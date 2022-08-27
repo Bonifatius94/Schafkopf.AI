@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30114.105
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Schafkopf.Lib", "Schafkopf.Lib\Schafkopf.Lib.csproj", "{12B6A27D-ECD3-4F4D-AB97-169399DB70C5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Schafkopf.Lib.Test", "Schafkopf.Lib.Test\Schafkopf.Lib.Test.csproj", "{110E386E-CE31-4DAB-921F-A68398C119E0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Schafkopf.Training", "Schafkopf.Training\Schafkopf.Training.csproj", "{C140BAC8-A092-4F05-874A-52723441962C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{12B6A27D-ECD3-4F4D-AB97-169399DB70C5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{12B6A27D-ECD3-4F4D-AB97-169399DB70C5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{12B6A27D-ECD3-4F4D-AB97-169399DB70C5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{12B6A27D-ECD3-4F4D-AB97-169399DB70C5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{110E386E-CE31-4DAB-921F-A68398C119E0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{110E386E-CE31-4DAB-921F-A68398C119E0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{110E386E-CE31-4DAB-921F-A68398C119E0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{110E386E-CE31-4DAB-921F-A68398C119E0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C140BAC8-A092-4F05-874A-52723441962C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C140BAC8-A092-4F05-874A-52723441962C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C140BAC8-A092-4F05-874A-52723441962C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C140BAC8-A092-4F05-874A-52723441962C}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
