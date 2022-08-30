@@ -12,8 +12,8 @@ public class GameCall
     public GameCall(
         GameMode mode,
         byte callingPlayerId,
-        CardColor trumpfOrGsuchteSau,
-        CardsDeck deck)
+        CardsDeck deck,
+        CardColor trumpfOrGsuchteSau = CardColor.Herz)
     {
         Mode = mode;
         Trumpf = CardColor.Herz;
@@ -174,9 +174,9 @@ public class CardComparer : IComparer<Card>
         bool isYTrumpf = call.IsTrumpf(y);
 
         if (isXTrumpf && !isYTrumpf)
-            return -1;
-        if (!isXTrumpf && isYTrumpf)
             return 1;
+        if (!isXTrumpf && isYTrumpf)
+            return -1;
 
         if (!isXTrumpf && !isYTrumpf)
             return x.Type - y.Type;

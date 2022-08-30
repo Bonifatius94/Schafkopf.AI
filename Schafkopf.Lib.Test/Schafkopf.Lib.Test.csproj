@@ -23,4 +23,8 @@
     </PackageReference>
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="../Schafkopf.Lib/Schafkopf.Lib.csproj" />
+  </ItemGroup>
+
 </Project>

@@ -2,8 +2,6 @@ namespace Schafkopf.Lib;
 
 public class CardsDeck
 {
-    public CardsDeck() => Shuffle();
-
     public static IReadOnlySet<Card> AllCards =
         Enumerable.Range(0, 32)
             .Select(id => new Card((byte)id))
