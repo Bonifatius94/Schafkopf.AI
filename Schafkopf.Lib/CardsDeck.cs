@@ -14,29 +14,40 @@ public class CardsDeck
 
     #region Shuffle
 
-    private static readonly Random rng = new Random();
+    private static readonly EqualDistPermutator permGen =
+        new EqualDistPermutator(32);
 
     public void Shuffle()
     {
         var cards = AllCards.ToList();
-        var perm = randomPermutation(cards.Count);
+        var perm = permGen.NextPermutation();
         var deckCopy = perm.Select(i => cards[i]).ToArray();
         Array.Copy(deckCopy, Deck, Deck.Length);
     }
 
-    private IEnumerable<int> randomPermutation(int count)
-    {
-        var ids = Enumerable.Range(0, count).ToArray();
+    #endregion Shuffle
+}
 
-        for (int i = 0; i < count; i++)
+public class EqualDistPermutator
+{
+    public EqualDistPermutator(int numItems)
+        => this.numItems = numItems;
+
+    private int numItems;
+
+    private static readonly Random rng = new Random();
+
+    public IEnumerable<int> NextPermutation()
+    {
+        var ids = Enumerable.Range(0, numItems).ToArray();
+
+        for (int i = 0; i < numItems; i++)
         {
-            int j = rng.Next(i, count);
+            int j = rng.Next(i, numItems);
             yield return ids[j];
 
             if (i != j)
                 ids[j] = ids[i];
         }
     }
-
-    #endregion Shuffle
 }
