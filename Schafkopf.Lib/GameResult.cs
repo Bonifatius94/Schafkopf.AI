@@ -21,19 +21,38 @@ public class GameHistory
 
     #endregion Turns
 
+    #region Caller/Opponent
+
+    public IEnumerable<int> CallerIds => callerIds();
+    public IEnumerable<int> OpponentIds => opponentIds();
+
+    private IEnumerable<int> callerIds()
+    {
+        yield return Call.CallingPlayerId;
+        if (Call.Mode == GameMode.Sauspiel)
+            yield return Call.PartnerPlayerId;
+    }
+
+    private IEnumerable<int> opponentIds()
+    {
+        for (int id = 0; id < 4; id++)
+            if (id != Call.CallingPlayerId &&
+                    (Call.Mode != GameMode.Sauspiel || id != Call.PartnerPlayerId))
+                yield return id;
+    }
+
+    #endregion Caller/Opponent
+
     #region Score
 
+    // TODO: implement this with less re-computation effort (e.g. use memoization)
+
     private Dictionary<int, int> scoreByPlayer
-        => turns.GroupBy(t => eval.WinnerId(t))
-            .ToDictionary(g => g.Key, g => g.Select(x => x.Augen).Sum());
-
-    public IEnumerable<int> CallerIds
-        => Call.Mode == GameMode.Sauspiel
-            ? new List<int>() { Call.CallingPlayerId, Call.PartnerPlayerId }
-            : new List<int>() { Call.CallingPlayerId };
-
-    public IEnumerable<int> OpponentIds
-        => Enumerable.Range(0, 4).Except(CallerIds).ToList();
+        => turns
+            .GroupBy(t => eval.WinnerId(t))
+            .ToDictionary(
+                g => g.Key,
+                g => g.Select(x => x.Augen).Sum());
 
     public int ScoreCaller => CallerIds.Select(id => scoreByPlayer[id]).Sum();
     public int ScoreOpponents => OpponentIds.Select(id => scoreByPlayer[id]).Sum();
@@ -69,9 +88,10 @@ public class GameResult
             { GameMode.Solo, 50 },
             { GameMode.Wenz, 50 },
         };
+
     private const double chargePerLaufendem = 10;
-    private const double chargeSchneider = 10;
-    private const double chargeSchwarz = 20;
+    private const double additionalChargeSchneider = 10;
+    private const double additionalChargeSchwarz = 20;
 
     private static double computeReward(GameHistory history, int playerId)
     {
@@ -80,8 +100,8 @@ public class GameResult
 
         double baseCharge = baseChargeOfGame[history.Call.Mode]
             + (laufende * chargePerLaufendem)
-            + (history.IsSchneider ? chargeSchneider : 0)
-            + (history.IsSchwarz ? chargeSchwarz : 0);
+            + (history.IsSchneider ? additionalChargeSchneider : 0)
+            + (history.IsSchwarz ? additionalChargeSchwarz : 0);
         double gameCost = baseCharge * (1 + klopfer);
 
         bool isPlayer = history.CallerIds.Contains(playerId);
