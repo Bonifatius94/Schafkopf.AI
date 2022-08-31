@@ -34,7 +34,7 @@ public readonly struct Turn
     public Card C2 => new Card((byte)((Id >> 5) & 0x1F));
     public Card C3 => new Card((byte)((Id >> 10) & 0x1F));
     public Card C4 => new Card((byte)((Id >> 15) & 0x1F));
-    public int FirstDrawingPlayerId => Id >> 20;
+    public int FirstDrawingPlayerId => (Id >> 20) & 0x3;
     public int CardsCount => Id >> 22;
     public bool IsDone => CardsCount == 4;
     public Card[] AllCards => new Card[] { C1, C2, C3, C4 };
@@ -63,6 +63,8 @@ public readonly struct Turn
 
     #endregion Augen
 
+    // TODO: think of transforming this into a list of (player_id, card) tuples
+    //       reason: O(1) read access is not required by the implementation
     public IReadOnlyDictionary<int, Card> CardsByPlayer()
     {
         int firstDrawingPlayerId = FirstDrawingPlayerId;
