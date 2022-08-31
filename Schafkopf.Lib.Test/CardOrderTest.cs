@@ -6,13 +6,16 @@ public class WenzTrumpfCardOrderTest
 {
     private static readonly Random rng = new Random();
 
+    private GameCall newWenz()
+    {
+        int playerId = rng.Next(0, 4);
+        return GameCall.Wenz(playerId);
+    }
+
     [Fact]
     public void Test_OberAndHerzAreNotTrumpf_WhenPlayingWenz()
     {
-        byte playerId = (byte)rng.Next(0, 4);
-        var deck = new CardsDeck();
-        var call = new GameCall(GameMode.Wenz, playerId, deck);
-
+        var call = newWenz();
         var allTrumpf = CardsDeck.AllCards.Where(x => x.Type == CardType.Unter);
         var allNonTrumpf = CardsDeck.AllCards.Except(allTrumpf);
         allTrumpf.Should().Match(x => x.All(card => call.IsTrumpf(card)));
@@ -22,9 +25,7 @@ public class WenzTrumpfCardOrderTest
     [Fact]
     public void Test_AnyTrumpfWinsAgainstAnyOtherCard_WhenPlayingWenz()
     {
-        byte playerId = (byte)rng.Next(0, 4);
-        var deck = new CardsDeck();
-        var call = new GameCall(GameMode.Wenz, playerId, deck);
+        var call = newWenz();
         var comp = new CardComparer(call);
 
         var allUnter = CardsDeck.AllCards.Where(x => x.Type == CardType.Unter).ToList();
@@ -36,9 +37,7 @@ public class WenzTrumpfCardOrderTest
     [Fact]
     public void Test_TrumpfAreInCorrectOrder_WhenPlayingWenz()
     {
-        byte playerId = (byte)rng.Next(0, 4);
-        var deck = new CardsDeck();
-        var call = new GameCall(GameMode.Wenz, playerId, deck);
+        var call = newWenz();
         var comp = new CardComparer(call);
 
         IEnumerable<Card> orderedTrumpfCards = new List<Card>() {
@@ -77,10 +76,10 @@ public class SauspielTrumpfCardOrderTest
 
     private GameCall newSauspiel()
     {
-        byte playerId = (byte)rng.Next(0, 4);
+        int playerId = rng.Next(0, 4);
         var gsuchteSau = (CardColor)rng.Next(0, 4);
         var deck = new CardsDeck();
-        return new GameCall(GameMode.Sauspiel, playerId, deck, gsuchteSau);
+        return GameCall.Sauspiel(playerId, deck, gsuchteSau);
     }
 
     [Fact]
@@ -142,8 +141,7 @@ public class SoloTrumpfCardOrderTest
     private GameCall newSolo(CardColor trumpf)
     {
         byte playerId = (byte)rng.Next(0, 4);
-        var deck = new CardsDeck();
-        return new GameCall(GameMode.Solo, playerId, deck, trumpf);
+        return GameCall.Solo(playerId, trumpf);
     }
 
     [Theory]

@@ -8,11 +8,12 @@ var table = new GameTable(
     new RandomAgent());
 var session = new GameSession(table, deck);
 
-var call = new GameCall(GameMode.Sauspiel, 0, deck, CardColor.Schell);
-while (!call.CanCallSauspiel(deck))
+var call = GameCall.Sauspiel(0, deck, CardColor.Schell);
+var callValidator = new GameCallValidator();
+while (!callValidator.IsValidCall(call, deck))
 {
     deck.Shuffle();
-    call = new GameCall(GameMode.Sauspiel, 0, deck, CardColor.Schell);
+    call = GameCall.Sauspiel(0, deck, CardColor.Schell);
 }
 
 var history = session.PlayGameUntilEnd(call);

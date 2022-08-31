@@ -4,44 +4,59 @@ public enum GameMode
 {
     Sauspiel,
     Wenz,
-    Solo
+    Solo,
+    Weiter
 }
 
 public class GameCall
 {
-    // TODO: make this constructor private and add
-    //       static methods to create sauspiel / solo / wenz
-    public GameCall(
-        GameMode mode,
+    private GameCall()
+    {
+        Mode = GameMode.Weiter;
+    }
+
+    private GameCall(byte callingPlayerId)
+    {
+        Mode = GameMode.Wenz;
+        CallingPlayerId = callingPlayerId;
+    }
+
+    private GameCall(
+        byte callingPlayerId,
+        CardColor trumpf)
+    {
+        Mode = GameMode.Solo;
+        Trumpf = trumpf;
+        CallingPlayerId = callingPlayerId;
+    }
+
+    private GameCall(
         byte callingPlayerId,
         CardsDeck deck,
-        CardColor trumpfOrGsuchteSau = CardColor.Herz)
+        CardColor gsuchteSau)
     {
-        Mode = mode;
+        Mode = GameMode.Sauspiel;
         Trumpf = CardColor.Herz;
         CallingPlayerId = callingPlayerId;
-
-        if (mode == GameMode.Sauspiel)
-        {
-            GsuchteSau = new Card(CardType.Sau, trumpfOrGsuchteSau);
-            PartnerPlayerId = (byte)Enumerable.Range(0, 4)
-                .First(i => deck.HandOfPlayer(i).HasCard(GsuchteSau));
-        }
-        else if (mode == GameMode.Solo)
-            Trumpf = trumpfOrGsuchteSau;
+        GsuchteSau = new Card(CardType.Sau, gsuchteSau);
+        PartnerPlayerId = (byte)Enumerable.Range(0, 4)
+            .First(i => deck.HandOfPlayer(i).HasCard(GsuchteSau));
     }
 
-    public bool CanCallSauspiel(CardsDeck deck)
-    {
-        if (CallingPlayerId == PartnerPlayerId)
-            return false;
+    public static GameCall Weiter(int callingPlayerId)
+        => new GameCall();
 
-        var callingPlayerHand = deck.HandOfPlayer(CallingPlayerId);
-        if (!callingPlayerHand.HasFarbe(GsuchteSau.Color, IsTrumpf))
-            return false;
+    public static GameCall Sauspiel(
+            int callingPlayerId,
+            CardsDeck deck,
+            CardColor gsuchteSau)
+        => new GameCall((byte)callingPlayerId, deck, gsuchteSau);
 
-        return true;
-    }
+    public static GameCall Wenz(int callingPlayerId)
+        => new GameCall((byte)callingPlayerId);
+
+    public static GameCall Solo(int callingPlayerId, CardColor trumpf)
+        => new GameCall((byte)callingPlayerId, null, trumpf);
 
     public GameMode Mode { get; private set; }
     public byte CallingPlayerId { get; private set; }
@@ -60,5 +75,23 @@ public class GameCall
         else
             throw new NotSupportedException(
                 $"game mode {Mode} is currently not supported!");
+    }
+}
+
+public class GameCallValidator
+{
+    public bool IsValidCall(GameCall call, CardsDeck deck)
+    {
+        if (call.Mode != GameMode.Sauspiel)
+            return true;
+
+        if (call.CallingPlayerId == call.PartnerPlayerId)
+            return false;
+
+        var callingPlayerHand = deck.HandOfPlayer(call.CallingPlayerId);
+        if (!callingPlayerHand.HasFarbe(call.GsuchteSau.Color, call.IsTrumpf))
+            return false;
+
+        return true;
     }
 }

@@ -4,10 +4,10 @@ public interface ISchafkopfPlayer
 {
     Hand Hand { get; }
 
-    void NewGame(Hand hand);
+    void NewGame(GameCall call, Hand hand);
     void OnInvalidCardPicked(Card card);
     Card ChooseCard(Turn currentTurn);
-    void OnGameFinished(GameHistory game);
+    void OnGameFinished(GameResult result);
 }
 
 public class GameSession
@@ -23,7 +23,7 @@ public class GameSession
 
     public GameHistory PlayGameUntilEnd(GameCall call)
     {
-        table.SupplyHands(deck);
+        table.SupplyHands(call, deck);
 
         var history = new GameHistory(call);
         var eval = new TurnEvaluator(call);

@@ -27,11 +27,12 @@ public class GameTable
         yield return players[(++beginningPlayerId % 4)];
     }
 
-    public void SupplyHands(CardsDeck deck)
+    // TODO: add functionality to determine the game call + klopfer
+
+    public void SupplyHands(GameCall call, CardsDeck deck)
     {
-        // TODO: implement Klopfen here ...
         foreach (int id in Enumerable.Range(0, 4))
-            players[id].NewGame(deck.HandOfPlayer(id));
+            players[id].NewGame(call, deck.HandOfPlayer(id));
     }
 
     public void Shift()
