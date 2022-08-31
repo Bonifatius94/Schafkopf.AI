@@ -56,7 +56,7 @@ public class GameCall
         => new GameCall((byte)callingPlayerId);
 
     public static GameCall Solo(int callingPlayerId, CardColor trumpf)
-        => new GameCall((byte)callingPlayerId, null, trumpf);
+        => new GameCall((byte)callingPlayerId, trumpf);
 
     public GameMode Mode { get; private set; }
     public byte CallingPlayerId { get; private set; }
