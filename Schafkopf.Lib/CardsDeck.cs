@@ -2,7 +2,7 @@ namespace Schafkopf.Lib;
 
 public class CardsDeck
 {
-    public static IReadOnlySet<Card> AllCards =
+    public static readonly IReadOnlySet<Card> AllCards =
         Enumerable.Range(0, 32)
             .Select(id => new Card((byte)id))
             .ToHashSet();
