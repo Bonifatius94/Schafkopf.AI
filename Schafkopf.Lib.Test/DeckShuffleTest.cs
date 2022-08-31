@@ -13,9 +13,9 @@ public class DeckSchuffleTest
     private (int, int, int, int, int) asTuple_5(IList<int> perm)
         => (perm.ElementAt(0), perm.ElementAt(1), perm.ElementAt(2), perm.ElementAt(3), perm.ElementAt(4));
 
-    private (int, int, int, int, int, int, int, int) asTuple_8(IList<int> perm)
+    private (int, int, int, int, int, int, int) asTuple_7(IList<int> perm)
         => (perm.ElementAt(0), perm.ElementAt(1), perm.ElementAt(2), perm.ElementAt(3),
-            perm.ElementAt(4), perm.ElementAt(5), perm.ElementAt(6), perm.ElementAt(7));
+            perm.ElementAt(4), perm.ElementAt(5), perm.ElementAt(6));
 
     private int fact(int n) => Enumerable.Range(1, n).Aggregate((x, y) => x * y);
 
@@ -63,23 +63,22 @@ public class DeckSchuffleTest
         entropy.Should().BeGreaterThan(0.99);
     }
 
-    [Fact(Skip="very computation-intensive")]
-    public void Test_YieldsEquallyDistPermutations_8()
+    [Fact]
+    public void Test_YieldsEquallyDistPermutations_7()
     {
-        int numItems = 8;
+        int numItems = 7;
         int numPerms = fact(numItems);
-        const int numDraws = 100000000;
+        const int numDraws = 10000000;
         var permGen = new EqualDistPermutator(numItems);
-        var permCounts = new ConcurrentDictionary<(int, int, int, int, int, int, int, int), int>();
+        var permCounts = new ConcurrentDictionary<(int, int, int, int, int, int, int), int>();
 
         for (int i = 0; i < numDraws; i++)
-            incrementCount(permCounts, asTuple_8(permGen.NextPermutation().ToList()));
+            incrementCount(permCounts, asTuple_7(permGen.NextPermutation().ToList()));
 
-        permCounts.Average(x => (double)x.Value / numDraws)
-            .Should().BeApproximately(1.0 / numItems, 0.01);
-        double entropy = permCounts
-            .Select(count => (double)count.Value / numDraws)
-            .Select(p => -1 * p * Math.Log(p, numPerms)).Sum();
+        var relProbs = permCounts.Select(count =>
+            (double)count.Value / numDraws).ToList();
+        relProbs.Average().Should().BeApproximately(1.0 / numPerms, 0.01);
+        double entropy = relProbs.Select(p => -1 * p * Math.Log(p, numPerms)).Sum();
         entropy.Should().BeGreaterThan(0.99);
     }
 }
