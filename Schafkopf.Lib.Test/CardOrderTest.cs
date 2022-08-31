@@ -2,7 +2,7 @@ using FluentAssertions;
 
 namespace Schafkopf.Lib.Test;
 
-public class WenzCardOrderTest
+public class WenzTrumpfCardOrderTest
 {
     private static readonly Random rng = new Random();
 
@@ -13,22 +13,24 @@ public class WenzCardOrderTest
         var deck = new CardsDeck();
         var call = new GameCall(GameMode.Wenz, playerId, deck);
 
-        var allUsualTrumpfWithoutUnter = CardsDeck.AllCards
-            .Where(x => (x.Color == CardColor.Herz && x.Type != CardType.Unter)
-                        || x.Type == CardType.Ober);
-        allUsualTrumpfWithoutUnter.Should().Match(x => x.All(card => !call.IsTrumpf(card)));
+        var allTrumpf = CardsDeck.AllCards.Where(x => x.Type == CardType.Unter);
+        var allNonTrumpf = CardsDeck.AllCards.Except(allTrumpf);
+        allTrumpf.Should().Match(x => x.All(card => call.IsTrumpf(card)));
+        allNonTrumpf.Should().Match(x => x.All(card => !call.IsTrumpf(card)));
     }
 
     [Fact]
-    public void Test_UnterAreTrumpf_WhenPlayingWenz()
+    public void Test_AnyTrumpfWinsAgainstAnyOtherCard_WhenPlayingWenz()
     {
         byte playerId = (byte)rng.Next(0, 4);
         var deck = new CardsDeck();
         var call = new GameCall(GameMode.Wenz, playerId, deck);
+        var comp = new CardComparer(call);
 
-        var allUnter = CardsDeck.AllCards
-            .Where(x => x.Type == CardType.Unter);
-        allUnter.Should().Match(x => x.All(card => call.IsTrumpf(card)));
+        var allUnter = CardsDeck.AllCards.Where(x => x.Type == CardType.Unter).ToList();
+        var allOtherCards = CardsDeck.AllCards.Except(allUnter).ToList();
+        allUnter.Should().Match(trumpf => trumpf.All(t =>
+            allOtherCards.All(o => comp.Compare(t, o) > 0)));
     }
 
     [Fact]
@@ -39,28 +41,153 @@ public class WenzCardOrderTest
         var call = new GameCall(GameMode.Wenz, playerId, deck);
         var comp = new CardComparer(call);
 
-        // any Unter 'sticht' non-Trumpf
-        var allUnter = CardsDeck.AllCards.Where(x => x.Type == CardType.Unter).ToList();
-        var allOtherCards = CardsDeck.AllCards.Except(allUnter).ToList();
-        allUnter.Should().Match(unter => unter.All(u =>
-            allOtherCards.All(o => comp.Compare(u, o) > 0)));
+        IEnumerable<Card> orderedTrumpfCards = new List<Card>() {
+            new Card(CardType.Unter, CardColor.Schell),
+            new Card(CardType.Unter, CardColor.Herz),
+            new Card(CardType.Unter, CardColor.Gras),
+            new Card(CardType.Unter, CardColor.Eichel),
+        };
 
-        // Unter are in correct order
-        var schellUnter = new Card(CardType.Unter, CardColor.Schell);
-        var herzUnter = new Card(CardType.Unter, CardColor.Herz);
-        var grasUnter = new Card(CardType.Unter, CardColor.Gras);
-        var eichelUnter = new Card(CardType.Unter, CardColor.Eichel);
-        schellUnter.Should().Match<Card>(u => comp.Compare(u, herzUnter) < 0);
-        schellUnter.Should().Match<Card>(u => comp.Compare(u, grasUnter) < 0);
-        schellUnter.Should().Match<Card>(u => comp.Compare(u, eichelUnter) < 0);
-        herzUnter.Should().Match<Card>(u => comp.Compare(u, schellUnter) > 0);
-        herzUnter.Should().Match<Card>(u => comp.Compare(u, grasUnter) < 0);
-        herzUnter.Should().Match<Card>(u => comp.Compare(u, eichelUnter) < 0);
-        grasUnter.Should().Match<Card>(u => comp.Compare(u, schellUnter) > 0);
-        grasUnter.Should().Match<Card>(u => comp.Compare(u, herzUnter) > 0);
-        grasUnter.Should().Match<Card>(u => comp.Compare(u, eichelUnter) < 0);
-        eichelUnter.Should().Match<Card>(u => comp.Compare(u, schellUnter) > 0);
-        eichelUnter.Should().Match<Card>(u => comp.Compare(u, herzUnter) > 0);
-        eichelUnter.Should().Match<Card>(u => comp.Compare(u, grasUnter) > 0);
+        orderedTrumpfCards.Should().BeInAscendingOrder(comp);
+        orderedTrumpfCards.Reverse().Should().BeInDescendingOrder(comp);
+    }
+}
+
+public class SauspielTrumpfCardOrderTest
+{
+    private static readonly Random rng = new Random();
+
+    private IEnumerable<Card> allTrumpfInAscendingOrder(CardColor trumpf)
+        => new List<Card>() {
+            new Card(CardType.Sieben, trumpf),
+            new Card(CardType.Acht, trumpf),
+            new Card(CardType.Neun, trumpf),
+            new Card(CardType.Koenig, trumpf),
+            new Card(CardType.Zehn, trumpf),
+            new Card(CardType.Sau, trumpf),
+            new Card(CardType.Unter, CardColor.Schell),
+            new Card(CardType.Unter, CardColor.Herz),
+            new Card(CardType.Unter, CardColor.Gras),
+            new Card(CardType.Unter, CardColor.Eichel),
+            new Card(CardType.Ober, CardColor.Schell),
+            new Card(CardType.Ober, CardColor.Herz),
+            new Card(CardType.Ober, CardColor.Gras),
+            new Card(CardType.Ober, CardColor.Eichel),
+        };
+
+    private GameCall newSauspiel()
+    {
+        byte playerId = (byte)rng.Next(0, 4);
+        var gsuchteSau = (CardColor)rng.Next(0, 4);
+        var deck = new CardsDeck();
+        return new GameCall(GameMode.Sauspiel, playerId, deck, gsuchteSau);
+    }
+
+    [Fact]
+    public void Test_HerzAndOberAndUnterAreTrumpf_WhenPlayingSauspiel()
+    {
+        var call = newSauspiel();
+        var allTrumpf = allTrumpfInAscendingOrder(CardColor.Herz);
+        var notTrumpf = CardsDeck.AllCards.Except(allTrumpf);
+        allTrumpf.Should().Match(x => x.All(card => call.IsTrumpf(card)));
+        notTrumpf.Should().Match(x => x.All(card => !call.IsTrumpf(card)));
+    }
+
+    [Fact]
+    public void Test_AnyTrumpfWinsAgainstAnyOtherCard_WhenPlayingSauspiel()
+    {
+        var call = newSauspiel();
+        var comp = new CardComparer(call);
+
+        var allTrumpf = allTrumpfInAscendingOrder(CardColor.Herz);
+        var allOtherCards = CardsDeck.AllCards.Except(allTrumpf).ToList();
+        allTrumpf.Should().Match(trumpf => trumpf.All(t =>
+            allOtherCards.All(o => comp.Compare(t, o) > 0)));
+    }
+
+    [Fact]
+    public void Test_TrumpfAreInCorrectOrder_WhenPlayingSauspiel()
+    {
+        var call = newSauspiel();
+        var comp = new CardComparer(call);
+
+        var orderedTrumpfCards = allTrumpfInAscendingOrder(CardColor.Herz);
+        orderedTrumpfCards.Should().BeInAscendingOrder(comp);
+        orderedTrumpfCards.Reverse().Should().BeInDescendingOrder(comp);
+    }
+}
+
+public class SoloTrumpfCardOrderTest
+{
+    private static readonly Random rng = new Random();
+
+    private IEnumerable<Card> allTrumpfInAscendingOrder(CardColor trumpf)
+        => new List<Card>() {
+            new Card(CardType.Sieben, trumpf),
+            new Card(CardType.Acht, trumpf),
+            new Card(CardType.Neun, trumpf),
+            new Card(CardType.Koenig, trumpf),
+            new Card(CardType.Zehn, trumpf),
+            new Card(CardType.Sau, trumpf),
+            new Card(CardType.Unter, CardColor.Schell),
+            new Card(CardType.Unter, CardColor.Herz),
+            new Card(CardType.Unter, CardColor.Gras),
+            new Card(CardType.Unter, CardColor.Eichel),
+            new Card(CardType.Ober, CardColor.Schell),
+            new Card(CardType.Ober, CardColor.Herz),
+            new Card(CardType.Ober, CardColor.Gras),
+            new Card(CardType.Ober, CardColor.Eichel),
+        };
+
+    private GameCall newSolo(CardColor trumpf)
+    {
+        byte playerId = (byte)rng.Next(0, 4);
+        var deck = new CardsDeck();
+        return new GameCall(GameMode.Solo, playerId, deck, trumpf);
+    }
+
+    [Theory]
+    [InlineData(CardColor.Schell)]
+    [InlineData(CardColor.Herz)]
+    [InlineData(CardColor.Gras)]
+    [InlineData(CardColor.Eichel)]
+    public void Test_TrumpfColorAndOberAndUnterAreTrumpf_WhenPlayingSolo(CardColor trumpf)
+    {
+        var call = newSolo(trumpf);
+        var allTrumpf = allTrumpfInAscendingOrder(trumpf);
+        var allNonTrumpf = CardsDeck.AllCards.Except(allTrumpf);
+        allTrumpf.Should().Match(x => x.All(card => call.IsTrumpf(card)));
+        allNonTrumpf.Should().Match(x => x.All(card => !call.IsTrumpf(card)));
+    }
+
+    [Theory]
+    [InlineData(CardColor.Schell)]
+    [InlineData(CardColor.Herz)]
+    [InlineData(CardColor.Gras)]
+    [InlineData(CardColor.Eichel)]
+    public void Test_AnyTrumpfWinsAgainstAnyOtherCard_WhenPlayingSolo(CardColor trumpf)
+    {
+        var call = newSolo(trumpf);
+        var comp = new CardComparer(call);
+
+        var allTrumpf = allTrumpfInAscendingOrder(trumpf);
+        var allOtherCards = CardsDeck.AllCards.Except(allTrumpf).ToList();
+        allTrumpf.Should().Match(trumpf => trumpf.All(t =>
+            allOtherCards.All(o => comp.Compare(t, o) > 0)));
+    }
+
+    [Theory]
+    [InlineData(CardColor.Schell)]
+    [InlineData(CardColor.Herz)]
+    [InlineData(CardColor.Gras)]
+    [InlineData(CardColor.Eichel)]
+    public void Test_TrumpfAreInCorrectOrder_WhenPlayingSolo(CardColor trumpf)
+    {
+        var call = newSolo(trumpf);
+        var comp = new CardComparer(call);
+
+        var orderedTrumpfCards = allTrumpfInAscendingOrder(trumpf);
+        orderedTrumpfCards.Should().BeInAscendingOrder(comp);
+        orderedTrumpfCards.Reverse().Should().BeInDescendingOrder(comp);
     }
 }

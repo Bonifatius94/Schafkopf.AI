@@ -185,11 +185,13 @@ public class CardComparer : IComparer<Card>
             return x.Color - y.Color;
 
         // case: both Trumpf in Solo or Sauspiel
-        return trumpfScore(x) - trumpfScore(y);
+        int scoreX = trumpfScore(x);
+        int scoreY = trumpfScore(y);
+        return scoreX - scoreY;
     }
 
     private int trumpfScore(Card x)
         => x.Type == CardType.Ober || x.Type == CardType.Unter
-            ? (int)x.Type * (int)x.Color
+            ? (int)x.Type * 4 + (int)x.Color + 8
             : (int)x.Type;
 }
