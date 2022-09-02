@@ -59,8 +59,7 @@ public readonly struct Hand
 
     private readonly ulong cards;
 
-    public int CardsCount => BitOperations.PopCount(
-        (ulong)(cards | CARD_COUNT_BITMASK));
+    public int CardsCount => BitOperations.PopCount(cards & CARD_COUNT_BITMASK);
 
     #region Accessors
 
