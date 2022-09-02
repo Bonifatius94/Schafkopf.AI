@@ -14,7 +14,7 @@ public class RandomAgent : ISchafkopfPlayer
     private static readonly Random rng = new Random();
 
     public Card ChooseCard(Turn state)
-        => Hand.Cards.ElementAt(rng.Next(0, Hand.Cards.Count));
+        => Hand.Cards.ElementAt(rng.Next(0, Hand.CardsCount));
 
     public void OnGameFinished(GameResult result) { }
 

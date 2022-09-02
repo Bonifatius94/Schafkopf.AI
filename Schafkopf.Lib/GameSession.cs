@@ -48,7 +48,8 @@ public class GameSession
                     player.OnInvalidCardPicked(card);
                 }
 
-                player.Hand.Discard(card);
+                var newHand = player.Hand.Discard(card);
+                // TODO: deal with immutability of hand
                 turn = turn.NextCard(card);
             }
 

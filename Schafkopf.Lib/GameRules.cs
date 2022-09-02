@@ -39,7 +39,7 @@ public class SauspielDrawValidator : IDrawValidator
             return false;
 
         bool mussAngeben = !isTrumpfTurn &&
-            playerHand.Cards.Any(c => c.Color == currentTurn.C1.Color);
+            playerHand.HasFarbe(currentTurn.C1.Color, call.IsTrumpf);
         if (mussAngeben && cardPlayed.Color != currentTurn.C1.Color)
             return false;
 
@@ -67,7 +67,7 @@ public class WenzOrSoloDrawValidator : IDrawValidator
             return false;
 
         bool mussAngeben = !isTrumpfTurn &&
-            playerHand.Cards.Any(c => c.Color == currentTurn.C1.Color);
+            playerHand.HasFarbe(currentTurn.C1.Color, call.IsTrumpf);
         if (mussAngeben && cardPlayed.Color != currentTurn.C1.Color)
             return false;
 

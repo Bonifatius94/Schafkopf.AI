@@ -1,15 +1,22 @@
+using FluentAssertions;
+
 namespace Schafkopf.Lib.Test;
 
 public class GameRulesTest
 {
     [Fact]
-    public void Test_MussTrumpfZugeben_WhenTrumpfPlayedAndTrumpfInHand()
+    public void Test_TrumpfZugeben_WhenTrumpfPlayedAndTrumpfInHand()
     {
-        
+        // var deck = new CardsDeck();
+
+        // var drawEval = new WenzOrSoloDrawValidator();
+        // var cardToPlay = new Card(CardType.Acht, CardColor.Herz);
+        // drawEval.IsValid(call, cardToPlay, turn, hand)
+        //     .Should().BeTrue();
     }
 
     [Fact]
-    public void Test_NotMussTrumpfZugeben_WhenTrumpfPlayedButNoTrumpfInHand()
+    public void Test_NotTrumpfZugeben_WhenTrumpfPlayedButNoTrumpfInHand()
     {
         
     }
