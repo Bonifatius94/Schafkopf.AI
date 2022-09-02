@@ -75,15 +75,10 @@ public class HandPropertiesTest
         hasCard.Should().BeFalse();
     }
 
+    public static IEnumerable<object[]> OwnedCardIds =
+        Enumerable.Range(0, 8).Select(i => new object[] { i }).ToList();
     [Theory]
-    [InlineData(0)]
-    [InlineData(1)]
-    [InlineData(2)]
-    [InlineData(3)]
-    [InlineData(4)]
-    [InlineData(5)]
-    [InlineData(6)]
-    [InlineData(7)]
+    [MemberData(nameof(OwnedCardIds))]
     public void Test_CardIsNotInHand_AfterItWasDiscarded(int delIndex)
     {
         var cards = new Card[] {
@@ -106,5 +101,101 @@ public class HandPropertiesTest
     }
 }
 
-// TODO: add tests for TrumpfCount, HasCard(), Discard()
-// TODO: add tests for trumpf/farbe related properties HasTrumpf(), HasFarbe(), FarbeCount()
+public class HandTrumpfPropertiesTest
+{
+    [Fact]
+    public void Test_HasTrumpfIsTrue_WhenTrumpfInHand()
+    {
+        var cards = new Card[] {
+            new Card(CardType.Sieben, CardColor.Schell),
+            new Card(CardType.Acht, CardColor.Schell),
+            new Card(CardType.Neun, CardColor.Herz),
+            new Card(CardType.Unter, CardColor.Herz),
+            new Card(CardType.Ober, CardColor.Gras),
+            new Card(CardType.Koenig, CardColor.Gras),
+            new Card(CardType.Zehn, CardColor.Eichel),
+            new Card(CardType.Sau, CardColor.Eichel),
+        };
+        var call = GameCall.Solo(0, CardColor.Eichel);
+
+        var hand = new Hand(cards);
+        hand = hand.CacheTrumpf(call.IsTrumpf);
+
+        hand.HasTrumpf().Should().BeTrue();
+    }
+
+    [Fact]
+    public void Test_HasTrumpfIsFalse_WhenNoTrumpfInHand()
+    {
+        var cards = new Card[] {
+            new Card(CardType.Sieben, CardColor.Schell),
+            new Card(CardType.Acht, CardColor.Schell),
+            new Card(CardType.Neun, CardColor.Schell),
+            new Card(CardType.Koenig, CardColor.Schell),
+            new Card(CardType.Sau, CardColor.Gras),
+            new Card(CardType.Koenig, CardColor.Gras),
+            new Card(CardType.Zehn, CardColor.Herz),
+            new Card(CardType.Sau, CardColor.Herz),
+        };
+        var call = GameCall.Solo(0, CardColor.Eichel);
+
+        var hand = new Hand(cards);
+        hand = hand.CacheTrumpf(call.IsTrumpf);
+
+        hand.HasTrumpf().Should().BeFalse();
+    }
+}
+
+
+public class HandFarbePropertiesTest
+{
+    public static IEnumerable<object[]> AllColors =
+        Enumerable.Range(0, 4).Select(i =>  new object[] { (CardColor)i }).ToList();
+    [Theory]
+    [MemberData(nameof(AllColors))]
+    public void Test_HasFarbeIsTrue_WhenFarbeInHand(CardColor farbe)
+    {
+        var trumpf = (CardColor)(((int)farbe + 1) % 4);
+        var cards = new Card[] {
+            new Card(CardType.Unter, trumpf),
+            new Card(CardType.Ober, trumpf),
+            new Card(CardType.Sieben, farbe),
+            new Card(CardType.Acht, farbe),
+            new Card(CardType.Neun, farbe),
+            new Card(CardType.Koenig, farbe),
+            new Card(CardType.Zehn, farbe),
+            new Card(CardType.Sau, farbe),
+        };
+        var call = GameCall.Solo(0, trumpf);
+
+        var hand = new Hand(cards);
+        hand = hand.CacheTrumpf(call.IsTrumpf);
+
+        hand.HasFarbe(farbe).Should().BeTrue();
+    }
+
+    [Theory]
+    [MemberData(nameof(AllColors))]
+    public void Test_HasFarbeIsFalse_WhenCardWithSameColorInHandThatIsTrumpf(CardColor farbe)
+    {
+        var trumpf = (CardColor)(((int)farbe + 1) % 4);
+        var cards = new Card[] {
+            new Card(CardType.Unter, farbe),
+            new Card(CardType.Ober, farbe),
+            new Card(CardType.Sieben, trumpf),
+            new Card(CardType.Acht, trumpf),
+            new Card(CardType.Neun, trumpf),
+            new Card(CardType.Koenig, trumpf),
+            new Card(CardType.Zehn, trumpf),
+            new Card(CardType.Sau, trumpf),
+        };
+        var call = GameCall.Solo(0, trumpf);
+
+        var hand = new Hand(cards);
+        hand = hand.CacheTrumpf(call.IsTrumpf);
+
+        hand.HasFarbe(farbe).Should().BeFalse();
+    }
+}
+
+// TODO: add tests for trumpf/farbe related properties HasFarbe(), FarbeCount()

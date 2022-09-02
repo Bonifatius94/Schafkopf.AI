@@ -62,6 +62,8 @@ public readonly struct Hand
     public int CardsCount => BitOperations.PopCount(
         (ulong)(cards | CARD_COUNT_BITMASK));
 
+    #region Accessors
+
     private int indexOf(byte cardQuery, byte cardMask)
     {
         // vectorize the card query
@@ -82,14 +84,6 @@ public readonly struct Hand
         // TODO: get rid of this branching
     }
 
-    // private int indexOf(byte cardQuery, byte cardMask)
-    // {
-    //     for (byte i = 0; i < 8; i++)
-    //         if ((((cards >> (i * CARD_OFFSET)) & cardMask) ^ cardQuery) == 0)
-    //             return i;
-    //     return -1;
-    // }
-
     private int indexOf(Card card)
         => indexOf((byte)(EXISTING_FLAG | card.Id), 0x3F);
 
@@ -101,6 +95,8 @@ public readonly struct Hand
 
     private bool isTrumpfAt(int index)
         => (cards & ((ulong)TRUMPF_FLAG << (index * CARD_OFFSET))) > 0;
+
+    #endregion Accessors
 
     public bool HasCard(Card card)
         => indexOf(card) >= 0;
