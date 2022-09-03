@@ -16,6 +16,7 @@ public readonly struct Hand
     private static readonly ulong CARD_COUNT_BITMASK;
     private static readonly ulong TRUMPF_BITMASK;
     private static readonly Vector128<byte> ZERO = Vector128.Create((byte)0);
+    private static readonly Vector128<ulong> ZERO_U64 = Vector128.Create(0ul);
 
     static Hand()
     {
@@ -74,13 +75,15 @@ public readonly struct Hand
         // match -> zero byte, so CompareEqual filters those 0x00 bytes
         var broadResult = Sse2.Xor(Sse2.And(cardsBytes, boradMask), broadQuery);
         var eqSimd = Sse2.CompareEqual(broadResult, ZERO);
-        ulong equalBytes = eqSimd.AsUInt64().GetElement(1);
+        ulong equalBytes = eqSimd.AsUInt64().GetElement(0);
 
-        // now, find the lowest matching byte and retrieve  its index
-        int zeros = BitOperations.TrailingZeroCount(equalBytes);
-        int id = zeros >> 3; // div by 8
-        return id == 8 ? -1 : id;
-        // TODO: get rid of this branching
+        // now, find the lowest matching byte and retrieve its index
+        ulong id = (ulong)(BitOperations.TrailingZeroCount(equalBytes) >> 3);
+
+        // handle case when there's no match -> return -1
+        var noMatchSimd = Sse42.CompareEqual(eqSimd.AsUInt64(), ZERO_U64);
+        ulong noMatch = noMatchSimd.GetElement(0);
+        return (int)(id | noMatch);
     }
 
     private int indexOf(Card card)
