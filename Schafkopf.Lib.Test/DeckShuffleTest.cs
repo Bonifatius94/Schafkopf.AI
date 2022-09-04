@@ -3,17 +3,17 @@ using FluentAssertions;
 
 namespace Schafkopf.Lib.Test;
 
-public class DeckSchuffleTest
+public class SchufflePermsTest
 {
     #region Helpers
 
-    private (int, int) asTuple_2(IList<int> perm)
+    private (int, int) asTuple_2(IList<byte> perm)
         => (perm.ElementAt(0), perm.ElementAt(1));
 
-    private (int, int, int, int, int) asTuple_5(IList<int> perm)
+    private (int, int, int, int, int) asTuple_5(IList<byte> perm)
         => (perm.ElementAt(0), perm.ElementAt(1), perm.ElementAt(2), perm.ElementAt(3), perm.ElementAt(4));
 
-    private (int, int, int, int, int, int, int) asTuple_7(IList<int> perm)
+    private (int, int, int, int, int, int, int) asTuple_7(IList<byte> perm)
         => (perm.ElementAt(0), perm.ElementAt(1), perm.ElementAt(2), perm.ElementAt(3),
             perm.ElementAt(4), perm.ElementAt(5), perm.ElementAt(6));
 
@@ -80,5 +80,35 @@ public class DeckSchuffleTest
         relProbs.Average().Should().BeApproximately(1.0 / numPerms, 0.01);
         double entropy = relProbs.Select(p => -1 * p * Math.Log(p, numPerms)).Sum();
         entropy.Should().BeGreaterThan(0.99);
+    }
+}
+
+public class DeckShuffleTest
+{
+    [Fact]
+    public void Test_DeckContainsAllCards_AfterShuffle()
+    {
+        var deck = new CardsDeck();
+        deck.Shuffle();
+
+        var allCardsAfterShuffle =
+            deck.HandOfPlayer(0).Cards
+                .Concat(deck.HandOfPlayer(1).Cards)
+                .Concat(deck.HandOfPlayer(2).Cards)
+                .Concat(deck.HandOfPlayer(3).Cards)
+            .ToHashSet();
+        allCardsAfterShuffle.Should().BeEquivalentTo(CardsDeck.AllCards);
+    }
+
+    [Fact]
+    public void Test_AllHandsHaveCardCountIs8_AfterShuffle()
+    {
+        var deck = new CardsDeck();
+        deck.Shuffle();
+
+        var hands = Enumerable.Range(0, 4)
+            .Select(i => deck.HandOfPlayer(i))
+            .ToList();
+        hands.Should().Match(x => x.All(h => h.CardsCount == 8));
     }
 }

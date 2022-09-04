@@ -13,7 +13,7 @@ public readonly struct Hand
     private const byte TRUMPF_FLAG = 0x40;
     private const byte ORIG_CARD_MASK = 0x1F;
     private const byte CARD_MASK_WITH_META = 0x7F;
-    private static readonly ulong CARD_COUNT_BITMASK;
+    private static readonly ulong EXISTING_BITMASK;
     private static readonly ulong TRUMPF_BITMASK;
     private static readonly Vector128<byte> ZERO = Vector128.Create((byte)0);
     private static readonly Vector128<ulong> ZERO_U64 = Vector128.Create(0ul);
@@ -23,7 +23,7 @@ public readonly struct Hand
         ulong cardCountMask = 0;
         for (byte i = 0; i < 8; i++)
             cardCountMask |= (ulong)EXISTING_FLAG << (i * CARD_OFFSET);
-        CARD_COUNT_BITMASK = cardCountMask;
+        EXISTING_BITMASK = cardCountMask;
 
         ulong trumofBitmask = 0;
         for (byte i = 0; i < 8; i++)
@@ -44,8 +44,11 @@ public readonly struct Hand
         this.cards = cards;
     }
 
-    private Hand(ulong cards)
-        => this.cards = cards;
+    internal Hand(ulong cards, bool setExisting = false)
+    {
+        ulong mask = setExisting ? EXISTING_BITMASK : 0;
+        this.cards = cards | mask;
+    }
 
     public Hand CacheTrumpf(Func<Card, bool> isTrumpf)
     {
@@ -60,7 +63,7 @@ public readonly struct Hand
 
     private readonly ulong cards;
 
-    public int CardsCount => BitOperations.PopCount(cards & CARD_COUNT_BITMASK);
+    public int CardsCount => BitOperations.PopCount(cards & EXISTING_BITMASK);
 
     #region Accessors
 
