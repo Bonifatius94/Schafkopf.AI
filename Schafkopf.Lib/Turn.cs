@@ -37,7 +37,7 @@ public readonly struct Turn
             throw new ArgumentException(
                 "Too many cards! A turn only consists of max. 4 cards.");
 
-        ulong id = (uint)firstDrawingPlayerId << 32;
+        ulong id = (ulong)firstDrawingPlayerId << 32;
         unsafe
         {
             fixed (Card* cp = &cards[0])
@@ -74,13 +74,24 @@ public readonly struct Turn
     private readonly ulong Id;
 
     public Card C1 => new Card((byte)(Id & Card.CARD_MASK_WITH_META));
-    // public Card C2 => new Card((byte)((Id >> 8) & Card.CARD_MASK_WITH_META));
-    // public Card C3 => new Card((byte)((Id >> 16) & Card.CARD_MASK_WITH_META));
-    // public Card C4 => new Card((byte)((Id >> 24) & Card.CARD_MASK_WITH_META));
+    public Card C2 => new Card((byte)((Id >> 8) & Card.CARD_MASK_WITH_META));
+    public Card C3 => new Card((byte)((Id >> 16) & Card.CARD_MASK_WITH_META));
+    public Card C4 => new Card((byte)((Id >> 24) & Card.CARD_MASK_WITH_META));
     public int FirstDrawingPlayerId => (int)((Id & FIRST_PLAYER_MASK) >> 32);
 
     public int CardsCount => BitOperations.PopCount(Id & EXISTING_BITMASK);
     public bool IsDone => CardsCount == 4;
+
+    public Card[] AllCards
+    {
+        get
+        {
+            var allCards = new Card[] { C1, C2, C3, C4 };
+            return Enumerable.Range(FirstDrawingPlayerId, 4)
+                .Select(i => allCards[i % 4])
+                .ToArray()[0..CardsCount];
+        }
+    }
 
     #region Augen
 
