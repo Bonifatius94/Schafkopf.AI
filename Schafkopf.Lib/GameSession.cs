@@ -25,7 +25,9 @@ public class GameSession
     {
         table.SupplyHands(call, deck);
 
-        var history = new GameHistory(call);
+        var initialHands = Enumerable.Range(0, 4)
+            .Select(i => (i, deck.HandOfPlayerWithMeta(i, call)));
+        var history = new GameHistory(call, initialHands.ToList());
         var validator = new DrawValidatorFactory().Create(call.Mode);
         int kommtRaus = table.FirstDrawingPlayerId;
 

@@ -77,10 +77,10 @@ public class WenzOrSoloDrawValidator : IDrawValidator
 
 public class CardComparer : IComparer<Card>
 {
-    public CardComparer(GameCall call)
-        => this.call = call;
+    public CardComparer(GameMode mode)
+        => this.mode = mode;
 
-    private readonly GameCall call;
+    private readonly GameMode mode;
 
     public int Compare(Card x, Card y)
     {
@@ -97,7 +97,7 @@ public class CardComparer : IComparer<Card>
         if (!isXTrumpf && !isYTrumpf)
             return x.Type - y.Type;
 
-        if (call.Mode == GameMode.Wenz)
+        if (mode == GameMode.Wenz)
             return x.Color - y.Color;
 
         // case: both Trumpf in Solo or Sauspiel

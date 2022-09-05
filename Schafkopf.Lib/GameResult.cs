@@ -2,9 +2,11 @@ namespace Schafkopf.Lib;
 
 public class GameHistory
 {
-    public GameHistory(GameCall call)
+    public GameHistory(GameCall call, IReadOnlyList<(int, Hand)> initialHands)
     {
         Call = call;
+        this.initialHands = initialHands
+            .ToDictionary(x => x.Item1, x => x.Item2);
     }
 
     public GameCall Call { get; private set; }
@@ -12,6 +14,7 @@ public class GameHistory
     #region Turns
 
     private List<Turn> turns = new List<Turn>();
+    private IReadOnlyDictionary<int, Hand> initialHands;
     public IReadOnlyList<Turn> Turns => turns;
 
     public void Append(Turn turn)
@@ -61,6 +64,28 @@ public class GameHistory
     public bool IsSchneider => ScoreCaller > 90 || ScoreOpponents >= 90;
     public bool IsSchwarz => Math.Abs(ScoreCaller - ScoreOpponents) == 120;
 
+    public int Laufende
+    {
+        get
+        {
+            var comp = new CardComparer(Call.Mode);
+            var allCardsOrdered = Enumerable.Range(0, 4)
+                .SelectMany(id => initialHands[id].Cards)
+                .Where(c => c.IsTrumpf)
+                .OrderByDescending(x => x, comp)
+                .ToList();
+            var callerCardsOrdered = callerIds()
+                .SelectMany(id => initialHands[id].Cards)
+                .OrderByDescending(x => x, comp)
+                .ToList();
+
+            return Enumerable.Range(0, Math.Min(
+                    allCardsOrdered.Count, callerCardsOrdered.Count))
+                .TakeWhile(i => allCardsOrdered[i] != callerCardsOrdered[i])
+                .Last();
+        }
+    }
+
     public GameResult ToPlayerResult(int playerId)
         => new GameResult(this, playerId);
 }
@@ -93,11 +118,10 @@ public class GameResult
 
     private static double computeReward(GameHistory history, int playerId)
     {
-        int klopfer = 0; // TODO: include a game mechanism for player interaction
-        int laufende = 0; // TODO: find a way to compute this
+        int klopfer = 0; // TODO: include a game mechanism for collecting klopfer
 
         double baseCharge = baseChargeOfGame[history.Call.Mode]
-            + (laufende * chargePerLaufendem)
+            + (history.Laufende >= 3 ? history.Laufende * chargePerLaufendem : 0)
             + (history.IsSchneider ? additionalChargeSchneider : 0)
             + (history.IsSchwarz ? additionalChargeSchwarz : 0);
         double gameCost = baseCharge * (1 + klopfer);

@@ -144,7 +144,7 @@ public readonly struct Turn
         var cardsByPlayer = Enumerable.Range(FirstDrawingPlayerId, CardsCount)
             .ToDictionary(i => i % 4, i => cards[i]);
 
-        var comparer = new CardComparer(call);
+        var comparer = new CardComparer(call.Mode);
         if (isTrumpfTurn)
             return cardsByPlayer.MaxBy(x => x.Value, comparer).Key;
 
@@ -167,7 +167,7 @@ public readonly struct Turn
             }
         }
 
-        var comparer = new CardComparer(call);
+        var comparer = new CardComparer(call.Mode);
         short cmp_01 = (short)comparer.Compare(cards[0], cards[1]);
         short cmp_02 = (short)comparer.Compare(cards[0], cards[2]);
         short cmp_03 = (short)comparer.Compare(cards[0], cards[3]);

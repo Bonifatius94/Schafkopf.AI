@@ -65,6 +65,11 @@ public readonly struct Card
 
     public override int GetHashCode() => Id & ORIG_CARD_MASK;
 
+    public static bool operator ==(Card a, Card b)
+        => a.GetHashCode() == b.GetHashCode();
+    public static bool operator !=(Card a, Card b)
+        => a.GetHashCode() != b.GetHashCode();
+
     #endregion Equality
 
     public override string ToString() => $"{Color} {Type}";
