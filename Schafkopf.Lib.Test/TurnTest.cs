@@ -38,8 +38,6 @@ public class TurnAddCardTest
         turnWithCardApplied.FirstDrawingPlayerId.Should().Be(playerId);
     }
 
-    private static readonly Random rng = new Random();
-
     [Theory]
     [MemberData(nameof(PlayerIds))]
     public void Test_ShouldYieldFinishedTurn_WhenApplying4Cards(int playerId)
@@ -153,5 +151,103 @@ public class TurnAugenCountTest
             turn = turn.NextCard(card);
 
         turn.Augen.Should().Be(expAugen);
+    }
+}
+
+public class TurnWinnerTest
+{
+    public TurnWinnerTest()
+    {
+        call = GameCall.Solo(0, CardColor.Herz);
+        var deck = new CardsDeck();
+        cardsWithMeta = deck.AllCardsWithMeta(call).ToList();
+    }
+
+    private readonly GameCall call;
+    private readonly List<Card> cardsWithMeta;
+
+    public static IEnumerable<object[]> CardsWithExpWinner =
+        new List<object[]> {
+            new object[] {
+                new List<Card> {
+                    new Card(CardType.Sieben, CardColor.Schell),
+                    new Card(CardType.Acht, CardColor.Schell),
+                    new Card(CardType.Neun, CardColor.Schell),
+                    new Card(CardType.Koenig, CardColor.Schell),
+                },
+                0, 3
+            },
+            new object[] {
+                new List<Card> {
+                    new Card(CardType.Koenig, CardColor.Schell),
+                    new Card(CardType.Zehn, CardColor.Schell),
+                    new Card(CardType.Sau, CardColor.Schell),
+                    new Card(CardType.Sieben, CardColor.Eichel),
+                },
+                1, 2
+            },
+            new object[] {
+                new List<Card> {
+                    new Card(CardType.Koenig, CardColor.Schell),
+                    new Card(CardType.Zehn, CardColor.Schell),
+                    new Card(CardType.Sau, CardColor.Eichel),
+                    new Card(CardType.Sieben, CardColor.Eichel),
+                },
+                1, 1
+            },
+            new object[] {
+                new List<Card> {
+                    new Card(CardType.Ober, CardColor.Eichel),
+                    new Card(CardType.Koenig, CardColor.Schell),
+                    new Card(CardType.Zehn, CardColor.Schell),
+                    new Card(CardType.Sau, CardColor.Schell),
+                },
+                2, 0
+            },
+            new object[] {
+                new List<Card> {
+                    new Card(CardType.Ober, CardColor.Schell),
+                    new Card(CardType.Ober, CardColor.Gras),
+                    new Card(CardType.Unter, CardColor.Schell),
+                    new Card(CardType.Sau, CardColor.Herz),
+                },
+                3, 1
+            },
+        };
+
+    [Theory]
+    [MemberData(nameof(CardsWithExpWinner))]
+    public void Test_YieldsExpectedWinner_AfterApplyingGivenCards(
+        List<Card> cardsToApply, int beginningPlayer, int expWinner)
+    {
+        var turn = Turn.NewTurn((byte)beginningPlayer);
+        var cardsToApplyWithMeta = cardsToApply
+            .Select(x => cardsWithMeta.First(y => y == x));
+        foreach (var card in cardsToApplyWithMeta)
+            turn = turn.NextCard(card);
+
+        turn.WinnerId(call).Should().Be(expWinner);
+    }
+
+    private static IEnumerable<Card> AllCards
+        => CardsDeck.AllCards
+            .Select(c => new Card((byte)(c.Id | Card.EXISTING_FLAG)))
+            .ToList();
+
+    public static IEnumerable<object[]> TooLessCards =
+        Enumerable.Range(0, 4).Select(i => AllCards.Take(i).ToList())
+            .Select(x => new object[] { x });
+
+    [Theory]
+    [MemberData(nameof(TooLessCards))]
+    public void Test_ThrowsException_WhenTryingToEvaluateWinnerBeforeTurnIsOver(
+        List<Card> cardsToApply)
+    {
+        var turn = Turn.NewTurn(0);
+        foreach (var card in cardsToApply)
+            turn = turn.NextCard(card);
+
+        turn.Invoking(x => x.WinnerId(call))
+            .Should().Throw<InvalidOperationException>();
     }
 }

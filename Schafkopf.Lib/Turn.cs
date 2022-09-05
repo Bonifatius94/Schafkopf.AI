@@ -153,7 +153,7 @@ public readonly struct Turn
         }
 
         var cardsByPlayer = Enumerable.Range(FirstDrawingPlayerId, CardsCount)
-            .ToDictionary(i => i % 4, i => cards[i]);
+            .ToDictionary(i => i % 4, i => cards[i % 4]);
 
         var comparer = new CardComparer(call.Mode);
         if (isTrumpfTurn)
@@ -167,6 +167,10 @@ public readonly struct Turn
     public int WinnerIdSimd(GameCall call)
     {
         // TODO: test if this works now
+
+        if (CardsCount < 4)
+            throw new InvalidOperationException(
+                "Can only evaluate winner when turn is over!");
 
         var cards = new Card[4];
         unsafe
