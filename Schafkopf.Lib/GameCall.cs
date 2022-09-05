@@ -48,7 +48,7 @@ public class GameCall
 
     public static GameCall Sauspiel(
             int callingPlayerId,
-            CardsDeck deck,
+            CardsDeck deck, // TODO: don't pass in the entire deck ...
             CardColor gsuchteSau)
         => new GameCall((byte)callingPlayerId, deck, gsuchteSau);
 
@@ -64,17 +64,32 @@ public class GameCall
     public Card GsuchteSau { get; private set; }
     public CardColor Trumpf { get; private set; }
 
+    public Func<Card, bool> IsTrumpf =>
+        (card) => new TrumpfEval(Mode, Trumpf).IsTrumpf(card);
+}
+
+public class TrumpfEval
+{
+    public TrumpfEval(GameMode mode, CardColor trumpf = CardColor.Herz)
+    {
+        this.mode = mode;
+        this.trumpf = trumpf;
+    }
+
+    private readonly GameMode mode;
+    private readonly CardColor trumpf;
+
     public bool IsTrumpf(Card card)
     {
-        if (Mode == GameMode.Wenz)
+        if (mode == GameMode.Wenz)
             return card.Type == CardType.Unter;
-        else if (Mode == GameMode.Sauspiel || Mode == GameMode.Solo)
+        else if (mode == GameMode.Sauspiel || mode == GameMode.Solo)
             return card.Type == CardType.Unter
                 || card.Type == CardType.Ober
-                || card.Color == Trumpf;
+                || card.Color == trumpf;
         else
             throw new NotSupportedException(
-                $"game mode {Mode} is currently not supported!");
+                $"game mode {mode} is currently not supported!");
     }
 }
 
@@ -89,7 +104,7 @@ public class GameCallValidator
             return false;
 
         var callingPlayerHand = deck.HandOfPlayer(call.CallingPlayerId);
-        if (!callingPlayerHand.HasFarbe(call.GsuchteSau.Color, call.IsTrumpf))
+        if (!callingPlayerHand.HasFarbe(call.GsuchteSau.Color))
             return false;
 
         return true;

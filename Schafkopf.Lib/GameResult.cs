@@ -5,11 +5,9 @@ public class GameHistory
     public GameHistory(GameCall call)
     {
         Call = call;
-        eval = new TurnEvaluator(call);
     }
 
     public GameCall Call { get; private set; }
-    private readonly TurnEvaluator eval;
 
     #region Turns
 
@@ -49,7 +47,7 @@ public class GameHistory
 
     private Dictionary<int, int> scoreByPlayer
         => turns
-            .GroupBy(t => eval.WinnerId(t))
+            .GroupBy(t => t.WinnerId(Call))
             .ToDictionary(
                 g => g.Key,
                 g => g.Select(x => x.Augen).Sum());

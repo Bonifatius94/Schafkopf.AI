@@ -27,19 +27,19 @@ public class SauspielDrawValidator : IDrawValidator
 
         bool kommtRaus = currentTurn.CardsCount == 0;
         bool darfNichtUntenDurch = kommtRaus && playerHand.HasCard(call.GsuchteSau)
-            && playerHand.FarbeCount(call.GsuchteSau.Color, call.IsTrumpf) < 4;
+            && playerHand.FarbeCount(call.GsuchteSau.Color) < 4;
         if (darfNichtUntenDurch && cardPlayed.Color == call.GsuchteSau.Color
                 && cardPlayed.Type != CardType.Sau)
             return false;
         else if (kommtRaus)
             return true;
 
-        bool isTrumpfTurn = call.IsTrumpf(currentTurn.C1);
-        if (isTrumpfTurn && !call.IsTrumpf(cardPlayed) && playerHand.HasTrumpf(call.IsTrumpf))
+        bool isTrumpfTurn = currentTurn.C1.IsTrumpf;
+        if (isTrumpfTurn && !cardPlayed.IsTrumpf && playerHand.HasTrumpf())
             return false;
 
         bool mussAngeben = !isTrumpfTurn &&
-            playerHand.HasFarbe(currentTurn.C1.Color, call.IsTrumpf);
+            playerHand.HasFarbe(currentTurn.C1.Color);
         if (mussAngeben && cardPlayed.Color != currentTurn.C1.Color)
             return false;
 
@@ -55,48 +55,23 @@ public class WenzOrSoloDrawValidator : IDrawValidator
 {
     public bool IsValid(GameCall call, Card cardPlayed, Turn currentTurn, Hand playerHand)
     {
-        if (call.Mode != GameMode.Wenz)
-            throw new InvalidOperationException("Can only handle Wenz game mode!");
+        if (call.Mode != GameMode.Wenz && call.Mode != GameMode.Solo)
+            throw new InvalidOperationException("Can only handle Wenz or Solo game mode!");
 
         bool kommtRaus = currentTurn.CardsCount == 0;
         if (kommtRaus)
             return true;
 
-        bool isTrumpfTurn = call.IsTrumpf(currentTurn.C1);
-        if (isTrumpfTurn && !call.IsTrumpf(cardPlayed) && playerHand.HasTrumpf(call.IsTrumpf))
+        bool isTrumpfTurn = currentTurn.C1.IsTrumpf;
+        if (isTrumpfTurn && !cardPlayed.IsTrumpf && playerHand.HasTrumpf())
             return false;
 
         bool mussAngeben = !isTrumpfTurn &&
-            playerHand.HasFarbe(currentTurn.C1.Color, call.IsTrumpf);
+            playerHand.HasFarbe(currentTurn.C1.Color);
         if (mussAngeben && cardPlayed.Color != currentTurn.C1.Color)
             return false;
 
         return true;
-    }
-}
-
-public class TurnEvaluator
-{
-    public TurnEvaluator(GameCall call)
-    {
-        this.call = call;
-        comparer = new CardComparer(call);
-    }
-
-    private readonly GameCall call;
-    private readonly CardComparer comparer;
-
-    public int WinnerId(Turn turn)
-    {
-        bool isTrumpfTurn = call.IsTrumpf(turn.C1);
-        var cardsByPlayer = turn.CardsByPlayer();
-
-        if (isTrumpfTurn)
-            return cardsByPlayer.MaxBy(x => x.Value, comparer).Key;
-
-        return cardsByPlayer
-            .Where(x => x.Value.Color == turn.C1.Color)
-            .MaxBy(x => x.Value, comparer).Key;
     }
 }
 
@@ -109,9 +84,11 @@ public class CardComparer : IComparer<Card>
 
     public int Compare(Card x, Card y)
     {
-        bool isXTrumpf = call.IsTrumpf(x);
-        bool isYTrumpf = call.IsTrumpf(y);
+        bool isXTrumpf = x.IsTrumpf;
+        bool isYTrumpf = y.IsTrumpf;
 
+        // TODO: remove branching, e.g. using SIMD instructions
+        //       or making use of some score func like trumpfScore()
         if (isXTrumpf && !isYTrumpf)
             return 1;
         if (!isXTrumpf && isYTrumpf)

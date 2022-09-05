@@ -1,13 +1,18 @@
+using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.X86;
+
 namespace Schafkopf.Lib;
 
 public class CardsDeck
 {
+    // TODO: re-design this to ensure that the meta-data of Hand is always initialized
+
     public static readonly IReadOnlySet<Card> AllCards =
         Enumerable.Range(0, 32)
             .Select(id => new Card((byte)id))
             .ToHashSet();
 
-    // info: use this array to store the cards in-place
+    // info: use this array to store the cards in-place,
     //       8 cards in a row belong to each player
     private readonly Hand[] hands =
         AllCards.Chunk(8)
@@ -20,6 +25,12 @@ public class CardsDeck
     public Hand HandOfPlayerWithMeta(int playerId, GameCall call)
         => hands[playerId].CacheTrumpf(call.IsTrumpf);
 
+    // TODO: find a better performing implementation
+    public IEnumerable<Card> AllCardsWithMeta(GameCall call)
+        => Enumerable.Range(0, 4)
+            .SelectMany(i => HandOfPlayerWithMeta(i, call).Cards)
+            .ToList();
+
     #region Shuffle
 
     private static readonly EqualDistPermutator permGen =
@@ -29,7 +40,10 @@ public class CardsDeck
     {
         var cards = AllCards.ToList();
         var perm = permGen.NextPermutation();
-        var deckCopy = perm.Select(i => cards[i]).ToArray();
+
+        var deckCopy = new Card[32];
+        for (int i = 0; i < 32; i++)
+            deckCopy[i] = cards[perm[i]];
 
         unsafe
         {
@@ -48,87 +62,86 @@ public class CardsDeck
 
     #region VectorizedShuffle
 
-    // TODO: make this vectorization work for better performance
+    public void ShuffleSimd()
+    {
+        // TODO: make this vectorization work for better performance
 
-    //// experimental shuffle with AVX2 256-bit vector byte shuffle
-    // public void Shuffle()
-    // {
-    //     Vector256<byte> cardsVec;
-    //     unsafe
-    //     {
-    //         fixed (Hand* hp = &hands[0])
-    //             cardsVec = cardsToVec(hp);
-    //     }
+        Vector256<byte> cardsVec;
+        unsafe
+        {
+            fixed (Hand* hp = &hands[0])
+                cardsVec = cardsToVec(hp);
+        }
 
-    //     var perm = permGen.NextPermutation();
-    //     var permVec = permToVec(perm);
-    //     var shuffledCardsVec = Avx2.Shuffle(cardsVec, permVec);
+        var perm = permGen.NextPermutation();
+        var permVec = permToVec(perm);
+        var shuffledCardsVec = Avx2.Shuffle(cardsVec, permVec);
 
-    //     unsafe
-    //     {
-    //         fixed (Hand* hp = &hands[0])
-    //         {
-    //             Card* cards = (Card*)hp;
-    //             vecToCards(shuffledCardsVec, cards);
-    //         }
-    //     }
-    // }
+        unsafe
+        {
+            fixed (Hand* hp = &hands[0])
+            {
+                Card* cards = (Card*)hp;
+                vecToCards(shuffledCardsVec, cards);
+            }
+        }
+    }
 
-    // private unsafe Vector256<byte> cardsToVec(Hand* hands)
-    // {
-    //     Vector256<byte> vec;
+    private unsafe Vector256<byte> cardsToVec(Hand* hands)
+    {
+        Vector256<byte> vec;
 
-    //     unsafe
-    //     {
-    //         ulong* cardBytes = (ulong*)hands;
-    //         var vecAsUlong = Vector256.Create(
-    //             cardBytes[0],
-    //             cardBytes[1],
-    //             cardBytes[2],
-    //             cardBytes[3]);
-    //         vec = vecAsUlong.AsByte();
-    //     }
+        unsafe
+        {
+            ulong* cardBytes = (ulong*)hands;
+            var vecAsUlong = Vector256.Create(
+                cardBytes[0],
+                cardBytes[1],
+                cardBytes[2],
+                cardBytes[3]);
+            vec = vecAsUlong.AsByte();
+        }
 
-    //     return vec;
-    // }
+        return vec;
+    }
 
-    // private readonly byte[] output = new byte[256];
+    private readonly byte[] output = new byte[256];
 
-    // private unsafe void vecToCards(Vector256<byte> vec, Card* output)
-    // {
-    //     var vecAsUlong = vec.AsUInt64();
-    //     ulong v1 = vecAsUlong.GetElement(0);
-    //     ulong v2 = vecAsUlong.GetElement(1);
-    //     ulong v3 = vecAsUlong.GetElement(2);
-    //     ulong v4 = vecAsUlong.GetElement(3);
+    private unsafe void vecToCards(Vector256<byte> vec, Card* output)
+    {
+        var vecAsUlong = vec.AsUInt64();
+        ulong v1 = vecAsUlong.GetElement(0);
+        ulong v2 = vecAsUlong.GetElement(1);
+        ulong v3 = vecAsUlong.GetElement(2);
+        ulong v4 = vecAsUlong.GetElement(3);
 
-    //     unsafe
-    //     {
-    //         ulong* pul = (ulong*)output;
-    //         *(pul++) = v1;
-    //         *(pul++) = v2;
-    //         *(pul++) = v3;
-    //         *(pul++) = v4;
-    //     }
-    // }
+        unsafe
+        {
+            ulong* pul = (ulong*)output;
+            *(pul++) = v1;
+            *(pul++) = v2;
+            *(pul++) = v3;
+            *(pul++) = v4;
+        }
+    }
 
-    // private Vector256<byte> permToVec(byte[] perm)
-    // {
-    //     Vector256<byte> vec;
+    private Vector256<byte> permToVec(byte[] perm)
+    {
+        Vector256<byte> vec;
 
-    //     unsafe
-    //     {
-    //         fixed (byte* p = &perm[0])
-    //         {
-    //             ulong* pul = (ulong*)p;
-    //             var vecAsUlong = Vector256.Create(
-    //                 pul[0], pul[1], pul[2], pul[3]);
-    //             vec = vecAsUlong.AsByte();
-    //         }
-    //     }
+        unsafe
+        {
+            fixed (byte* p = &perm[0])
+            {
+                ulong* pul = (ulong*)p;
+                var vecAsUlong = Vector256.Create(
+                    pul[0], pul[1], pul[2], pul[3]);
+                vec = vecAsUlong.AsByte();
+            }
+        }
 
-    //     return vec;
-    // }
+        return vec;
+    }
 
     #endregion VectorizedShuffle
 }

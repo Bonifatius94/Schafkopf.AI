@@ -26,7 +26,6 @@ public class GameSession
         table.SupplyHands(call, deck);
 
         var history = new GameHistory(call);
-        var eval = new TurnEvaluator(call);
         var validator = new DrawValidatorFactory().Create(call.Mode);
         int kommtRaus = table.FirstDrawingPlayerId;
 
@@ -54,7 +53,7 @@ public class GameSession
             }
 
             history.Append(turn);
-            kommtRaus = eval.WinnerId(turn);
+            kommtRaus = turn.WinnerId(call);
         }
 
         table.Shift();

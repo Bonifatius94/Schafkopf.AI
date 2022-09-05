@@ -9,10 +9,6 @@ public readonly struct Hand
     #region Init
 
     private const byte CARD_OFFSET = 8;
-    private const byte EXISTING_FLAG = 0x20;
-    private const byte TRUMPF_FLAG = 0x40;
-    private const byte ORIG_CARD_MASK = 0x1F;
-    private const byte CARD_MASK_WITH_META = 0x7F;
     private static readonly ulong EXISTING_BITMASK;
     private static readonly ulong TRUMPF_BITMASK;
     private static readonly Vector128<byte> ZERO = Vector128.Create((byte)0);
@@ -22,12 +18,12 @@ public readonly struct Hand
     {
         ulong cardCountMask = 0;
         for (byte i = 0; i < 8; i++)
-            cardCountMask |= (ulong)EXISTING_FLAG << (i * CARD_OFFSET);
+            cardCountMask |= (ulong)Card.EXISTING_FLAG << (i * CARD_OFFSET);
         EXISTING_BITMASK = cardCountMask;
 
         ulong trumofBitmask = 0;
         for (byte i = 0; i < 8; i++)
-            trumofBitmask |= (ulong)TRUMPF_FLAG << (i * CARD_OFFSET);
+            trumofBitmask |= (ulong)Card.TRUMPF_FLAG << (i * CARD_OFFSET);
         TRUMPF_BITMASK = trumofBitmask;
     }
 
@@ -38,7 +34,7 @@ public readonly struct Hand
         for (byte i = 0; i < initialHandOfUniqueCards.Length; i++)
         {
             var card = initialHandOfUniqueCards[i];
-            cards |= ((ulong)card.Id | EXISTING_FLAG) << (i * CARD_OFFSET);
+            cards |= ((ulong)card.Id | Card.EXISTING_FLAG) << (i * CARD_OFFSET);
         }
 
         this.cards = cards;
@@ -55,7 +51,7 @@ public readonly struct Hand
         ulong newCards = cards;
         for (byte i = 0; i < 8; i++)
             if (hasCardAt(i) && isTrumpf(cardAt(i)))
-                newCards |= (ulong)TRUMPF_FLAG << (i * CARD_OFFSET);
+                newCards |= (ulong)Card.TRUMPF_FLAG << (i * CARD_OFFSET);
         return new Hand(newCards);
     }
 
@@ -71,12 +67,12 @@ public readonly struct Hand
     {
         // vectorize the card query
         var broadQuery = Vector128.Create(cardQuery);
-        var boradMask = Vector128.Create(cardMask);
+        var broadMask = Vector128.Create(cardMask);
         var cardsBytes = Vector128.Create(cards).AsByte();
 
         // carry out the query using XOR + bitwise AND
         // match -> zero byte, so CompareEqual filters those 0x00 bytes
-        var broadResult = Sse2.Xor(Sse2.And(cardsBytes, boradMask), broadQuery);
+        var broadResult = Sse2.Xor(Sse2.And(cardsBytes, broadMask), broadQuery);
         var eqSimd = Sse2.CompareEqual(broadResult, ZERO);
         ulong equalBytes = eqSimd.AsUInt64().GetElement(0);
 
@@ -90,16 +86,16 @@ public readonly struct Hand
     }
 
     private int indexOf(Card card)
-        => indexOf((byte)(EXISTING_FLAG | card.Id), 0x3F);
+        => indexOf((byte)(Card.EXISTING_FLAG | card.Id), 0x3F);
 
     private Card cardAt(int index)
-        => new Card((byte)((cards >> (index * CARD_OFFSET)) & ORIG_CARD_MASK));
+        => new Card((byte)((cards >> (index * CARD_OFFSET)) & Card.CARD_MASK_WITH_META));
 
     private bool hasCardAt(int index)
-        => (cards & ((ulong)EXISTING_FLAG << (index * CARD_OFFSET))) > 0;
+        => (cards & ((ulong)Card.EXISTING_FLAG << (index * CARD_OFFSET))) > 0;
 
     private bool isTrumpfAt(int index)
-        => (cards & ((ulong)TRUMPF_FLAG << (index * CARD_OFFSET))) > 0;
+        => (cards & ((ulong)Card.TRUMPF_FLAG << (index * CARD_OFFSET))) > 0;
 
     #endregion Accessors
 
@@ -113,7 +109,7 @@ public readonly struct Hand
             throw new ArgumentException(
                 $"Player does not have {card} in hand!");
 
-        ulong newCards = cards ^ ((ulong)EXISTING_FLAG << (index * CARD_OFFSET));
+        ulong newCards = cards ^ ((ulong)Card.EXISTING_FLAG << (index * CARD_OFFSET));
         return new Hand(newCards);
     }
 
@@ -153,19 +149,4 @@ public readonly struct Hand
         int count = bitsSet >> 3; // div by 8
         return count;
     }
-
-    #region Legacy
-
-    // TODO: replace these slow LINQ functions with the optimized ones
-
-    public bool HasTrumpf(Func<Card, bool> isTrumpf)
-        => Cards.Any(c => isTrumpf(c));
-
-    public bool HasFarbe(CardColor gsucht, Func<Card, bool> isTrumpf)
-        => Cards.Any(c => c.Color == gsucht && !isTrumpf(c));
-
-    public int FarbeCount(CardColor farbe, Func<Card, bool> isTrumpf)
-        => Cards.Where(c => c.Color == farbe && !isTrumpf(c)).Count();
-
-    #endregion Legacy
 }
