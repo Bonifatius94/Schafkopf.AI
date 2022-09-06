@@ -181,10 +181,10 @@ public class TurnWinnerTest
                 new List<Card> {
                     new Card(CardType.Koenig, CardColor.Schell),
                     new Card(CardType.Zehn, CardColor.Schell),
-                    new Card(CardType.Sau, CardColor.Schell),
                     new Card(CardType.Sieben, CardColor.Eichel),
+                    new Card(CardType.Sau, CardColor.Schell),
                 },
-                1, 2
+                1, 0
             },
             new object[] {
                 new List<Card> {
@@ -193,7 +193,7 @@ public class TurnWinnerTest
                     new Card(CardType.Sau, CardColor.Eichel),
                     new Card(CardType.Sieben, CardColor.Eichel),
                 },
-                1, 1
+                1, 2
             },
             new object[] {
                 new List<Card> {
@@ -202,13 +202,13 @@ public class TurnWinnerTest
                     new Card(CardType.Zehn, CardColor.Schell),
                     new Card(CardType.Sau, CardColor.Schell),
                 },
-                2, 0
+                2, 2
             },
             new object[] {
                 new List<Card> {
                     new Card(CardType.Ober, CardColor.Schell),
-                    new Card(CardType.Ober, CardColor.Gras),
                     new Card(CardType.Unter, CardColor.Schell),
+                    new Card(CardType.Ober, CardColor.Gras),
                     new Card(CardType.Sau, CardColor.Herz),
                 },
                 3, 1

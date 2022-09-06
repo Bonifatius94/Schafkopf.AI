@@ -140,7 +140,6 @@ public readonly struct Turn
                 "Can only evaluate winner when turn is over!");
 
         var c1 = C1;
-        bool isTrumpfTurn = c1.IsTrumpf;
 
         var cards = new Card[4];
         unsafe
@@ -152,22 +151,21 @@ public readonly struct Turn
             }
         }
 
-        var cardsByPlayer = Enumerable.Range(FirstDrawingPlayerId, CardsCount)
-            .ToDictionary(i => i % 4, i => cards[i % 4]);
+        var cardsByPlayer = Enumerable.Range(0, CardsCount)
+            .ToDictionary(i => i, i => cards[i]);
 
         var comparer = new CardComparer(call.Mode);
-        if (isTrumpfTurn)
+        if (cards.Any(c => c.IsTrumpf))
             return cardsByPlayer.MaxBy(x => x.Value, comparer).Key;
 
+        var farbe = cards[FirstDrawingPlayerId].Color;
         return cardsByPlayer
-            .Where(x => x.Value.Color == c1.Color || call.IsTrumpf(x.Value))
+            .Where(x => x.Value.Color == farbe || x.Value.IsTrumpf)
             .MaxBy(x => x.Value, comparer).Key;
     }
 
     public int WinnerIdSimd(GameCall call)
     {
-        // TODO: test if this works now
-
         if (CardsCount < 4)
             throw new InvalidOperationException(
                 "Can only evaluate winner when turn is over!");
@@ -181,6 +179,8 @@ public readonly struct Turn
                 *cp_u32 = (uint)(Id & CARDS_MASK);
             }
         }
+
+        // TODO: ignore farbe when other farbe played as first card
 
         var comparer = new CardComparer(call.Mode);
         short cmp_01 = (short)comparer.Compare(cards[0], cards[1]);
@@ -209,7 +209,7 @@ public readonly struct Turn
         uint bitcnt_3 = (byte)BitOperations.PopCount(cmpResult.GetElement(3));
         // info: winner has popcnt() = 64, all others have popcnt() = 0
         //       -> arrange popcnt() results such that tzcnt() yields the index
-        uint counts = (bitcnt_0 >> 5) | (bitcnt_1 >> 4) | (bitcnt_2 >> 3) | (bitcnt_3 >> 2);
+        uint counts = (bitcnt_0 >> 6) | (bitcnt_1 >> 5) | (bitcnt_2 >> 4) | (bitcnt_3 >> 3);
         int winnerId = BitOperations.TrailingZeroCount(counts);
         return winnerId;
     }
