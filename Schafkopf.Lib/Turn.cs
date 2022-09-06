@@ -11,7 +11,7 @@ public readonly struct Turn
     private const ulong FIRST_PLAYER_MASK = 0x300000000;
     private static readonly ulong EXISTING_BITMASK;
     private static readonly Vector128<byte> ZERO = Vector128.Create((byte)0);
-    private static readonly Vector256<short> ZERO_16 = Vector256.Create((short)0);
+    private static readonly Vector256<short> MINUS_ONE_16 = Vector256.Create((short)-1);
     private static readonly Vector256<ulong> MAXVALUE = Vector256.Create(0xFFFFFFFFFFFFFFFF);
     private static readonly Card[] EMPTY_CARDS = new Card[4];
 
@@ -97,19 +97,10 @@ public readonly struct Turn
 
     private int cardCountByType(uint cards, CardType type)
     {
-        const byte mask = 0x1C;
+        const byte CARD_TYPE_MASK = 0x1C;
         byte query = (byte)((byte)type << 2);
-        var cardsVec = Vector128.Create(cards).AsByte();
-        var queryVec = Vector128.Create(query);
-        var maskVec = Vector128.Create(mask);
-
-        // match all cards of given card type
-        var result = Sse2.Xor(Sse2.And(cardsVec, maskVec), queryVec);
-        var eqSimd = Sse2.CompareEqual(result, ZERO);
-        ulong equalBytes = eqSimd.AsUInt32().GetElement(0);
-
-        // count the amount of matching bytes (divide bit count by 8)
-        int count = BitOperations.PopCount(equalBytes) >> 3;
+        uint matches = matchMask(cards, query, CARD_TYPE_MASK);
+        int count = BitOperations.PopCount(matches) >> 3;
         return count;
     }
 
@@ -133,13 +124,21 @@ public readonly struct Turn
 
     #region Winner
 
+    // TODO: remove the call parameter by caching the game mode in Id
     public int WinnerId(GameCall call)
     {
         if (CardsCount < 4)
             throw new InvalidOperationException(
                 "Can only evaluate winner when turn is over!");
 
-        var c1 = C1;
+        // ignore farbe when other farbe played as first card
+        // -> make ignored cards "schell sieben" -> lose comparison
+        uint cards_u32 = (uint)(Id & CARDS_MASK);
+        byte sameFarbeQuery = (byte)((Id >> (FirstDrawingPlayerId * CARD_OFFSET)) & 0x03);
+        const byte sameFarbeMask = 0x03;
+        uint sameFarbeMatches = matchMask(cards_u32, sameFarbeQuery, sameFarbeMask);
+        uint trumpfMatches = matchMask(cards_u32, Card.TRUMPF_FLAG, Card.TRUMPF_FLAG);
+        cards_u32 = (cards_u32 & sameFarbeMatches) | (cards_u32 & trumpfMatches);
 
         var cards = new Card[4];
         unsafe
@@ -147,40 +146,9 @@ public readonly struct Turn
             fixed (Card* cp = &cards[0])
             {
                 var cp_u32 = (uint*)cp;
-                *cp_u32 = (uint)(Id & CARDS_MASK);
+                *cp_u32 = cards_u32;
             }
         }
-
-        var cardsByPlayer = Enumerable.Range(0, CardsCount)
-            .ToDictionary(i => i, i => cards[i]);
-
-        var comparer = new CardComparer(call.Mode);
-        if (cards.Any(c => c.IsTrumpf))
-            return cardsByPlayer.MaxBy(x => x.Value, comparer).Key;
-
-        var farbe = cards[FirstDrawingPlayerId].Color;
-        return cardsByPlayer
-            .Where(x => x.Value.Color == farbe || x.Value.IsTrumpf)
-            .MaxBy(x => x.Value, comparer).Key;
-    }
-
-    public int WinnerIdSimd(GameCall call)
-    {
-        if (CardsCount < 4)
-            throw new InvalidOperationException(
-                "Can only evaluate winner when turn is over!");
-
-        var cards = new Card[4];
-        unsafe
-        {
-            fixed (Card* cp = &cards[0])
-            {
-                var cp_u32 = (uint*)cp;
-                *cp_u32 = (uint)(Id & CARDS_MASK);
-            }
-        }
-
-        // TODO: ignore farbe when other farbe played as first card
 
         var comparer = new CardComparer(call.Mode);
         short cmp_01 = (short)comparer.Compare(cards[0], cards[1]);
@@ -199,20 +167,45 @@ public readonly struct Turn
         );
 
         // filter the row that wins all comparisons
-        var cmpResult = Avx2.CompareGreaterThan(cmpVec, ZERO_16).AsUInt64();
+        var cmpResult = Avx2.CompareGreaterThan(cmpVec, MINUS_ONE_16).AsUInt64();
         cmpResult = Avx2.CompareEqual(cmpResult, MAXVALUE);
 
         // determine the filtered row's id -> winner id
-        uint bitcnt_0 = (byte)BitOperations.PopCount(cmpResult.GetElement(0));
-        uint bitcnt_1 = (byte)BitOperations.PopCount(cmpResult.GetElement(1));
-        uint bitcnt_2 = (byte)BitOperations.PopCount(cmpResult.GetElement(2));
-        uint bitcnt_3 = (byte)BitOperations.PopCount(cmpResult.GetElement(3));
+        ulong bitcnt_0 = (byte)BitOperations.PopCount(cmpResult.GetElement(0));
+        ulong bitcnt_1 = (byte)BitOperations.PopCount(cmpResult.GetElement(1));
+        ulong bitcnt_2 = (byte)BitOperations.PopCount(cmpResult.GetElement(2));
+        ulong bitcnt_3 = (byte)BitOperations.PopCount(cmpResult.GetElement(3));
         // info: winner has popcnt() = 64, all others have popcnt() = 0
         //       -> arrange popcnt() results such that tzcnt() yields the index
-        uint counts = (bitcnt_0 >> 6) | (bitcnt_1 >> 5) | (bitcnt_2 >> 4) | (bitcnt_3 >> 3);
-        int winnerId = BitOperations.TrailingZeroCount(counts);
-        return winnerId;
+        ulong counts = (bitcnt_0 >> 6) | (bitcnt_1 >> 5) | (bitcnt_2 >> 4) | (bitcnt_3 >> 3);
+        ulong winnerId = (ulong)BitOperations.TrailingZeroCount(counts);
+
+        // when first player's bit is set, always pick first player
+        // -> this implements first player 'hat Recht' rule
+        var countsVec = Vector128.Create((byte)counts);
+        var firstPlayerVec = Vector128.Create((byte)(1 << FirstDrawingPlayerId));
+        ulong firstPlayerHatRechtMask = Sse2.CompareEqual(
+                Sse2.Xor(Sse2.And(countsVec, firstPlayerVec), firstPlayerVec), ZERO)
+            .AsUInt64().GetElement(0);
+
+        return (int)((firstPlayerHatRechtMask & (ulong)FirstDrawingPlayerId)
+            | (~firstPlayerHatRechtMask & winnerId));
     }
 
     #endregion Winner
+
+    #region Matching
+
+    private uint matchMask(uint cards, byte query, byte mask)
+    {
+        var cardsVec = Vector128.Create(cards).AsByte();
+        var queryVec = Vector128.Create(query);
+        var maskVec = Vector128.Create(mask);
+        var result = Sse2.Xor(Sse2.And(cardsVec, maskVec), queryVec);
+        var eqSimd = Sse2.CompareEqual(result, ZERO);
+        uint resultMask = eqSimd.AsUInt32().GetElement(0);
+        return resultMask;
+    }
+
+    #endregion Matching
 }
