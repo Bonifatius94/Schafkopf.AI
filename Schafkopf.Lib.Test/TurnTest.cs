@@ -156,70 +156,77 @@ public class TurnAugenCountTest
 
 public class TurnWinnerTest
 {
-    public TurnWinnerTest()
-    {
-        call = GameCall.Solo(0, CardColor.Herz);
-        var deck = new CardsDeck();
-        cardsWithMeta = deck.AllCardsWithMeta(call).ToList();
-    }
-
-    private readonly GameCall call;
-    private readonly List<Card> cardsWithMeta;
-
     public static IEnumerable<object[]> CardsWithExpWinner =
         new List<object[]> {
             new object[] {
+                GameCall.Solo(0, CardColor.Schell),
                 new List<Card> {
-                    new Card(CardType.Sieben, CardColor.Schell),
-                    new Card(CardType.Acht, CardColor.Schell),
-                    new Card(CardType.Neun, CardColor.Schell),
-                    new Card(CardType.Koenig, CardColor.Schell),
+                    new Card(CardType.Sieben, CardColor.Herz),
+                    new Card(CardType.Acht, CardColor.Herz),
+                    new Card(CardType.Neun, CardColor.Herz),
+                    new Card(CardType.Koenig, CardColor.Herz),
                 },
                 0, 3
             },
             new object[] {
+                GameCall.Solo(0, CardColor.Schell),
                 new List<Card> {
-                    new Card(CardType.Koenig, CardColor.Schell),
-                    new Card(CardType.Zehn, CardColor.Schell),
+                    new Card(CardType.Koenig, CardColor.Herz),
+                    new Card(CardType.Zehn, CardColor.Herz),
                     new Card(CardType.Sieben, CardColor.Eichel),
-                    new Card(CardType.Sau, CardColor.Schell),
+                    new Card(CardType.Sau, CardColor.Herz),
                 },
                 1, 0
             },
             new object[] {
+                GameCall.Solo(0, CardColor.Schell),
                 new List<Card> {
-                    new Card(CardType.Koenig, CardColor.Schell),
-                    new Card(CardType.Zehn, CardColor.Schell),
+                    new Card(CardType.Koenig, CardColor.Herz),
+                    new Card(CardType.Zehn, CardColor.Herz),
                     new Card(CardType.Sau, CardColor.Eichel),
                     new Card(CardType.Sieben, CardColor.Eichel),
                 },
                 1, 2
             },
             new object[] {
+                GameCall.Solo(0, CardColor.Schell),
                 new List<Card> {
                     new Card(CardType.Ober, CardColor.Eichel),
                     new Card(CardType.Koenig, CardColor.Schell),
-                    new Card(CardType.Zehn, CardColor.Schell),
-                    new Card(CardType.Sau, CardColor.Schell),
+                    new Card(CardType.Zehn, CardColor.Herz),
+                    new Card(CardType.Sau, CardColor.Herz),
                 },
                 2, 2
             },
             new object[] {
+                GameCall.Solo(0, CardColor.Schell),
                 new List<Card> {
-                    new Card(CardType.Ober, CardColor.Schell),
-                    new Card(CardType.Unter, CardColor.Schell),
+                    new Card(CardType.Ober, CardColor.Herz),
+                    new Card(CardType.Unter, CardColor.Herz),
                     new Card(CardType.Ober, CardColor.Gras),
-                    new Card(CardType.Sau, CardColor.Herz),
+                    new Card(CardType.Sau, CardColor.Schell),
                 },
                 3, 1
+            },
+            new object[] {
+                GameCall.Solo(0, CardColor.Herz),
+                new List<Card> {
+                    new Card(CardType.Sieben, CardColor.Schell),
+                    new Card(CardType.Sieben, CardColor.Eichel),
+                    new Card(CardType.Sieben, CardColor.Gras),
+                    new Card(CardType.Acht, CardColor.Gras),
+                },
+                3, 3
             },
         };
 
     [Theory]
     [MemberData(nameof(CardsWithExpWinner))]
     public void Test_YieldsExpectedWinner_AfterApplyingGivenCards(
-        List<Card> cardsToApply, int beginningPlayer, int expWinner)
+        GameCall call, List<Card> cardsToApply, int beginningPlayer, int expWinner)
     {
+        var deck = new CardsDeck();
+        var cardsWithMeta = deck.AllCardsWithMeta(call).ToList();
         var turn = Turn.NewTurn((byte)beginningPlayer);
         var cardsToApplyWithMeta = cardsToApply
             .Select(x => cardsWithMeta.First(y => y == x));
@@ -243,6 +250,7 @@ public class TurnWinnerTest
     public void Test_ThrowsException_WhenTryingToEvaluateWinnerBeforeTurnIsOver(
         List<Card> cardsToApply)
     {
+        var call = GameCall.Solo(0, CardColor.Schell);
         var turn = Turn.NewTurn(0);
         foreach (var card in cardsToApply)
             turn = turn.NextCard(card);
