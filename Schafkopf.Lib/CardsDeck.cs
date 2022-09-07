@@ -64,7 +64,20 @@ public class CardsDeck
 
     public void ShuffleSimd()
     {
-        // TODO: make this vectorization work for better performance
+        // info: this implementation works, but it's unclear
+        //       whether it's actually faster than the other one
+
+        // TODO: init the permutators to generate different outputs
+        var permGenUpper = new EqualDistPermutator(16);
+        var permGenLower = new EqualDistPermutator(16);
+        var permGenInterm = new EqualDistPermutator(4);
+        var permGenOut = new EqualDistPermutator(4);
+
+        // shuffle bytes within higher and lower 16 bytes
+        var upperPerm = permGenUpper.NextPermutation();
+        var lowerPerm = permGenLower.NextPermutation();
+        var intermPerm = permGenInterm.NextPermutation();
+        var outPerm = permGenOut.NextPermutation();
 
         Vector256<byte> cardsVec;
         unsafe
@@ -73,8 +86,20 @@ public class CardsDeck
                 cardsVec = cardsToVec(hp);
         }
 
-        var perm = permGen.NextPermutation();
-        var permVec = permToVec(perm);
+        // shuffle bytes within upper and lower 128 bit vector
+        var permVec = permToVec(upperPerm, lowerPerm);
+        var intermVec = Avx2.Shuffle(cardsVec, permVec).AsUInt64();
+        // pull shuffled bytes out by random order as 64-bit blocks
+        cardsVec = Vector256.Create(
+                intermVec.GetElement(intermPerm[0]),
+                intermVec.GetElement(intermPerm[1]),
+                intermVec.GetElement(intermPerm[2]),
+                intermVec.GetElement(intermPerm[3])
+            ).AsByte();
+        upperPerm = permGenUpper.NextPermutation();
+        lowerPerm = permGenLower.NextPermutation();
+        permVec = permToVec(upperPerm, lowerPerm);
+        // shuffle bytes again within upper and lower 128-bit vector
         var shuffledCardsVec = Avx2.Shuffle(cardsVec, permVec);
 
         unsafe
@@ -82,13 +107,19 @@ public class CardsDeck
             fixed (Hand* hp = &hands[0])
             {
                 Card* cards = (Card*)hp;
-                vecToCards(shuffledCardsVec, cards);
+                var vecAsUlong = shuffledCardsVec.AsUInt64();
+                ulong* pul = (ulong*)cards;
+                *(pul++) = vecAsUlong.GetElement(outPerm[0]);
+                *(pul++) = vecAsUlong.GetElement(outPerm[1]);
+                *(pul++) = vecAsUlong.GetElement(outPerm[2]);
+                *(pul++) = vecAsUlong.GetElement(outPerm[3]);
             }
         }
     }
 
     private unsafe Vector256<byte> cardsToVec(Hand* hands)
     {
+        // TODO: replace this with Gather() in .NET 7
         Vector256<byte> vec;
 
         unsafe
@@ -105,38 +136,23 @@ public class CardsDeck
         return vec;
     }
 
-    private readonly byte[] output = new byte[256];
-
-    private unsafe void vecToCards(Vector256<byte> vec, Card* output)
+    private Vector256<byte> permToVec(byte[] upperPerm, byte[] lowerPerm)
     {
-        var vecAsUlong = vec.AsUInt64();
-        ulong v1 = vecAsUlong.GetElement(0);
-        ulong v2 = vecAsUlong.GetElement(1);
-        ulong v3 = vecAsUlong.GetElement(2);
-        ulong v4 = vecAsUlong.GetElement(3);
-
-        unsafe
-        {
-            ulong* pul = (ulong*)output;
-            *(pul++) = v1;
-            *(pul++) = v2;
-            *(pul++) = v3;
-            *(pul++) = v4;
-        }
-    }
-
-    private Vector256<byte> permToVec(byte[] perm)
-    {
+        // TODO: replace this with Gather() in .NET 7
         Vector256<byte> vec;
 
         unsafe
         {
-            fixed (byte* p = &perm[0])
+            fixed (byte* up = &upperPerm[0])
             {
-                ulong* pul = (ulong*)p;
-                var vecAsUlong = Vector256.Create(
-                    pul[0], pul[1], pul[2], pul[3]);
-                vec = vecAsUlong.AsByte();
+                fixed (byte* lp = &lowerPerm[0])
+                {
+                    ulong* up_u64 = (ulong*)up;
+                    ulong* lp_u64 = (ulong*)lp;
+                    var vecAsUlong = Vector256.Create(
+                        up_u64[0], up_u64[1], lp_u64[1], lp_u64[2]);
+                    vec = vecAsUlong.AsByte();
+                }
             }
         }
 
@@ -163,6 +179,8 @@ public class EqualDistPermutator
 
     public byte[] NextPermutation()
     {
+        // TODO: find an intrinsic for doing this
+
         for (int i = 0; i < numItems; i++)
         {
             int j = rng.Next(i, numItems);
