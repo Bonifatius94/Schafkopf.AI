@@ -2,29 +2,22 @@ namespace Schafkopf.Lib;
 
 public interface IDrawValidator
 {
-    bool IsValid(GameCall call, Card cardPlayed, Turn currentTurn, Hand playerHand);
+    bool CanPlayCard(GameCall call, Card cardPlayed, Turn currentTurn, Hand playerHand);
 }
 
-public class DrawValidatorFactory
+public class DrawValidator : IDrawValidator
 {
-    private static readonly Dictionary<GameMode, IDrawValidator> validators =
-        new Dictionary<GameMode, IDrawValidator>() {
-            { GameMode.Sauspiel, new SauspielDrawValidator() },
-            { GameMode.Wenz, new WenzOrSoloDrawValidator() },
-            { GameMode.Solo, new WenzOrSoloDrawValidator() },
-        };
-
-    public IDrawValidator Create(GameMode mode)
-        => validators[mode];
-}
-
-public class SauspielDrawValidator : IDrawValidator
-{
-    public bool IsValid(GameCall call, Card cardPlayed, Turn currentTurn, Hand playerHand)
+    public bool CanPlayCard(GameCall call, Card cardPlayed, Turn currentTurn, Hand playerHand)
     {
-        if (call.Mode != GameMode.Sauspiel)
-            throw new InvalidOperationException("Can only handle Sauspiel game mode!");
+        if (call.Mode == GameMode.Solo || call.Mode == GameMode.Wenz)
+            return validateSoloOrWenz(call, cardPlayed, currentTurn, playerHand);
+        else if (call.Mode == GameMode.Sauspiel)
+            return validateSauspiel(call, cardPlayed, currentTurn, playerHand);
+        throw new NotSupportedException($"Game mode {call.Mode} is currently not supported!");
+    }
 
+    public bool validateSauspiel(GameCall call, Card cardPlayed, Turn currentTurn, Hand playerHand)
+    {
         bool kommtRaus = currentTurn.CardsCount == 0;
         bool darfNichtUntenDurch = kommtRaus && playerHand.HasCard(call.GsuchteSau)
             && playerHand.FarbeCount(call.GsuchteSau.Color) < 4;
@@ -49,15 +42,9 @@ public class SauspielDrawValidator : IDrawValidator
 
         return true;
     }
-}
 
-public class WenzOrSoloDrawValidator : IDrawValidator
-{
-    public bool IsValid(GameCall call, Card cardPlayed, Turn currentTurn, Hand playerHand)
+    private bool validateSoloOrWenz(GameCall call, Card cardPlayed, Turn currentTurn, Hand playerHand)
     {
-        if (call.Mode != GameMode.Wenz && call.Mode != GameMode.Solo)
-            throw new InvalidOperationException("Can only handle Wenz or Solo game mode!");
-
         bool kommtRaus = currentTurn.CardsCount == 0;
         if (kommtRaus)
             return true;

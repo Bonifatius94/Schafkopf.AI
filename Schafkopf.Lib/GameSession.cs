@@ -28,7 +28,7 @@ public class GameSession
         var initialHands = Enumerable.Range(0, 4)
             .Select(i => (i, deck.HandOfPlayerWithMeta(i, call)));
         var history = new GameHistory(call, initialHands.ToList());
-        var validator = new DrawValidatorFactory().Create(call.Mode);
+        var validator = new DrawValidator();
         int kommtRaus = table.FirstDrawingPlayerId;
 
         foreach (int round in Enumerable.Range(0, 8))
@@ -44,7 +44,7 @@ public class GameSession
                 while (true)
                 {
                     card = player.ChooseCard(turn);
-                    bool valid = !validator.IsValid(call, card, turn, player.Hand);
+                    bool valid = !validator.CanPlayCard(call, card, turn, player.Hand);
                     if (valid) break;
                     player.OnInvalidCardPicked(card);
                 }
