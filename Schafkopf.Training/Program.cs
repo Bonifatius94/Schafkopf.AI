@@ -8,12 +8,15 @@ var table = new GameTable(
     new RandomAgent());
 var session = new GameSession(table, deck);
 
-var call = GameCall.Sauspiel(0, deck, CardColor.Schell);
+var gsuchteFarbe = CardColor.Schell;
+int partnerId = GameCall.FindSauspielPartner(deck, gsuchteFarbe);
+var call = GameCall.Sauspiel(0, partnerId, gsuchteFarbe);
 var callValidator = new GameCallValidator();
 while (!callValidator.IsValidCall(call, deck))
 {
     deck.Shuffle();
-    call = GameCall.Sauspiel(0, deck, CardColor.Schell);
+    partnerId = GameCall.FindSauspielPartner(deck, gsuchteFarbe);
+    call = GameCall.Sauspiel(0, partnerId, gsuchteFarbe);
 }
 
 var history = session.PlayGameUntilEnd(call);

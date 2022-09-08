@@ -117,7 +117,7 @@ public class SauspielTrumpfCardOrderTest
         int playerId = rng.Next(0, 4);
         var gsuchteSau = (CardColor)rng.Next(0, 4);
         var deck = new CardsDeck();
-        return GameCall.Sauspiel(playerId, deck, gsuchteSau);
+        return GameCall.Sauspiel(playerId, playerId + 1, gsuchteSau);
     }
 
     #endregion Init

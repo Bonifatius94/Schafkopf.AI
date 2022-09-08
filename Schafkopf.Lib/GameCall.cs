@@ -32,15 +32,14 @@ public class GameCall
 
     private GameCall(
         byte callingPlayerId,
-        CardsDeck deck,
+        byte partnerPlayerId,
         CardColor gsuchteSau)
     {
         Mode = GameMode.Sauspiel;
         Trumpf = CardColor.Herz;
         CallingPlayerId = callingPlayerId;
         GsuchteSau = new Card(CardType.Sau, gsuchteSau);
-        PartnerPlayerId = (byte)Enumerable.Range(0, 4)
-            .First(i => deck.HandOfPlayer(i).HasCard(GsuchteSau));
+        PartnerPlayerId = partnerPlayerId;
     }
 
     public static GameCall Weiter(int callingPlayerId)
@@ -48,15 +47,22 @@ public class GameCall
 
     public static GameCall Sauspiel(
             int callingPlayerId,
-            CardsDeck deck, // TODO: don't pass in the entire deck ...
+            int partnerPlayerId,
             CardColor gsuchteSau)
-        => new GameCall((byte)callingPlayerId, deck, gsuchteSau);
+        => new GameCall((byte)callingPlayerId, (byte)partnerPlayerId, gsuchteSau);
 
     public static GameCall Wenz(int callingPlayerId)
         => new GameCall((byte)callingPlayerId);
 
     public static GameCall Solo(int callingPlayerId, CardColor trumpf)
         => new GameCall((byte)callingPlayerId, trumpf);
+
+    public static int FindSauspielPartner(CardsDeck deck, CardColor gsuchte)
+    {
+        var gsuchteSau = new Card(CardType.Sau, gsuchte);
+        return (byte)Enumerable.Range(0, 4)
+            .First(i => deck.HandOfPlayer(i).HasCard(gsuchteSau));
+    }
 
     public GameMode Mode { get; private set; }
     public byte CallingPlayerId { get; private set; }
