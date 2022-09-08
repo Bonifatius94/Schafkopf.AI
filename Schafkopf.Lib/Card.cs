@@ -36,11 +36,11 @@ public readonly struct Card
 
     // info: this constructor just exists to outline the memory allocation;
     //       the meta-data is instanciated by the Hand struct with bitwise ops
-    public Card(CardType type, CardColor color, bool isInHand, bool isTrumpf)
+    public Card(CardType type, CardColor color, bool exists, bool isTrumpf)
     {
         Id = (byte)((byte)color
             | ((byte)type << 2)
-            | (isInHand ? EXISTING_FLAG : 0)
+            | (exists ? EXISTING_FLAG : 0)
             | (isTrumpf ? TRUMPF_FLAG : 0));
     }
 
@@ -52,7 +52,7 @@ public readonly struct Card
     public CardColor Color => (CardColor)(Id & 0x3);
 
     // optional meta-data parameters for game logic
-    public bool IsInHand => (Id & EXISTING_FLAG) > 0;
+    public bool Exists => (Id & EXISTING_FLAG) > 0;
     public bool IsTrumpf => (Id & TRUMPF_FLAG) > 0;
 
     #region Equality
