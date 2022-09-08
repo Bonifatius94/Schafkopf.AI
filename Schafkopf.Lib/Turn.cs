@@ -4,6 +4,27 @@ using System.Runtime.Intrinsics.X86;
 
 namespace Schafkopf.Lib;
 
+// public readonly struct TurnMetaData
+// {
+//     private const byte ALREADY_GSUCHT_FLAG = 0x04;
+//     private const byte FIRST_PLAYER_MASK = 0x03;
+
+//     public TurnMetaData(byte firstDrawingPlayerId, bool alreadyGsucht)
+//     {
+//         id = (byte)((firstDrawingPlayerId & 0x03)
+//             | ((alreadyGsucht ? 0x04 : 0x00)));
+//     }
+
+//     // TODO: think of other useful constructors
+
+//     private readonly byte id;
+
+//     public int FirstDrawingPlayerId
+//         => (id & FIRST_PLAYER_MASK);
+//     public bool AlreadyGsucht
+//         => (id & ALREADY_GSUCHT_FLAG) > 0;
+// }
+
 public readonly struct Turn
 {
     private const byte CARD_OFFSET = 8;
@@ -16,7 +37,7 @@ public readonly struct Turn
     private static readonly Card[] EMPTY_CARDS = new Card[4];
 
     #region Init
-    
+
     static Turn()
     {
         ulong cardCountMask = 0;
@@ -78,6 +99,7 @@ public readonly struct Turn
     public Card C3 => new Card((byte)((Id >> 16) & Card.CARD_MASK_WITH_META));
     public Card C4 => new Card((byte)((Id >> 24) & Card.CARD_MASK_WITH_META));
     public int FirstDrawingPlayerId => (int)((Id & FIRST_PLAYER_MASK) >> 32);
+    // TODO: add AlreadyGsucht flag
 
     public int CardsCount => BitOperations.PopCount(Id & EXISTING_BITMASK);
     public bool IsDone => CardsCount == 4;
