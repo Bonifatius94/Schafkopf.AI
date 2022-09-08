@@ -183,11 +183,11 @@ public class GameRulesTest
 
     [Theory]
     [InlineData(0, true)]
-    [InlineData(1, true)]
-    [InlineData(2, true)]
-    [InlineData(3, true)]
+    [InlineData(1, false)]
+    [InlineData(2, false)]
+    [InlineData(3, false)]
     [InlineData(4, false)]
-    public void Test_CanPlayAnyCardOfFarbe_WhenGsuchtIsAndKannUntenDurch(
+    public void Test_MustPlayGsuchteSau_WhenGsuchtIsAndKannUntenDurch(
         int indexOfCardToPlay, bool canPlayCard)
     {
         // TODO: parameterize gsuchte sau for testing all colors
@@ -201,7 +201,7 @@ public class GameRulesTest
         });
         hand = hand.CacheTrumpf(call.IsTrumpf);
         var turn = turnOfCards(new Card[] {
-            new Card(CardType.Sieben, CardColor.Schell, true, false)
+            new Card(CardType.Koenig, CardColor.Schell, true, false)
         });
 
         var cardToPlay = hand.Cards.ElementAt(indexOfCardToPlay);

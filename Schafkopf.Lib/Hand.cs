@@ -125,13 +125,13 @@ public readonly struct Hand
         => (cards & TRUMPF_BITMASK) > 0;
 
     public bool HasFarbe(CardColor farbe)
-        => indexOf((byte)farbe, 0x43) > 0;
+        => indexOf((byte)farbe, 0x43) >= 0;
         // info: trumpf bit not set and farbe same as parameter
 
     public int FarbeCount(CardColor farbe)
     {
-        byte cardQuery = (byte)farbe;
-        const byte cardMask = 0x43;
+        byte cardQuery = (byte)((byte)farbe | Card.EXISTING_FLAG);
+        const byte cardMask = 0x63;
 
         // vectorize the card query
         var broadQuery = Vector128.Create(cardQuery);

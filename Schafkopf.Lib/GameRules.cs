@@ -27,16 +27,16 @@ public class DrawValidator : IDrawValidator
         else if (kommtRaus)
             return true;
 
-        bool isTrumpfTurn = currentTurn.C1.IsTrumpf;
+        bool isTrumpfTurn = currentTurn.FirstCard.IsTrumpf;
         if (isTrumpfTurn && !cardPlayed.IsTrumpf && playerHand.HasTrumpf())
             return false;
 
         bool mussAngeben = !isTrumpfTurn &&
-            playerHand.HasFarbe(currentTurn.C1.Color);
-        if (mussAngeben && cardPlayed.Color != currentTurn.C1.Color)
+            playerHand.HasFarbe(currentTurn.FirstCard.Color);
+        if (mussAngeben && cardPlayed.Color != currentTurn.FirstCard.Color)
             return false;
 
-        bool gsuchtIs = mussAngeben && call.GsuchteSau.Color == currentTurn.C1.Color;
+        bool gsuchtIs = mussAngeben && call.GsuchteSau.Color == currentTurn.FirstCard.Color;
         if (gsuchtIs && cardPlayed.Type != CardType.Sau)
             return false;
 
@@ -49,13 +49,13 @@ public class DrawValidator : IDrawValidator
         if (kommtRaus)
             return true;
 
-        bool isTrumpfTurn = currentTurn.C1.IsTrumpf;
+        bool isTrumpfTurn = currentTurn.FirstCard.IsTrumpf;
         if (isTrumpfTurn && !cardPlayed.IsTrumpf && playerHand.HasTrumpf())
             return false;
 
         bool mussAngeben = !isTrumpfTurn &&
-            playerHand.HasFarbe(currentTurn.C1.Color);
-        if (mussAngeben && cardPlayed.Color != currentTurn.C1.Color)
+            playerHand.HasFarbe(currentTurn.FirstCard.Color);
+        if (mussAngeben && cardPlayed.Color != currentTurn.FirstCard.Color)
             return false;
 
         return true;

@@ -94,10 +94,15 @@ public readonly struct Turn
 
     private readonly ulong Id;
 
-    public Card C1 => new Card((byte)(Id & Card.CARD_MASK_WITH_META));
-    public Card C2 => new Card((byte)((Id >> 8) & Card.CARD_MASK_WITH_META));
-    public Card C3 => new Card((byte)((Id >> 16) & Card.CARD_MASK_WITH_META));
-    public Card C4 => new Card((byte)((Id >> 24) & Card.CARD_MASK_WITH_META));
+    private Card c1 => new Card((byte)(Id & Card.CARD_MASK_WITH_META));
+    private Card c2 => new Card((byte)((Id >> 8) & Card.CARD_MASK_WITH_META));
+    private Card c3 => new Card((byte)((Id >> 16) & Card.CARD_MASK_WITH_META));
+    private Card c4 => new Card((byte)((Id >> 24) & Card.CARD_MASK_WITH_META));
+
+    public Card FirstCard => new Card(
+        (byte)((Id >> (FirstDrawingPlayerId * CARD_OFFSET))
+            & Card.CARD_MASK_WITH_META));
+
     public int FirstDrawingPlayerId => (int)((Id & FIRST_PLAYER_MASK) >> 32);
     // TODO: add AlreadyGsucht flag
 
@@ -108,7 +113,7 @@ public readonly struct Turn
     {
         get
         {
-            var allCards = new Card[] { C1, C2, C3, C4 };
+            var allCards = new Card[] { c1, c2, c3, c4 };
             return Enumerable.Range(FirstDrawingPlayerId, 4)
                 .Select(i => allCards[i % 4])
                 .ToArray()[0..CardsCount];
