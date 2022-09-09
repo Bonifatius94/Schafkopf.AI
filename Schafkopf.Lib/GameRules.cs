@@ -1,11 +1,6 @@
 namespace Schafkopf.Lib;
 
-public interface IDrawValidator
-{
-    bool CanPlayCard(GameCall call, Card cardPlayed, Turn currentTurn, Hand playerHand);
-}
-
-public class DrawValidator : IDrawValidator
+public class DrawValidator
 {
     public bool CanPlayCard(GameCall call, Card cardPlayed, Turn currentTurn, Hand playerHand)
     {
@@ -20,8 +15,8 @@ public class DrawValidator : IDrawValidator
     {
         bool kommtRaus = currentTurn.CardsCount == 0;
         bool darfNichtUntenDurch = kommtRaus && playerHand.HasCard(call.GsuchteSau)
-            && playerHand.FarbeCount(call.GsuchteSau.Color) < 4;
-        if (darfNichtUntenDurch && cardPlayed.Color == call.GsuchteSau.Color
+            && playerHand.FarbeCount(call.GsuchteFarbe) < 4;
+        if (darfNichtUntenDurch && cardPlayed.Color == call.GsuchteFarbe
                 && cardPlayed.Type != CardType.Sau)
             return false;
         else if (kommtRaus)
@@ -36,7 +31,7 @@ public class DrawValidator : IDrawValidator
         if (mussAngeben && cardPlayed.Color != currentTurn.FirstCard.Color)
             return false;
 
-        bool gsuchtIs = mussAngeben && call.GsuchteSau.Color == currentTurn.FirstCard.Color;
+        bool gsuchtIs = mussAngeben && call.GsuchteFarbe == currentTurn.FirstCard.Color;
         if (gsuchtIs && cardPlayed.Type != CardType.Sau)
             return false;
 

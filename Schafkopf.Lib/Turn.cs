@@ -4,26 +4,44 @@ using System.Runtime.Intrinsics.X86;
 
 namespace Schafkopf.Lib;
 
-// public readonly struct TurnMetaData
-// {
-//     private const byte ALREADY_GSUCHT_FLAG = 0x04;
-//     private const byte FIRST_PLAYER_MASK = 0x03;
+public readonly struct TurnMetaData
+{
+    private const byte FIRST_PLAYER_MASK = 0x03;
+    private const byte IS_SAUSPIEL_FLAG = 0x04;
+    private const byte ALREADY_GSUCHT_FLAG = 0x08;
+    private const byte GSUCHTE_FARBE_MASK = 0x30;
 
-//     public TurnMetaData(byte firstDrawingPlayerId, bool alreadyGsucht)
-//     {
-//         id = (byte)((firstDrawingPlayerId & 0x03)
-//             | ((alreadyGsucht ? 0x04 : 0x00)));
-//     }
+    #region Init
 
-//     // TODO: think of other useful constructors
+    public TurnMetaData(GameCall call, int firstDrawingPlayerId)
+    {
+        id = (uint)(firstDrawingPlayerId & 0x03);
+        // TODO: append the entire GameCall (only 16 bits of storage)
+    }
 
-//     private readonly byte id;
+    public static TurnMetaData NewMeta(
+        GameCall call,
+        int firstDrawingPlayerId)
+    {
+        throw new NotImplementedException();
+    }
 
-//     public int FirstDrawingPlayerId
-//         => (id & FIRST_PLAYER_MASK);
-//     public bool AlreadyGsucht
-//         => (id & ALREADY_GSUCHT_FLAG) > 0;
-// }
+    public static TurnMetaData UpdateMeta(TurnMetaData last)
+    {
+        throw new NotImplementedException();
+    }
+
+    #endregion Init
+
+    private readonly uint id;
+
+    public int FirstDrawingPlayerId
+        => (int)(id & FIRST_PLAYER_MASK);
+    public bool AlreadyGsucht
+        => (id & ALREADY_GSUCHT_FLAG) > 0;
+
+    // TODO: add getters for GameCall properties
+}
 
 public readonly struct Turn
 {
