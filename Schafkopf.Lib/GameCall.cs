@@ -5,81 +5,158 @@ namespace Schafkopf.Lib;
 
 public enum GameMode
 {
+    Weiter,
     Sauspiel,
     Wenz,
-    Solo,
-    Weiter
+    Solo
 }
 
-// TODO: make this a readonly struct with 16 bit storage
-public class GameCall
+public readonly struct GameCall
 {
-    private GameCall()
-    {
-        Mode = GameMode.Weiter;
-    }
-
-    private GameCall(byte callingPlayerId)
-    {
-        Mode = GameMode.Wenz;
-        CallingPlayerId = callingPlayerId;
-    }
+    #region Init
 
     private GameCall(
-        byte callingPlayerId,
-        CardColor trumpf)
+        GameMode mode,
+        int callingPlayerId,
+        int partnerPlayerId,
+        CardColor trumpf,
+        CardColor gsuchteFarbe,
+        bool isTout)
     {
-        Mode = GameMode.Solo;
-        Trumpf = trumpf;
-        CallingPlayerId = callingPlayerId;
+        Id = (ushort)(
+            (isTout ? 1 : 0) |
+            ((int)mode << 1) |
+            (callingPlayerId << 3) |
+            (partnerPlayerId << 5) |
+            ((int)trumpf << 7) |
+            ((int)gsuchteFarbe << 9)
+        );
     }
 
-    private GameCall(
-        byte callingPlayerId,
-        byte partnerPlayerId,
-        CardColor gsuchteFarbe)
-    {
-        Mode = GameMode.Sauspiel;
-        Trumpf = CardColor.Herz;
-        CallingPlayerId = callingPlayerId;
-        GsuchteFarbe = gsuchteFarbe;
-        PartnerPlayerId = partnerPlayerId;
-    }
-
-    public static GameCall Weiter(int callingPlayerId)
-        => new GameCall();
+    public static GameCall Weiter()
+        => new GameCall(
+            GameMode.Weiter, 0, 0,
+            CardColor.Schell, CardColor.Schell, false);
 
     public static GameCall Sauspiel(
             int callingPlayerId,
             int partnerPlayerId,
             CardColor gsuchteFarbe)
-        => new GameCall((byte)callingPlayerId, (byte)partnerPlayerId, gsuchteFarbe);
+        => new GameCall(
+            GameMode.Sauspiel, callingPlayerId, partnerPlayerId,
+            CardColor.Herz, gsuchteFarbe, false);
 
-    public static GameCall Wenz(int callingPlayerId)
-        => new GameCall((byte)callingPlayerId);
+    public static GameCall Wenz(
+            int callingPlayerId,
+            bool isTout = false)
+        => new GameCall(
+            GameMode.Wenz, callingPlayerId, 0,
+            CardColor.Schell, CardColor.Schell, isTout);
 
-    public static GameCall Solo(int callingPlayerId, CardColor trumpf)
-        => new GameCall((byte)callingPlayerId, trumpf);
+    public static GameCall Solo(
+            int callingPlayerId,
+            CardColor trumpf,
+            bool isTout = false)
+        => new GameCall(
+            GameMode.Solo, callingPlayerId, 0,
+            trumpf, CardColor.Schell, isTout);
 
     public static int FindSauspielPartner(CardsDeck deck, CardColor gsuchte)
     {
         var gsuchteSau = new Card(CardType.Sau, gsuchte);
-        return (byte)Enumerable.Range(0, 4)
+        return Enumerable.Range(0, 4)
             .First(i => deck.HandOfPlayer(i).HasCard(gsuchteSau));
     }
 
-    // TODO: represent this data as uint16 readonly struct
-    //       -> append it to every turn as meta-data
-    public GameMode Mode { get; private set; } // 2 bits
-    public byte CallingPlayerId { get; private set; } // 2 bits
-    public byte PartnerPlayerId { get; private set; } // 2 bits
-    public CardColor Trumpf { get; private set; } // 2 bits
-    public CardColor GsuchteFarbe { get; private set; } // 2 bits
+    #endregion Init
+
+    public readonly ushort Id;
+
+    public bool IsTout => (Id  & 0x01) > 0;
+    public GameMode Mode => (GameMode)((Id & 0x06) >> 1);
+    public byte CallingPlayerId => (byte)((Id & 0x18) >> 3);
+    public byte PartnerPlayerId => (byte)((Id & 0x60) >> 5);
+    public CardColor Trumpf => (CardColor)((Id & 0x180) >> 7);
+    public CardColor GsuchteFarbe => (CardColor)((Id & 0x600) >> 9);
 
     public Card GsuchteSau => new Card(CardType.Sau, GsuchteFarbe);
 
-    public Func<Card, bool> IsTrumpf =>
-        (card) => new TrumpfEval(Mode, Trumpf).IsTrumpf(card);
+    #region Trumpf
+
+    private static readonly Dictionary<(GameMode, CardColor), TrumpfEval> evalCache =
+        new Dictionary<(GameMode, CardColor), TrumpfEval>() {
+            { (GameMode.Sauspiel, CardColor.Herz),
+                new TrumpfEval(GameMode.Sauspiel, CardColor.Herz) },
+            { (GameMode.Wenz, CardColor.Schell),
+                new TrumpfEval(GameMode.Wenz) },
+            { (GameMode.Solo, CardColor.Schell),
+                new TrumpfEval(GameMode.Solo, CardColor.Schell) },
+            { (GameMode.Solo, CardColor.Herz),
+                new TrumpfEval(GameMode.Solo, CardColor.Herz) },
+            { (GameMode.Solo, CardColor.Gras),
+                new TrumpfEval(GameMode.Solo, CardColor.Gras) },
+            { (GameMode.Solo, CardColor.Eichel),
+                new TrumpfEval(GameMode.Solo, CardColor.Eichel) },
+        };
+
+    public bool IsTrumpf(Card card)
+        => evalCache[(Mode, Trumpf)].IsTrumpf(card);
+
+    #endregion Trumpf
+}
+
+public class GameCallComparer : IComparer<GameCall>
+{
+    public int Compare(GameCall x, GameCall y)
+    {
+        int modeDiff = (int)x.Mode - (int)y.Mode;
+        if (modeDiff != 0)
+            return modeDiff;
+
+        if (x.Mode == GameMode.Sauspiel)
+            return 0;
+
+        int xTout = x.IsTout ? 1 : 0;
+        int yTout = y.IsTout ? 1 : 0;
+        return xTout - yTout;
+    }
+}
+
+public class GameCallGenerator
+{
+    private static readonly GameCallComparer callComp = new GameCallComparer();
+
+    public IEnumerable<GameCall> AllPossibleCalls(
+        int playerId, CardsDeck deck, GameCall last)
+    {
+        var hand = deck.HandOfPlayer(playerId);
+        var sauspielColors = new List<CardColor>() {
+            CardColor.Schell, CardColor.Gras, CardColor.Eichel };
+        var possibleSauspielColors = sauspielColors
+            .Where(c => !hand.HasCard(new Card(CardType.Sau, c))
+                        && hand.HasFarbe(c));
+
+        var sauspiele = possibleSauspielColors
+            .Select(color => GameCall.Sauspiel(
+                playerId,
+                GameCall.FindSauspielPartner(deck, color),
+                color));
+
+        var touts = new List<bool>() { true, false };
+        var wenzen = touts.Select(tout => GameCall.Wenz(playerId, tout));
+
+        var soloColors = new List<CardColor>() {
+            CardColor.Schell, CardColor.Herz,
+            CardColor.Gras, CardColor.Eichel };
+
+        var soli = touts.SelectMany(tout =>
+            soloColors.Select(c => GameCall.Solo(playerId, c, tout)));
+
+        var allGameCalls = sauspiele.Union(wenzen).Union(soli);
+        var possibleCalls = last.Mode == GameMode.Weiter ? allGameCalls
+            : allGameCalls.Where(call => callComp.Compare(call, last) > 0);
+        return possibleCalls.Append(GameCall.Weiter()).ToList();
+    }
 }
 
 public class TrumpfEval
@@ -134,11 +211,10 @@ public class TrumpfEval
         Vector128.Create((byte)0);
     private static readonly Vector128<byte> WENZ_MODE =
         Vector128.Create((byte)GameMode.Wenz);
-    // private static readonly Vector128<byte> CARD_MASK =
-    //     Vector128.Create((byte)0x1F);
 
     private static readonly Vector128<byte>[] MODE_MASKS =
         new Vector128<byte>[] {
+            Vector128.Create((byte)GameMode.Weiter),
             Vector128.Create((byte)GameMode.Sauspiel),
             Vector128.Create((byte)GameMode.Wenz),
             Vector128.Create((byte)GameMode.Solo),
