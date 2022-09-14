@@ -19,7 +19,7 @@ public class TurnAddCardTest
     [MemberData(nameof(PlayerIds))]
     public void Test_TurnIsEmpty_AfterInitialization(int playerId)
     {
-        var turn = Turn.NewTurn((byte)playerId);
+        var turn = Turn.InitFirstTurn((byte)playerId, GameCall.Wenz(playerId));
         turn.FirstDrawingPlayerId.Should().Be(playerId);
         turn.CardsCount.Should().Be(0);
         turn.AllCards.Should().BeEmpty();
@@ -30,7 +30,7 @@ public class TurnAddCardTest
     public void Test_ShouldYieldTurnWithCard_WhenApplyingNextCard(
         int playerId, Card cardToApply)
     {
-        var turn = Turn.NewTurn((byte)playerId);
+        var turn = Turn.InitFirstTurn((byte)playerId, GameCall.Wenz(playerId));
         var turnWithCardApplied = turn.NextCard(cardToApply);
 
         turnWithCardApplied.AllCards.Should().Contain(cardToApply);
@@ -47,7 +47,7 @@ public class TurnAddCardTest
         var cardsToApply = permGen.NextPermutation().Take(4)
             .Select(i => (Card)allCards.ElementAt(i)[0]).ToList();
 
-        var turn = Turn.NewTurn((byte)playerId);
+        var turn = Turn.InitFirstTurn((byte)playerId, GameCall.Wenz(playerId));
 
         foreach (var cardToApply in cardsToApply)
             turn = turn.NextCard(cardToApply);
@@ -63,7 +63,7 @@ public class TurnAugenCountTest
     [Fact]
     public void Test_HasCorrectAugen_WhenInInitialState()
     {
-        var turn = Turn.NewTurn(0);
+        var turn = Turn.InitFirstTurn(0, GameCall.Wenz(0));
         turn.Augen.Should().Be(0);
     }
 
@@ -146,7 +146,7 @@ public class TurnAugenCountTest
     public void Test_HasCorrectAugen_WhenCardsInserted(
         List<Card> cardsToApply, int expAugen)
     {
-        var turn = Turn.NewTurn(0);
+        var turn = Turn.InitFirstTurn(0, GameCall.Wenz(0));
         foreach (var card in cardsToApply)
             turn = turn.NextCard(card);
 
@@ -227,13 +227,13 @@ public class TurnWinnerTest
     {
         var deck = new CardsDeck();
         var cardsWithMeta = deck.AllCardsWithMeta(call).ToList();
-        var turn = Turn.NewTurn((byte)beginningPlayer);
+        var turn = Turn.InitFirstTurn((byte)beginningPlayer, GameCall.Wenz(0));
         var cardsToApplyWithMeta = cardsToApply
             .Select(x => cardsWithMeta.First(y => y == x));
         foreach (var card in cardsToApplyWithMeta)
             turn = turn.NextCard(card);
 
-        turn.WinnerId(call).Should().Be(expWinner);
+        turn.WinnerId.Should().Be(expWinner);
     }
 
     private static IEnumerable<Card> AllCards
@@ -245,17 +245,5 @@ public class TurnWinnerTest
         Enumerable.Range(0, 4).Select(i => AllCards.Take(i).ToList())
             .Select(x => new object[] { x });
 
-    [Theory]
-    [MemberData(nameof(TooLessCards))]
-    public void Test_ThrowsException_WhenTryingToEvaluateWinnerBeforeTurnIsOver(
-        List<Card> cardsToApply)
-    {
-        var call = GameCall.Solo(0, CardColor.Schell);
-        var turn = Turn.NewTurn(0);
-        foreach (var card in cardsToApply)
-            turn = turn.NextCard(card);
-
-        turn.Invoking(x => x.WinnerId(call))
-            .Should().Throw<InvalidOperationException>();
-    }
+    // TODO: add test coverage for Turn.InitNextTurn(Turn last)
 }

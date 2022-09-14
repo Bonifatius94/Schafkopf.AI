@@ -7,48 +7,54 @@ namespace Schafkopf.Lib;
 public readonly struct TurnMetaData
 {
     private const byte FIRST_PLAYER_MASK = 0x03;
-    private const byte IS_SAUSPIEL_FLAG = 0x04;
-    private const byte ALREADY_GSUCHT_FLAG = 0x08;
-    private const byte GSUCHTE_FARBE_MASK = 0x30;
+    private const byte ALREADY_GSUCHT_FLAG = 0x04;
 
     #region Init
 
-    public TurnMetaData(GameCall call, int firstDrawingPlayerId)
+    public TurnMetaData(
+        GameCall call,
+        int firstDrawingPlayerId,
+        bool alreadyGsucht = false)
     {
-        id = (uint)(firstDrawingPlayerId & 0x03);
-        // TODO: append the entire GameCall (only 16 bits of storage)
+        Id = (ushort)((firstDrawingPlayerId & 0x03)
+            | (alreadyGsucht ? ALREADY_GSUCHT_FLAG : 0x00));
+        Call = call;
+    }
+
+    public TurnMetaData(GameCall call, ushort id)
+    {
+        Id = id;
+        Call = call;
     }
 
     public static TurnMetaData NewMeta(
-        GameCall call,
-        int firstDrawingPlayerId)
-    {
-        throw new NotImplementedException();
-    }
+            GameCall call,
+            int firstDrawingPlayerId)
+        => new TurnMetaData(call, firstDrawingPlayerId);
 
-    public static TurnMetaData UpdateMeta(TurnMetaData last)
+    public static TurnMetaData UpdateMeta(
+            TurnMetaData last, bool alreadyGsucht)
     {
-        throw new NotImplementedException();
+        ushort id = (ushort)(last.Id |
+            (alreadyGsucht ? ALREADY_GSUCHT_FLAG : 0x00));
+        return new TurnMetaData(last.Call, id);
     }
 
     #endregion Init
 
-    private readonly uint id;
+    public readonly ushort Id;
+    public readonly GameCall Call;
 
     public int FirstDrawingPlayerId
-        => (int)(id & FIRST_PLAYER_MASK);
+        => (int)(Id & FIRST_PLAYER_MASK);
     public bool AlreadyGsucht
-        => (id & ALREADY_GSUCHT_FLAG) > 0;
-
-    // TODO: add getters for GameCall properties
+        => (Id & ALREADY_GSUCHT_FLAG) > 0;
 }
 
 public readonly struct Turn
 {
     private const byte CARD_OFFSET = 8;
-    private const ulong CARDS_MASK = 0xFFFFFFFF;
-    private const ulong FIRST_PLAYER_MASK = 0x300000000;
-    private static readonly ulong EXISTING_BITMASK;
+    private static readonly uint EXISTING_BITMASK;
     private static readonly Vector128<byte> ZERO = Vector128.Create((byte)0);
     private static readonly Vector256<short> MINUS_ONE_16 = Vector256.Create((short)-1);
     private static readonly Vector256<ulong> MAXVALUE = Vector256.Create(0xFFFFFFFFFFFFFFFF);
@@ -58,44 +64,42 @@ public readonly struct Turn
 
     static Turn()
     {
-        ulong cardCountMask = 0;
+        uint cardCountMask = 0;
         for (byte i = 0; i < 8; i++)
-            cardCountMask |= (ulong)Card.EXISTING_FLAG << (i * CARD_OFFSET);
+            cardCountMask |= (uint)Card.EXISTING_FLAG << (i * CARD_OFFSET);
         EXISTING_BITMASK = cardCountMask;
     }
 
-    private Turn(byte firstDrawingPlayerId)
-       : this(firstDrawingPlayerId, EMPTY_CARDS) { }
+    private Turn(TurnMetaData meta, ReadOnlySpan<Card> cards)
+    {
+        Meta = meta;
+        unsafe
+        {
+            fixed (Card* cp = &cards[0])
+                Cards = *((uint*)cp);
+        }
+    }
 
-    private Turn(byte firstDrawingPlayerId, ReadOnlySpan<Card> cards)
+    private Turn(uint cards_u32, TurnMetaData meta)
+    {
+        Cards = cards_u32;
+        Meta = meta;
+    }
+
+    #endregion Init
+
+    public static Turn InitFirstTurn(int firstDrawingPlayerId, GameCall call)
     {
         if (firstDrawingPlayerId < 0 || firstDrawingPlayerId > 3)
             throw new ArgumentException(
                 $"Invalid player id {firstDrawingPlayerId}, needs to be within [0, 3]");
-        if (cards.Length > 4)
-            throw new ArgumentException(
-                "Too many cards! A turn only consists of max. 4 cards.");
 
-        ulong id = (ulong)firstDrawingPlayerId << 32;
-        unsafe
-        {
-            fixed (Card* cp = &cards[0])
-            {
-                uint* cp_u32 = (uint*)cp;
-                id |= *cp_u32;
-            }
-        }
-
-        Id = id;
+        var meta = new TurnMetaData(call, firstDrawingPlayerId);
+        return new Turn(meta, EMPTY_CARDS);
     }
 
-    private Turn(ulong id) => Id = id;
-
-    #endregion Init
-
-    // TODO: think of putting the game mode as argument and store it in Id
-    public static Turn NewTurn(byte firstDrawingPlayerId)
-        => new Turn(firstDrawingPlayerId);
+    public static Turn InitNextTurn(Turn last)
+        => new Turn(last.Meta, EMPTY_CARDS);
 
     public Turn NextCard(Card card)
     {
@@ -103,28 +107,33 @@ public readonly struct Turn
             throw new InvalidOperationException(
                 "Cannot add another card. The turn is already over!");
 
-        int playerId = (FirstDrawingPlayerId + CardsCount) % 4;
-        ulong newId = (Id & CARDS_MASK)
-            | ((ulong)card.Id << (playerId * CARD_OFFSET))
-            | (Id & FIRST_PLAYER_MASK);
-        return new Turn(newId);
+        int playerId = (Meta.FirstDrawingPlayerId + CardsCount) % 4;
+        uint newId = Cards | ((uint)card.Id << (playerId * CARD_OFFSET));
+        bool alreadyGsucht = Meta.AlreadyGsucht
+            || AllCards.Contains(Meta.Call.GsuchteSau);
+        TurnMetaData newMeta = new TurnMetaData(
+            Meta.Call, FirstDrawingPlayerId, alreadyGsucht);
+        return new Turn(newId, newMeta);
     }
 
-    private readonly ulong Id;
+    private readonly uint Cards;
+    private readonly TurnMetaData Meta;
 
-    private Card c1 => new Card((byte)(Id & Card.CARD_MASK_WITH_META));
-    private Card c2 => new Card((byte)((Id >> 8) & Card.CARD_MASK_WITH_META));
-    private Card c3 => new Card((byte)((Id >> 16) & Card.CARD_MASK_WITH_META));
-    private Card c4 => new Card((byte)((Id >> 24) & Card.CARD_MASK_WITH_META));
+    private Card c1 => new Card((byte)(Cards & Card.CARD_MASK_WITH_META));
+    private Card c2 => new Card((byte)((Cards >> 8) & Card.CARD_MASK_WITH_META));
+    private Card c3 => new Card((byte)((Cards >> 16) & Card.CARD_MASK_WITH_META));
+    private Card c4 => new Card((byte)((Cards >> 24) & Card.CARD_MASK_WITH_META));
+
+    public int FirstDrawingPlayerId => Meta.FirstDrawingPlayerId;
 
     public Card FirstCard => new Card(
-        (byte)((Id >> (FirstDrawingPlayerId * CARD_OFFSET))
+        (byte)((Cards >> (Meta.FirstDrawingPlayerId * CARD_OFFSET))
             & Card.CARD_MASK_WITH_META));
 
-    public int FirstDrawingPlayerId => (int)((Id & FIRST_PLAYER_MASK) >> 32);
+    // public int FirstDrawingPlayerId => (int)((Id & FIRST_PLAYER_MASK) >> 32);
     // TODO: add AlreadyGsucht flag
 
-    public int CardsCount => BitOperations.PopCount(Id & EXISTING_BITMASK);
+    public int CardsCount => BitOperations.PopCount(Cards & EXISTING_BITMASK);
     public bool IsDone => CardsCount == 4;
 
     public Card[] AllCards
@@ -132,7 +141,7 @@ public readonly struct Turn
         get
         {
             var allCards = new Card[] { c1, c2, c3, c4 };
-            return Enumerable.Range(FirstDrawingPlayerId, 4)
+            return Enumerable.Range(Meta.FirstDrawingPlayerId, 4)
                 .Select(i => allCards[i % 4])
                 .ToArray()[0..CardsCount];
         }
@@ -156,12 +165,11 @@ public readonly struct Turn
             // TODO: implement this with AVX2 256-bit vector ops
             //         -> should be even more efficient
 
-            uint cards = (uint)(Id & CARDS_MASK);
-            return cardCountByType(cards, CardType.Unter) * 2
-                + cardCountByType(cards, CardType.Ober) * 3
-                + cardCountByType(cards, CardType.Koenig) * 4
-                + cardCountByType(cards, CardType.Zehn) * 10
-                + cardCountByType(cards, CardType.Sau) * 11;
+            return cardCountByType(Cards, CardType.Unter) * 2
+                + cardCountByType(Cards, CardType.Ober) * 3
+                + cardCountByType(Cards, CardType.Koenig) * 4
+                + cardCountByType(Cards, CardType.Zehn) * 10
+                + cardCountByType(Cards, CardType.Sau) * 11;
         }
     }
 
@@ -169,17 +177,24 @@ public readonly struct Turn
 
     #region Winner
 
-    // TODO: remove the call parameter by caching the game mode in Id
-    public int WinnerId(GameCall call)
-    {
-        if (CardsCount < 4)
-            throw new InvalidOperationException(
-                "Can only evaluate winner when turn is over!");
+    // note: this only yields valid results when the turn is over
+    public int WinnerId => winnerId();
 
+    private static readonly CardComparer[] cardComps =
+        new CardComparer[] {
+            new CardComparer(GameMode.Weiter),
+            new CardComparer(GameMode.Sauspiel),
+            new CardComparer(GameMode.Wenz),
+            new CardComparer(GameMode.Solo),
+        };
+
+    private int winnerId()
+    {
         // ignore farbe when other farbe played as first card
         // -> make ignored cards "schell sieben" -> lose comparison
-        uint cards_u32 = (uint)(Id & CARDS_MASK);
-        byte sameFarbeQuery = (byte)((Id >> (FirstDrawingPlayerId * CARD_OFFSET)) & 0x03);
+        int firstPlayerId = Meta.FirstDrawingPlayerId;
+        uint cards_u32 = Cards;
+        byte sameFarbeQuery = (byte)((Cards >> (firstPlayerId * CARD_OFFSET)) & 0x03);
         const byte sameFarbeMask = 0x03;
         uint sameFarbeMatches = matchMask(cards_u32, sameFarbeQuery, sameFarbeMask);
         uint trumpfMatches = matchMask(cards_u32, Card.TRUMPF_FLAG, Card.TRUMPF_FLAG);
@@ -189,13 +204,10 @@ public readonly struct Turn
         unsafe
         {
             fixed (Card* cp = &cards[0])
-            {
-                var cp_u32 = (uint*)cp;
-                *cp_u32 = cards_u32;
-            }
+                *((uint*)cp) = cards_u32;
         }
 
-        var comparer = new CardComparer(call.Mode);
+        var comparer = cardComps[(int)Meta.Call.Mode];
         short cmp_01 = (short)comparer.Compare(cards[0], cards[1]);
         short cmp_02 = (short)comparer.Compare(cards[0], cards[2]);
         short cmp_03 = (short)comparer.Compare(cards[0], cards[3]);
@@ -228,12 +240,12 @@ public readonly struct Turn
         // when first player's bit is set, always pick first player
         // -> this implements first player 'hat Recht' rule
         var countsVec = Vector128.Create((byte)counts);
-        var firstPlayerVec = Vector128.Create((byte)(1 << FirstDrawingPlayerId));
+        var firstPlayerVec = Vector128.Create((byte)(1 << firstPlayerId));
         ulong firstPlayerHatRechtMask = Sse2.CompareEqual(
                 Sse2.Xor(Sse2.And(countsVec, firstPlayerVec), firstPlayerVec), ZERO)
             .AsUInt64().GetElement(0);
 
-        return (int)((firstPlayerHatRechtMask & (ulong)FirstDrawingPlayerId)
+        return (int)((firstPlayerHatRechtMask & (ulong)firstPlayerId)
             | (~firstPlayerHatRechtMask & winnerId));
     }
 
@@ -253,4 +265,7 @@ public readonly struct Turn
     }
 
     #endregion Matching
+
+    public override string ToString()
+        => $"{string.Join(", ", AllCards.Select(x => x.ToString()))}";
 }

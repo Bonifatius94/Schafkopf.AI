@@ -6,9 +6,9 @@ public class GameRulesTest
 {
     #region Init
 
-    private Turn turnOfCards(IEnumerable<Card> cards)
+    private Turn turnOfCards(GameCall call, IEnumerable<Card> cards)
     {
-        var turn = Turn.NewTurn(0);
+        var turn = Turn.InitFirstTurn(0, call);
         foreach (var card in cards)
             turn = turn.NextCard(card);
         return turn;
@@ -36,7 +36,7 @@ public class GameRulesTest
             new Card(CardType.Ober, CardColor.Gras),
         });
         hand = hand.CacheTrumpf(call.IsTrumpf);
-        var turn = Turn.NewTurn(0);
+        var turn = Turn.InitFirstTurn(0, call);
 
         var cardToPlay = hand.Cards.ElementAt(indexOfCardToPlay);
         drawEval.CanPlayCard(call, cardToPlay, turn, hand)
@@ -61,7 +61,7 @@ public class GameRulesTest
             new Card(CardType.Ober, CardColor.Gras),
         });
         hand = hand.CacheTrumpf(call.IsTrumpf);
-        var turn = turnOfCards(new Card[] {
+        var turn = turnOfCards(call, new Card[] {
             new Card(CardType.Unter, CardColor.Eichel, true, true)
         });
 
@@ -88,7 +88,7 @@ public class GameRulesTest
             new Card(CardType.Ober, CardColor.Gras),
         });
         hand = hand.CacheTrumpf(call.IsTrumpf);
-        var turn = turnOfCards(new Card[] {
+        var turn = turnOfCards(call, new Card[] {
             new Card(CardType.Unter, CardColor.Eichel, true, true)
         });
 
@@ -116,7 +116,7 @@ public class GameRulesTest
             new Card(CardType.Ober, CardColor.Gras),
         });
         hand = hand.CacheTrumpf(call.IsTrumpf);
-        var turn = turnOfCards(new Card[] {
+        var turn = turnOfCards(call, new Card[] {
             new Card(CardType.Ober, CardColor.Eichel, true, false)
         });
 
@@ -144,7 +144,7 @@ public class GameRulesTest
             new Card(CardType.Ober, CardColor.Gras),
         });
         hand = hand.CacheTrumpf(call.IsTrumpf);
-        var turn = turnOfCards(new Card[] {
+        var turn = turnOfCards(call, new Card[] {
             new Card(CardType.Ober, CardColor.Eichel, true, false)
         });
 
@@ -172,7 +172,7 @@ public class GameRulesTest
             new Card(CardType.Sau, CardColor.Gras),
         });
         hand = hand.CacheTrumpf(call.IsTrumpf);
-        var turn = turnOfCards(new Card[] {
+        var turn = turnOfCards(call, new Card[] {
             new Card(CardType.Sieben, CardColor.Schell, true, false)
         });
 
@@ -200,7 +200,7 @@ public class GameRulesTest
             new Card(CardType.Ober, CardColor.Gras),
         });
         hand = hand.CacheTrumpf(call.IsTrumpf);
-        var turn = turnOfCards(new Card[] {
+        var turn = turnOfCards(call, new Card[] {
             new Card(CardType.Koenig, CardColor.Schell, true, false)
         });
 
@@ -221,7 +221,7 @@ public class GameRulesTest
             new Card(CardType.Sieben, CardColor.Schell),
         });
         hand = hand.CacheTrumpf(call.IsTrumpf);
-        var turn = Turn.NewTurn(0);
+        var turn = Turn.InitFirstTurn(0, call);
 
         var cardToPlay = hand.Cards.ElementAt(indexOfCardToPlay);
         drawEval.CanPlayCard(call, cardToPlay, turn, hand)
@@ -248,7 +248,7 @@ public class GameRulesTest
             new Card(CardType.Neun, CardColor.Schell),
         });
         hand = hand.CacheTrumpf(call.IsTrumpf);
-        var turn = Turn.NewTurn(0);
+        var turn = Turn.InitFirstTurn(0, call);
 
         var cardToPlay = hand.Cards.ElementAt(indexOfCardToPlay);
         drawEval.CanPlayCard(call, cardToPlay, turn, hand)
@@ -271,7 +271,7 @@ public class GameRulesTest
             new Card(CardType.Neun, CardColor.Schell),
         });
         hand = hand.CacheTrumpf(call.IsTrumpf);
-        var turn = turnOfCards(new Card[] {
+        var turn = turnOfCards(call, new Card[] {
             new Card(CardType.Sieben, CardColor.Eichel, true, false)
         });
         // TODO: initialize turn meta-data such that it's already gsucht
