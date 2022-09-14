@@ -59,9 +59,8 @@ public readonly struct Card
 
     // info: EQ_MASK ensures that only the card type and color are used
     //       for comparison; meta-data is ignored to reduce coupling
-
-    public override bool Equals([NotNullWhen(true)] object obj)
-        => obj != null && obj is Card c && (c.Id & ORIG_CARD_MASK) == (this.Id & ORIG_CARD_MASK);
+    public override bool Equals([NotNullWhen(true)] object? obj)
+        => obj is Card c && (c.Id & ORIG_CARD_MASK) == (this.Id & ORIG_CARD_MASK);
 
     public override int GetHashCode() => Id & ORIG_CARD_MASK;
 

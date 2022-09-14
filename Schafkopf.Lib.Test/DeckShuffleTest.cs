@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using FluentAssertions;
 
 namespace Schafkopf.Lib.Test;
@@ -20,6 +21,7 @@ public class SchufflePermsTest
     private int fact(int n) => Enumerable.Range(1, n).Aggregate((x, y) => x * y);
 
     private void incrementCount<T>(ConcurrentDictionary<T, int> dict, T key)
+            where T : notnull
         => dict.AddOrUpdate(key, (perm) => 1, (perm, count) => count + 1);
 
     #endregion Helpers
