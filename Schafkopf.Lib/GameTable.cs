@@ -18,23 +18,21 @@ public class GameTable
     public IEnumerable<ISchafkopfPlayer> PlayersInDrawingOrder()
         => PlayersInDrawingOrder(FirstDrawingPlayerId);
 
-    public IEnumerable<ISchafkopfPlayer> PlayersInDrawingOrder(
-        int beginningPlayerId)
+    public IEnumerable<ISchafkopfPlayer> PlayersInDrawingOrder(int kommtRaus)
     {
-        yield return players[beginningPlayerId];
-        yield return players[(++beginningPlayerId % 4)];
-        yield return players[(++beginningPlayerId % 4)];
-        yield return players[(++beginningPlayerId % 4)];
+        int id = kommtRaus;
+        yield return players[id];
+        id = ++id & 0x03;
+        yield return players[id];
+        id = ++id & 0x03;
+        yield return players[id];
+        id = ++id & 0x03;
+        yield return players[id];
     }
 
-    // TODO: add functionality to determine the game call + klopfer
-
-    public void SupplyHands(GameCall call, CardsDeck deck)
-    {
-        foreach (int id in Enumerable.Range(0, 4))
-            players[id].NewGame(call, deck.HandOfPlayer(id));
-    }
+    public IEnumerable<ISchafkopfPlayer> PlayersById(IEnumerable<int> ids)
+        => ids.Select(id => players[id]);
 
     public void Shift()
-        => FirstDrawingPlayerId = (FirstDrawingPlayerId + 1) % 4;
+        => FirstDrawingPlayerId = (FirstDrawingPlayerId + 1) & 0x03;
 }
