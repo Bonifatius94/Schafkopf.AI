@@ -1,6 +1,8 @@
+using System.Collections;
+
 namespace Schafkopf.Lib;
 
-public class GameHistory
+public class GameHistory : IEnumerable<Turn>
 {
     public GameHistory(
         GameCall call,
@@ -27,14 +29,13 @@ public class GameHistory
     public Turn CurrentTurn => turns[turnCount - 1];
     public IReadOnlyList<Turn> Turns => turns[0..turnCount];
 
-    public Turn NextCard(Card card)
+    public IEnumerator<Turn> GetEnumerator()
     {
-        var turnWithCardApplied = CurrentTurn.NextCard(card);
-        turns[turnCount - 1] = turnWithCardApplied;
-        return turnWithCardApplied;
+        for (int i = 0; i < 8; i++)
+            yield return nextTurn();
     }
 
-    public Turn NextTurn()
+    private Turn nextTurn()
     {
         if (turnCount >= 8)
             throw new InvalidOperationException(
@@ -45,6 +46,16 @@ public class GameHistory
         var nextTurn = Turn.InitNextTurn(lastTurn);
         turns[turnCount++] = nextTurn;
         return nextTurn;
+    }
+
+    IEnumerator IEnumerable.GetEnumerator()
+        => GetEnumerator();
+
+    public Turn NextCard(Card card)
+    {
+        var turnWithCardApplied = CurrentTurn.NextCard(card);
+        turns[turnCount - 1] = turnWithCardApplied;
+        return turnWithCardApplied;
     }
 
     #endregion Turns

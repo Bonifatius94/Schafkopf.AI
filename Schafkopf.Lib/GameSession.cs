@@ -98,25 +98,24 @@ public class GameSession
 
     private GameHistory playGameUntilEnd(GameHistory history)
     {
-        foreach (int round in Enumerable.Range(0, 8))
+        foreach (var newTurn in history)
         {
-            var players = table.PlayersInDrawingOrder(history.KommtRaus);
-            foreach (var player in players)
+            var turn = newTurn;
+            foreach (var player in
+                table.PlayersInDrawingOrder(history.KommtRaus))
             {
                 if (history.CanKontraRe())
                     askForKontraRe(history);
 
                 var possibleCards = player.Hand
                     .Where(card => validator.CanPlayCard(
-                        history.Call, card, history.CurrentTurn, player.Hand))
+                        history.Call, card, turn, player.Hand))
                     .ToArray();
 
                 var card = player.ChooseCard(history, possibleCards);
                 player.Discard(card);
-                history.NextCard(card);
+                turn = history.NextCard(card);
             }
-
-            history.NextTurn();
         }
 
         return history;
