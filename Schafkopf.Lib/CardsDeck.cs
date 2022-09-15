@@ -155,7 +155,7 @@ public class CardsDeck
                     ulong* up_u64 = (ulong*)up;
                     ulong* lp_u64 = (ulong*)lp;
                     var vecAsUlong = Vector256.Create(
-                        up_u64[0], up_u64[1], lp_u64[1], lp_u64[2]);
+                        up_u64[0], up_u64[1], lp_u64[0], lp_u64[1]);
                     vec = vecAsUlong.AsByte();
                 }
             }
