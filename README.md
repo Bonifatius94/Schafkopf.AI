@@ -39,4 +39,9 @@ dotnet test
 ```
 
 ### Run AI Training
+
+```sh
+dotnet run --project Schafkopf.Training/Schafkopf.Training.csproj
+```
+
 This is still wip, game logic needs to be finished first
