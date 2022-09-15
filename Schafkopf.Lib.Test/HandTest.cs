@@ -75,33 +75,64 @@ public class HandPropertiesTest
         hasCard.Should().BeFalse();
     }
 
-    public static IEnumerable<object[]> OwnedCardIds =
-        Enumerable.Range(0, 8).Select(i => new object[] { i }).ToList();
-    [Theory]
-    [MemberData(nameof(OwnedCardIds))]
-    public void Test_CardIsNotInHand_AfterItWasDiscarded(int delIndex)
-    {
-        var cards = new Card[] {
-            new Card(CardType.Sieben, CardColor.Schell),
-            new Card(CardType.Acht, CardColor.Schell),
-            new Card(CardType.Neun, CardColor.Herz),
-            new Card(CardType.Unter, CardColor.Herz),
-            new Card(CardType.Ober, CardColor.Gras),
-            new Card(CardType.Koenig, CardColor.Gras),
-            new Card(CardType.Zehn, CardColor.Eichel),
-            new Card(CardType.Sau, CardColor.Eichel),
-        };
-        var hand = new Hand(cards);
+    public static IEnumerable<object[]> AllCardsAtAllPositions =
+        Enumerable.Range(0, 8)
+            .SelectMany(i => CardsDeck.AllCards
+                .Select(c => new object[] { i, c }))
+            .ToList();
 
-        var cardToDiscard = cards[delIndex];
+    [Theory]
+    [MemberData(nameof(AllCardsAtAllPositions))]
+    public void Test_CardIsNotInInitialHand_AfterItWasDiscarded(
+        int delIndex, Card cardToDiscard)
+    {
+        var cards = CardsDeck.AllCards
+            .Except(new Card[] { cardToDiscard })
+            .RandomSubset(7).ToList();
+        cards.Insert(delIndex, cardToDiscard);
+        var hand = new Hand(cards.ToArray());
+
         var newHand = hand.Discard(cardToDiscard);
 
         newHand.Should().BeEquivalentTo(
             cards.Except(new Card[] { cardToDiscard }));
+        newHand.Should().HaveCount(7);
     }
 
-    private static readonly EqualDistPermutator permGen =
-        new EqualDistPermutator(8);
+    public static IEnumerable<object[]> LotsOfRandomHandsToDiscard
+        => Enumerable.Range(0, 500)
+            .Select(_ => new object[] {
+                CardsDeck.AllCards.RandomSubset(8).ToList(),
+                permGen.NextPermutation().ToList()
+            });
+
+    [Theory]
+    [MemberData(nameof(LotsOfRandomHandsToDiscard))]
+    public void Test_CanDiscardEntireHand_GivenLotsOfPerms(
+        IEnumerable<Card> cards, IEnumerable<byte> cardsDelOrder)
+    {
+        // info: exhaustive testing would involve ~ 10^7 unique hands
+        //       -> this only tests a representative random subset
+
+        var hand = new Hand(cards.ToArray());
+        var cardsToDiscard = cardsDelOrder
+            .Select(x => hand.ElementAt(x)).ToArray();
+        var expCards = cards.ToList();
+
+        foreach (var cardToDiscard in cardsToDiscard)
+        {
+            expCards.Remove(cardToDiscard);
+            var handAfter = hand.Discard(cardToDiscard);
+            handAfter.Should().BeEquivalentTo(expCards);
+            handAfter.Should().HaveCount(hand.CardsCount - 1);
+            hand = handAfter;
+        }
+
+        hand.Should().BeEmpty();
+    }
+
+    private static readonly EqualDistPermutator_256 permGen =
+        new EqualDistPermutator_256(8);
 
     public static IEnumerable<object[]> cardsCount =
         Enumerable.Range(0, 9).Select(i => new object[] { i }).ToList();
