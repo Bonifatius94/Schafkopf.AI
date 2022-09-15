@@ -52,7 +52,7 @@ public class GameHistory
     #region Klopfer/Kontra/Re
 
     public bool CanKontraRe()
-        => turnCount == 0 && CurrentTurn.CardsCount <= 1;
+        => turnCount == 1 && CurrentTurn.CardsCount <= 1;
 
     private int klopfer = 0;
     public bool IsKontraCalled { get; private set; } = false;
