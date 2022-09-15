@@ -106,8 +106,8 @@ public readonly struct Turn
         int playerId = (Meta.FirstDrawingPlayerId + CardsCount) % 4;
         uint newId = Cards | ((uint)card.Id << (playerId * CARD_OFFSET));
         bool alreadyGsucht = Meta.AlreadyGsucht
-            || AllCards.Contains(Meta.Call.GsuchteSau);
-        TurnMetaData newMeta = new TurnMetaData(
+            || (FirstCard.Exists && FirstCard.Color == Meta.Call.GsuchteFarbe);
+        var newMeta = new TurnMetaData(
             Meta.Call, FirstDrawingPlayerId, alreadyGsucht);
         return new Turn(newId, newMeta);
     }

@@ -6,9 +6,9 @@ public class GameRulesTest
 {
     #region Init
 
-    private Turn turnOfCards(GameCall call, IEnumerable<Card> cards)
+    private Turn turnOfCards(GameCall call, IEnumerable<Card> cards, int kommtRaus = 0)
     {
-        var turn = Turn.InitFirstTurn(0, call);
+        var turn = Turn.InitFirstTurn(kommtRaus, call);
         foreach (var card in cards)
             turn = turn.NextCard(card);
         return turn;
@@ -228,10 +228,6 @@ public class GameRulesTest
             .Should().Be(canPlayCard);
     }
 
-    // TODO: there needs to be some meta-data flag in Turn whether already gsucht
-    //       Sauspiel partner is allowed to play cards of gsuchte farbe except
-    //       for gsuchte sau and can still use 'kann unten durch' rule
-
     [Theory]
     [InlineData(0, true)]
     [InlineData(1, true)]
@@ -255,12 +251,37 @@ public class GameRulesTest
             .Should().Be(canPlayCard);
     }
 
-    [Theory(Skip="logic is not ready for this test")]
-    [InlineData(0, true)]
+    [Theory]
+    [InlineData(0, false)]
     [InlineData(1, true)]
     [InlineData(2, true)]
     [InlineData(3, true)]
     public void Test_MustNotSchmierenGsuchteSau_WhenNotAlreadyGsucht(
+        int indexOfCardToPlay, bool canPlayCard)
+    {
+        var call = GameCall.Sauspiel(2, 1, CardColor.Schell);
+        var hand = new Hand(new Card[] {
+            new Card(CardType.Sau, CardColor.Schell),
+            new Card(CardType.Sieben, CardColor.Schell),
+            new Card(CardType.Acht, CardColor.Schell),
+            new Card(CardType.Neun, CardColor.Schell),
+        });
+        hand = hand.CacheTrumpf(call.IsTrumpf);
+        var turn = turnOfCards(call, new Card[] {
+                new Card(CardType.Sieben, CardColor.Eichel, true, false),
+            }, 0);
+
+        var cardToPlay = hand.ElementAt(indexOfCardToPlay);
+        drawEval.CanPlayCard(call, cardToPlay, turn, hand)
+            .Should().Be(canPlayCard);
+    }
+
+    [Theory]
+    [InlineData(0, true)]
+    [InlineData(1, true)]
+    [InlineData(2, true)]
+    [InlineData(3, true)]
+    public void Test_CanSchmierenGsuchteSau_WhenAlreadyGsucht(
         int indexOfCardToPlay, bool canPlayCard)
     {
         var call = GameCall.Sauspiel(1, 0, CardColor.Schell);
@@ -271,10 +292,14 @@ public class GameRulesTest
             new Card(CardType.Neun, CardColor.Schell),
         });
         hand = hand.CacheTrumpf(call.IsTrumpf);
-        var turn = turnOfCards(call, new Card[] {
-            new Card(CardType.Sieben, CardColor.Eichel, true, false)
+        var gsuchtTurn = turnOfCards(call, new Card[] {
+            new Card(CardType.Koenig, CardColor.Schell, true, false),
+            new Card(CardType.Zehn, CardColor.Schell, true, false),
+            new Card(CardType.Zehn, CardColor.Eichel, true, false),
+            new Card(CardType.Sau, CardColor.Herz, true, true),
         });
-        // TODO: initialize turn meta-data such that it's already gsucht
+        var turn = Turn.InitNextTurn(gsuchtTurn);
+        turn = turn.NextCard(new Card(CardType.Sieben, CardColor.Eichel, true, false));
 
         var cardToPlay = hand.ElementAt(indexOfCardToPlay);
         drawEval.CanPlayCard(call, cardToPlay, turn, hand)

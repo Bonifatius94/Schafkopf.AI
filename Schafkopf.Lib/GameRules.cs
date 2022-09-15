@@ -16,23 +16,27 @@ public class DrawValidator
         bool kommtRaus = currentTurn.CardsCount == 0;
         bool darfNichtUntenDurch = kommtRaus && playerHand.HasCard(call.GsuchteSau)
             && playerHand.FarbeCount(call.GsuchteFarbe) < 4;
+
         if (darfNichtUntenDurch && cardPlayed.Color == call.GsuchteFarbe
                 && cardPlayed.Type != CardType.Sau)
             return false;
         else if (kommtRaus)
             return true;
 
-        bool isTrumpfTurn = currentTurn.FirstCard.IsTrumpf;
-        if (isTrumpfTurn && !cardPlayed.IsTrumpf && playerHand.HasTrumpf())
+        bool trumpfZugeben = currentTurn.FirstCard.IsTrumpf;
+        if (trumpfZugeben && !cardPlayed.IsTrumpf && playerHand.HasTrumpf())
             return false;
 
-        bool mussAngeben = !isTrumpfTurn &&
+        bool farbeZugeben = !trumpfZugeben &&
             playerHand.HasFarbe(currentTurn.FirstCard.Color);
-        if (mussAngeben && cardPlayed.Color != currentTurn.FirstCard.Color)
+        if (farbeZugeben && cardPlayed.Color != currentTurn.FirstCard.Color)
             return false;
 
-        bool gsuchtIs = mussAngeben && call.GsuchteFarbe == currentTurn.FirstCard.Color;
+        bool gsuchtIs = farbeZugeben && call.GsuchteFarbe == currentTurn.FirstCard.Color;
         if (gsuchtIs && cardPlayed.Type != CardType.Sau)
+            return false;
+
+        if (!gsuchtIs && !currentTurn.AlreadyGsucht && cardPlayed == call.GsuchteSau)
             return false;
 
         return true;
