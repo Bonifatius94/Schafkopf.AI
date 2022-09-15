@@ -38,6 +38,12 @@ dotnet restore
 dotnet test
 ```
 
+Test with code coverage
+
+```sh
+dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=lcov /p:CoverletOutput=./lcov.info
+```
+
 ### Run AI Training
 
 ```sh
