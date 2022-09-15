@@ -73,11 +73,7 @@ public readonly struct Turn
     private Turn(TurnMetaData meta, ReadOnlySpan<Card> cards)
     {
         Meta = meta;
-        unsafe
-        {
-            fixed (Card* cp = &cards[0])
-                Cards = *((uint*)cp);
-        }
+        unsafe { fixed (Card* cp = &cards[0]) Cards = *((uint*)cp); }
     }
 
     private Turn(uint cards_u32, TurnMetaData meta)
@@ -125,13 +121,11 @@ public readonly struct Turn
     private Card c4 => new Card((byte)((Cards >> 24) & Card.CARD_MASK_WITH_META));
 
     public int FirstDrawingPlayerId => Meta.FirstDrawingPlayerId;
+    public bool AlreadyGsucht => Meta.AlreadyGsucht;
 
     public Card FirstCard => new Card(
         (byte)((Cards >> (Meta.FirstDrawingPlayerId * CARD_OFFSET))
             & Card.CARD_MASK_WITH_META));
-
-    // public int FirstDrawingPlayerId => (int)((Id & FIRST_PLAYER_MASK) >> 32);
-    // TODO: add AlreadyGsucht flag
 
     public int CardsCount => BitOperations.PopCount(Cards & EXISTING_BITMASK);
     public bool IsDone => CardsCount == 4;
@@ -201,11 +195,7 @@ public readonly struct Turn
         cards_u32 = (cards_u32 & sameFarbeMatches) | (cards_u32 & trumpfMatches);
 
         var cards = new Card[4];
-        unsafe
-        {
-            fixed (Card* cp = &cards[0])
-                *((uint*)cp) = cards_u32;
-        }
+        unsafe { fixed (Card* cp = &cards[0]) *((uint*)cp) = cards_u32; }
 
         var comparer = cardComps[(int)Meta.Call.Mode];
         short cmp_01 = (short)comparer.Compare(cards[0], cards[1]);
