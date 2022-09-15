@@ -19,7 +19,7 @@ public class HandPropertiesTest
         };
         var hand = new Hand(cards);
 
-        hand.Cards.Should().BeEquivalentTo(cards);
+        hand.Should().BeEquivalentTo(cards);
     }
 
     [Theory]
@@ -96,7 +96,7 @@ public class HandPropertiesTest
         var cardToDiscard = cards[delIndex];
         var newHand = hand.Discard(cardToDiscard);
 
-        newHand.Cards.Should().BeEquivalentTo(
+        newHand.Should().BeEquivalentTo(
             cards.Except(new Card[] { cardToDiscard }));
     }
 

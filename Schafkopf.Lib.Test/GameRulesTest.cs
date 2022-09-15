@@ -38,7 +38,7 @@ public class GameRulesTest
         hand = hand.CacheTrumpf(call.IsTrumpf);
         var turn = Turn.InitFirstTurn(0, call);
 
-        var cardToPlay = hand.Cards.ElementAt(indexOfCardToPlay);
+        var cardToPlay = hand.ElementAt(indexOfCardToPlay);
         drawEval.CanPlayCard(call, cardToPlay, turn, hand)
             .Should().Be(canPlayCard);
     }
@@ -65,7 +65,7 @@ public class GameRulesTest
             new Card(CardType.Unter, CardColor.Eichel, true, true)
         });
 
-        var cardToPlay = hand.Cards.ElementAt(indexOfCardToPlay);
+        var cardToPlay = hand.ElementAt(indexOfCardToPlay);
         drawEval.CanPlayCard(call, cardToPlay, turn, hand)
             .Should().Be(canPlayCard);
     }
@@ -92,7 +92,7 @@ public class GameRulesTest
             new Card(CardType.Unter, CardColor.Eichel, true, true)
         });
 
-        var cardToPlay = hand.Cards.ElementAt(indexOfCardToPlay);
+        var cardToPlay = hand.ElementAt(indexOfCardToPlay);
         drawEval.CanPlayCard(call, cardToPlay, turn, hand)
             .Should().Be(canPlayCard);
     }
@@ -120,7 +120,7 @@ public class GameRulesTest
             new Card(CardType.Ober, CardColor.Eichel, true, false)
         });
 
-        var cardToPlay = hand.Cards.ElementAt(indexOfCardToPlay);
+        var cardToPlay = hand.ElementAt(indexOfCardToPlay);
         drawEval.CanPlayCard(call, cardToPlay, turn, hand)
             .Should().Be(canPlayCard);
     }
@@ -148,7 +148,7 @@ public class GameRulesTest
             new Card(CardType.Ober, CardColor.Eichel, true, false)
         });
 
-        var cardToPlay = hand.Cards.ElementAt(indexOfCardToPlay);
+        var cardToPlay = hand.ElementAt(indexOfCardToPlay);
         drawEval.CanPlayCard(call, cardToPlay, turn, hand)
             .Should().Be(canPlayCard);
     }
@@ -176,7 +176,7 @@ public class GameRulesTest
             new Card(CardType.Sieben, CardColor.Schell, true, false)
         });
 
-        var cardToPlay = hand.Cards.ElementAt(indexOfCardToPlay);
+        var cardToPlay = hand.ElementAt(indexOfCardToPlay);
         drawEval.CanPlayCard(call, cardToPlay, turn, hand)
             .Should().Be(canPlayCard);
     }
@@ -204,7 +204,7 @@ public class GameRulesTest
             new Card(CardType.Koenig, CardColor.Schell, true, false)
         });
 
-        var cardToPlay = hand.Cards.ElementAt(indexOfCardToPlay);
+        var cardToPlay = hand.ElementAt(indexOfCardToPlay);
         drawEval.CanPlayCard(call, cardToPlay, turn, hand)
             .Should().Be(canPlayCard);
     }
@@ -223,7 +223,7 @@ public class GameRulesTest
         hand = hand.CacheTrumpf(call.IsTrumpf);
         var turn = Turn.InitFirstTurn(0, call);
 
-        var cardToPlay = hand.Cards.ElementAt(indexOfCardToPlay);
+        var cardToPlay = hand.ElementAt(indexOfCardToPlay);
         drawEval.CanPlayCard(call, cardToPlay, turn, hand)
             .Should().Be(canPlayCard);
     }
@@ -250,7 +250,7 @@ public class GameRulesTest
         hand = hand.CacheTrumpf(call.IsTrumpf);
         var turn = Turn.InitFirstTurn(0, call);
 
-        var cardToPlay = hand.Cards.ElementAt(indexOfCardToPlay);
+        var cardToPlay = hand.ElementAt(indexOfCardToPlay);
         drawEval.CanPlayCard(call, cardToPlay, turn, hand)
             .Should().Be(canPlayCard);
     }
@@ -276,7 +276,7 @@ public class GameRulesTest
         });
         // TODO: initialize turn meta-data such that it's already gsucht
 
-        var cardToPlay = hand.Cards.ElementAt(indexOfCardToPlay);
+        var cardToPlay = hand.ElementAt(indexOfCardToPlay);
         drawEval.CanPlayCard(call, cardToPlay, turn, hand)
             .Should().Be(canPlayCard);
     }

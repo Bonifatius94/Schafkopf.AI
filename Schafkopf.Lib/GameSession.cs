@@ -68,7 +68,7 @@ public class GameSession
             .Select(pos => (
                     Player: drawingOrder[pos],
                     Pos: pos,
-                    FirstFourCards: handsInDrawingOrder[pos].Cards.Take(4)
+                    FirstFourCards: handsInDrawingOrder[pos].Take(4)
                 ))
             .Where(x => x.Player.IsKlopfer(x.Pos, x.FirstFourCards))
             .Count();
@@ -106,7 +106,7 @@ public class GameSession
                 if (history.CanKontraRe())
                     askForKontraRe(history);
 
-                var possibleCards = player.Hand.Cards
+                var possibleCards = player.Hand
                     .Where(card => validator.CanPlayCard(
                         history.Call, card, history.CurrentTurn, player.Hand))
                     .ToArray();

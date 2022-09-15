@@ -94,10 +94,10 @@ public class DeckShuffleTest
         deck.Shuffle();
 
         var allCardsAfterShuffle =
-            deck.HandOfPlayer(0).Cards
-                .Concat(deck.HandOfPlayer(1).Cards)
-                .Concat(deck.HandOfPlayer(2).Cards)
-                .Concat(deck.HandOfPlayer(3).Cards)
+            deck.HandOfPlayer(0)
+                .Concat(deck.HandOfPlayer(1))
+                .Concat(deck.HandOfPlayer(2))
+                .Concat(deck.HandOfPlayer(3))
             .ToHashSet();
         allCardsAfterShuffle.Should().BeEquivalentTo(CardsDeck.AllCards);
     }

@@ -1,10 +1,11 @@
+using System.Collections;
 using System.Numerics;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
 
 namespace Schafkopf.Lib;
 
-public readonly struct Hand
+public readonly struct Hand : IEnumerable<Card>
 {
     #region Init
 
@@ -40,7 +41,7 @@ public readonly struct Hand
         this.cards = cards;
     }
 
-    internal Hand(ulong cards, bool setExisting = false)
+    public Hand(ulong cards, bool setExisting = false)
     {
         ulong mask = setExisting ? EXISTING_BITMASK : 0;
         this.cards = cards | mask;
@@ -113,13 +114,15 @@ public readonly struct Hand
         return new Hand(newCards);
     }
 
-    public IEnumerable<Card> Cards => cardsIter();
-    private IEnumerable<Card> cardsIter()
+    public IEnumerator<Card> GetEnumerator()
     {
         for (int i = 0; i < 8; i++)
             if (hasCardAt(i))
                 yield return cardAt(i);
     }
+
+    IEnumerator IEnumerable.GetEnumerator()
+        => GetEnumerator();
 
     public bool HasTrumpf()
         => (cards & TRUMPF_BITMASK) > 0;

@@ -117,12 +117,12 @@ public class GameHistory
         {
             var comp = new CardComparer(Call.Mode);
             var allCardsOrdered = Enumerable.Range(0, 4)
-                .SelectMany(id => initialHands[id].Cards)
+                .SelectMany(id => initialHands[id])
                 .Where(c => c.IsTrumpf)
                 .OrderByDescending(x => x, comp)
                 .ToList();
             var callerCardsOrdered = callerIds()
-                .SelectMany(id => initialHands[id].Cards)
+                .SelectMany(id => initialHands[id])
                 .OrderByDescending(x => x, comp)
                 .ToList();
 

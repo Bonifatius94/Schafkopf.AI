@@ -33,7 +33,7 @@ public class CardsDeck
     // TODO: find a better performing implementation
     public IEnumerable<Card> AllCardsWithMeta(GameCall call)
         => Enumerable.Range(0, 4)
-            .SelectMany(i => HandOfPlayerWithMeta(i, call).Cards)
+            .SelectMany(i => HandOfPlayerWithMeta(i, call))
             .ToList();
 
     #region Shuffle
