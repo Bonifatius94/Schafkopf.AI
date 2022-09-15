@@ -86,9 +86,9 @@ public readonly struct Turn
 
     public static Turn InitFirstTurn(int firstDrawingPlayerId, GameCall call)
     {
-        if (firstDrawingPlayerId < 0 || firstDrawingPlayerId > 3)
-            throw new ArgumentException(
-                $"Invalid player id {firstDrawingPlayerId}, needs to be within [0, 3]");
+        // if (firstDrawingPlayerId < 0 || firstDrawingPlayerId > 3)
+        //     throw new ArgumentException(
+        //         $"Invalid player id {firstDrawingPlayerId}, needs to be within [0, 3]");
 
         var meta = new TurnMetaData(call, firstDrawingPlayerId);
         return new Turn(meta, EMPTY_CARDS);
@@ -99,9 +99,9 @@ public readonly struct Turn
 
     public Turn NextCard(Card card)
     {
-        if (CardsCount >= 4)
-            throw new InvalidOperationException(
-                "Cannot add another card. The turn is already over!");
+        // if (CardsCount >= 4)
+        //     throw new InvalidOperationException(
+        //         "Cannot add another card. The turn is already over!");
 
         int playerId = (Meta.FirstDrawingPlayerId + CardsCount) % 4;
         uint newId = Cards | ((uint)card.Id << (playerId * CARD_OFFSET));
@@ -128,7 +128,7 @@ public readonly struct Turn
             & Card.CARD_MASK_WITH_META));
 
     public int CardsCount => BitOperations.PopCount(Cards & EXISTING_BITMASK);
-    public bool IsDone => CardsCount == 4;
+    // public bool IsDone => CardsCount == 4;
 
     public Card[] AllCards
     {

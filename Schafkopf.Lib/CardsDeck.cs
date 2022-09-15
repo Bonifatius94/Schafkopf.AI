@@ -70,106 +70,106 @@ public class CardsDeck
 
     #endregion Shuffle
 
-    #region VectorizedShuffle
+    // #region VectorizedShuffle
 
-    public void ShuffleSimd()
-    {
-        // info: this implementation works, but it's unclear
-        //       whether it's actually faster than the other one
+    // public void ShuffleSimd()
+    // {
+    //     // info: this implementation works, but it's unclear
+    //     //       whether it's actually faster than the other one
 
-        // TODO: init the permutators to generate different outputs
-        var permGenUpper = new EqualDistPermutator_256(16);
-        var permGenLower = new EqualDistPermutator_256(16);
-        var permGenInterm = new EqualDistPermutator_256(4);
-        var permGenOut = new EqualDistPermutator_256(4);
+    //     // TODO: init the permutators to generate different outputs
+    //     var permGenUpper = new EqualDistPermutator_256(16);
+    //     var permGenLower = new EqualDistPermutator_256(16);
+    //     var permGenInterm = new EqualDistPermutator_256(4);
+    //     var permGenOut = new EqualDistPermutator_256(4);
 
-        // shuffle bytes within higher and lower 16 bytes
-        var upperPerm = permGenUpper.NextPermutation();
-        var lowerPerm = permGenLower.NextPermutation();
-        var intermPerm = permGenInterm.NextPermutation();
-        var outPerm = permGenOut.NextPermutation();
+    //     // shuffle bytes within higher and lower 16 bytes
+    //     var upperPerm = permGenUpper.NextPermutation();
+    //     var lowerPerm = permGenLower.NextPermutation();
+    //     var intermPerm = permGenInterm.NextPermutation();
+    //     var outPerm = permGenOut.NextPermutation();
 
-        Vector256<byte> cardsVec;
-        unsafe
-        {
-            fixed (Hand* hp = &hands[0])
-                cardsVec = cardsToVec(hp);
-        }
+    //     Vector256<byte> cardsVec;
+    //     unsafe
+    //     {
+    //         fixed (Hand* hp = &hands[0])
+    //             cardsVec = cardsToVec(hp);
+    //     }
 
-        // shuffle bytes within upper and lower 128 bit vector
-        var permVec = permToVec(upperPerm, lowerPerm);
-        var intermVec = Avx2.Shuffle(cardsVec, permVec).AsUInt64();
-        // pull shuffled bytes out by random order as 64-bit blocks
-        cardsVec = Vector256.Create(
-                intermVec.GetElement(intermPerm[0]),
-                intermVec.GetElement(intermPerm[1]),
-                intermVec.GetElement(intermPerm[2]),
-                intermVec.GetElement(intermPerm[3])
-            ).AsByte();
-        upperPerm = permGenUpper.NextPermutation();
-        lowerPerm = permGenLower.NextPermutation();
-        permVec = permToVec(upperPerm, lowerPerm);
-        // shuffle bytes again within upper and lower 128-bit vector
-        var shuffledCardsVec = Avx2.Shuffle(cardsVec, permVec);
+    //     // shuffle bytes within upper and lower 128 bit vector
+    //     var permVec = permToVec(upperPerm, lowerPerm);
+    //     var intermVec = Avx2.Shuffle(cardsVec, permVec).AsUInt64();
+    //     // pull shuffled bytes out by random order as 64-bit blocks
+    //     cardsVec = Vector256.Create(
+    //             intermVec.GetElement(intermPerm[0]),
+    //             intermVec.GetElement(intermPerm[1]),
+    //             intermVec.GetElement(intermPerm[2]),
+    //             intermVec.GetElement(intermPerm[3])
+    //         ).AsByte();
+    //     upperPerm = permGenUpper.NextPermutation();
+    //     lowerPerm = permGenLower.NextPermutation();
+    //     permVec = permToVec(upperPerm, lowerPerm);
+    //     // shuffle bytes again within upper and lower 128-bit vector
+    //     var shuffledCardsVec = Avx2.Shuffle(cardsVec, permVec);
 
-        unsafe
-        {
-            fixed (Hand* hp = &hands[0])
-            {
-                Card* cards = (Card*)hp;
-                var vecAsUlong = shuffledCardsVec.AsUInt64();
-                ulong* pul = (ulong*)cards;
-                *(pul++) = vecAsUlong.GetElement(outPerm[0]);
-                *(pul++) = vecAsUlong.GetElement(outPerm[1]);
-                *(pul++) = vecAsUlong.GetElement(outPerm[2]);
-                *(pul++) = vecAsUlong.GetElement(outPerm[3]);
-            }
-        }
-    }
+    //     unsafe
+    //     {
+    //         fixed (Hand* hp = &hands[0])
+    //         {
+    //             Card* cards = (Card*)hp;
+    //             var vecAsUlong = shuffledCardsVec.AsUInt64();
+    //             ulong* pul = (ulong*)cards;
+    //             *(pul++) = vecAsUlong.GetElement(outPerm[0]);
+    //             *(pul++) = vecAsUlong.GetElement(outPerm[1]);
+    //             *(pul++) = vecAsUlong.GetElement(outPerm[2]);
+    //             *(pul++) = vecAsUlong.GetElement(outPerm[3]);
+    //         }
+    //     }
+    // }
 
-    private unsafe Vector256<byte> cardsToVec(Hand* hands)
-    {
-        // TODO: replace this with Gather() in .NET 7
-        Vector256<byte> vec;
+    // private unsafe Vector256<byte> cardsToVec(Hand* hands)
+    // {
+    //     // TODO: replace this with Gather() in .NET 7
+    //     Vector256<byte> vec;
 
-        unsafe
-        {
-            ulong* cardBytes = (ulong*)hands;
-            var vecAsUlong = Vector256.Create(
-                cardBytes[0],
-                cardBytes[1],
-                cardBytes[2],
-                cardBytes[3]);
-            vec = vecAsUlong.AsByte();
-        }
+    //     unsafe
+    //     {
+    //         ulong* cardBytes = (ulong*)hands;
+    //         var vecAsUlong = Vector256.Create(
+    //             cardBytes[0],
+    //             cardBytes[1],
+    //             cardBytes[2],
+    //             cardBytes[3]);
+    //         vec = vecAsUlong.AsByte();
+    //     }
 
-        return vec;
-    }
+    //     return vec;
+    // }
 
-    private Vector256<byte> permToVec(byte[] upperPerm, byte[] lowerPerm)
-    {
-        // TODO: replace this with Gather() in .NET 7
-        Vector256<byte> vec;
+    // private Vector256<byte> permToVec(byte[] upperPerm, byte[] lowerPerm)
+    // {
+    //     // TODO: replace this with Gather() in .NET 7
+    //     Vector256<byte> vec;
 
-        unsafe
-        {
-            fixed (byte* up = &upperPerm[0])
-            {
-                fixed (byte* lp = &lowerPerm[0])
-                {
-                    ulong* up_u64 = (ulong*)up;
-                    ulong* lp_u64 = (ulong*)lp;
-                    var vecAsUlong = Vector256.Create(
-                        up_u64[0], up_u64[1], lp_u64[0], lp_u64[1]);
-                    vec = vecAsUlong.AsByte();
-                }
-            }
-        }
+    //     unsafe
+    //     {
+    //         fixed (byte* up = &upperPerm[0])
+    //         {
+    //             fixed (byte* lp = &lowerPerm[0])
+    //             {
+    //                 ulong* up_u64 = (ulong*)up;
+    //                 ulong* lp_u64 = (ulong*)lp;
+    //                 var vecAsUlong = Vector256.Create(
+    //                     up_u64[0], up_u64[1], lp_u64[0], lp_u64[1]);
+    //                 vec = vecAsUlong.AsByte();
+    //             }
+    //         }
+    //     }
 
-        return vec;
-    }
+    //     return vec;
+    // }
 
-    #endregion VectorizedShuffle
+    // #endregion VectorizedShuffle
 }
 
 public class EqualDistPermutator_256
