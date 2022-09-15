@@ -25,6 +25,11 @@ public class CardsDeck
     public Hand HandOfPlayerWithMeta(int playerId, GameCall call)
         => hands[playerId].CacheTrumpf(call.IsTrumpf);
 
+    public Hand[] InitialHands()
+        => Enumerable.Range(0, 4)
+            .Select(i => HandOfPlayer(i))
+            .ToArray();
+
     public Hand[] InitialHands(GameCall call)
         => Enumerable.Range(0, 4)
             .Select(i => HandOfPlayerWithMeta(i, call))

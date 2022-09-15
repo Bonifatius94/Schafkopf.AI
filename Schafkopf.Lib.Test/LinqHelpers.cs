@@ -15,3 +15,21 @@ public static class PickRandomEx
             .NextPermutation().Take(count)
             .Select(i => items.ElementAt(i));
 }
+
+public static class PowerSetEx
+{
+    public static IEnumerable<IEnumerable<T>> PowerSet<T>(this IEnumerable<T> items)
+    {
+        if (!items.Any())
+            yield return items;
+        else
+        {
+            var head = items.First();
+            var powerset = items.Skip(1).PowerSet().ToList();
+            foreach(var set in powerset)
+                yield return set.Prepend(head);
+            foreach(var set in powerset)
+                yield return set;
+        }
+    }
+}

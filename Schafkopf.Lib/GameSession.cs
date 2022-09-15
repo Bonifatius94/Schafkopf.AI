@@ -19,7 +19,7 @@ public class GameSession
         deck.Shuffle();
 
         int klopfer = askForKlopfer();
-        var call = makeCalls(klopfer);
+        var call = makeCalls(klopfer, deck.InitialHands());
 
         var initialHands = deck.InitialHands(call);
         int kommtRaus = table.FirstDrawingPlayerId;
@@ -39,7 +39,7 @@ public class GameSession
 
     #region Call
 
-    private GameCall makeCalls(int klopfer)
+    private GameCall makeCalls(int klopfer, Hand[] initialHands)
     {
         int pos = 0;
         var call = GameCall.Weiter();
@@ -47,7 +47,7 @@ public class GameSession
         foreach (var player in table.PlayersInDrawingOrder())
         {
             var hand = deck.HandOfPlayer(player.Id);
-            var possibleCalls = callGen.AllPossibleCalls(player.Id, deck, call);
+            var possibleCalls = callGen.AllPossibleCalls(player.Id, initialHands, call);
             var nextCall = player.MakeCall(possibleCalls, pos++, hand, klopfer);
             if (nextCall.Mode == GameMode.Weiter)
                 continue;
@@ -59,20 +59,11 @@ public class GameSession
 
     private int askForKlopfer()
     {
-        var drawingOrder = table.PlayersInDrawingOrder().ToArray();
-        var handsInDrawingOrder = drawingOrder
-            .Select(p => deck.HandOfPlayer(p.Id))
-            .ToArray();
-
-        int klopfer = Enumerable.Range(0, 4)
-            .Select(pos => (
-                    Player: drawingOrder[pos],
-                    Pos: pos,
-                    FirstFourCards: handsInDrawingOrder[pos].Take(4)
-                ))
-            .Where(x => x.Player.IsKlopfer(x.Pos, x.FirstFourCards))
+        return Enumerable.Range(0, 4).Zip(table.PlayersInDrawingOrder())
+            .Select(x => (Pos: x.First, Player: x.Second))
+            .Where(x => x.Player.IsKlopfer(
+                x.Pos, deck.HandOfPlayer(x.Player.Id).Take(4)))
             .Count();
-        return klopfer;
     }
 
     private void askForKontraRe(GameHistory history)

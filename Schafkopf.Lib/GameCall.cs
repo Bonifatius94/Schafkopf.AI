@@ -61,13 +61,6 @@ public readonly struct GameCall
             GameMode.Solo, callingPlayerId, 0,
             trumpf, CardColor.Schell, isTout);
 
-    public static int FindSauspielPartner(CardsDeck deck, CardColor gsuchte)
-    {
-        var gsuchteSau = new Card(CardType.Sau, gsuchte);
-        return Enumerable.Range(0, 4)
-            .First(i => deck.HandOfPlayer(i).HasCard(gsuchteSau));
-    }
-
     #endregion Init
 
     public readonly ushort Id;
@@ -103,6 +96,19 @@ public readonly struct GameCall
         => evalCache[(Mode, Trumpf)].IsTrumpf(card);
 
     #endregion Trumpf
+
+    public override string ToString()
+    {
+        if (Mode == GameMode.Weiter)
+            return "Weiter";
+        else if (Mode == GameMode.Sauspiel)
+            return $"Sauspiel mit der {GsuchteFarbe} Sau";
+        else if (Mode == GameMode.Wenz)
+            return $"Wenz{(IsTout ? " Tout" : "")}";
+        else if (Mode == GameMode.Solo)
+            return $"{Trumpf} Solo{(IsTout ? " Tout" : "")}";
+        return $"unknown game mode {Mode}";
+    }
 }
 
 public class GameCallComparer : IComparer<GameCall>
@@ -124,30 +130,47 @@ public class GameCallComparer : IComparer<GameCall>
 
 public class GameCallGenerator
 {
+    #region Init
+
     private static readonly GameCallComparer callComp = new GameCallComparer();
 
+    private static readonly List<CardColor> sauspielColors =
+        new List<CardColor>() {
+            CardColor.Schell,
+            CardColor.Gras,
+            CardColor.Eichel
+        };
+
+    private static readonly List<CardColor> soloColors =
+        new List<CardColor>() {
+            CardColor.Schell,
+            CardColor.Herz,
+            CardColor.Gras,
+            CardColor.Eichel
+        };
+
+    private static readonly List<bool> touts =
+        new List<bool>() { true, false };
+
+    #endregion Init
+
     public IEnumerable<GameCall> AllPossibleCalls(
-        int playerId, CardsDeck deck, GameCall last)
+        int playerId, Hand[] initialHandsWithoutMeta, GameCall last)
     {
-        var hand = deck.HandOfPlayer(playerId);
-        var sauspielColors = new List<CardColor>() {
-            CardColor.Schell, CardColor.Gras, CardColor.Eichel };
+        var hand = initialHandsWithoutMeta[playerId];
+        var handSauspiel = hand.CacheTrumpf(
+            new TrumpfEval(GameMode.Sauspiel).IsTrumpf);
         var possibleSauspielColors = sauspielColors
-            .Where(c => !hand.HasCard(new Card(CardType.Sau, c))
-                        && hand.HasFarbe(c));
+            .Where(c => !handSauspiel.HasCard(new Card(CardType.Sau, c))
+                        && handSauspiel.HasFarbe(c));
 
         var sauspiele = possibleSauspielColors
             .Select(color => GameCall.Sauspiel(
                 playerId,
-                GameCall.FindSauspielPartner(deck, color),
+                findSauspielPartner(initialHandsWithoutMeta, color),
                 color));
 
-        var touts = new List<bool>() { true, false };
         var wenzen = touts.Select(tout => GameCall.Wenz(playerId, tout));
-
-        var soloColors = new List<CardColor>() {
-            CardColor.Schell, CardColor.Herz,
-            CardColor.Gras, CardColor.Eichel };
 
         var soli = touts.SelectMany(tout =>
             soloColors.Select(c => GameCall.Solo(playerId, c, tout)));
@@ -156,6 +179,13 @@ public class GameCallGenerator
         var possibleCalls = last.Mode == GameMode.Weiter ? allGameCalls
             : allGameCalls.Where(call => callComp.Compare(call, last) > 0);
         return possibleCalls.Append(GameCall.Weiter()).ToList();
+    }
+
+    private int findSauspielPartner(Hand[] initialHands, CardColor gsuchte)
+    {
+        var gsuchteSau = new Card(CardType.Sau, gsuchte);
+        return Enumerable.Range(0, 4)
+            .First(i => initialHands[i].HasCard(gsuchteSau));
     }
 }
 
@@ -249,22 +279,4 @@ public class TrumpfEval
     }
 
     // TODO: use this matching table to compute the rank for card comparison
-}
-
-public class GameCallValidator
-{
-    public bool IsValidCall(GameCall call, CardsDeck deck)
-    {
-        if (call.Mode != GameMode.Sauspiel)
-            return true;
-
-        if (call.CallingPlayerId == call.PartnerPlayerId)
-            return false;
-
-        var callingPlayerHand = deck.HandOfPlayer(call.CallingPlayerId);
-        if (!callingPlayerHand.HasFarbe(call.GsuchteFarbe))
-            return false;
-
-        return true;
-    }
 }
