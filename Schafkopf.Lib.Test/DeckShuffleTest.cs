@@ -32,7 +32,7 @@ public class SchufflePermsTest
         int numItems = 2;
         int numPerms = fact(numItems);
         const int numDraws = 100000;
-        var permGen = new EqualDistPermutator(numItems);
+        var permGen = new EqualDistPermutator_256(numItems);
         var permCounts = new ConcurrentDictionary<(int, int), int>();
 
         for (int i = 0; i < numDraws; i++)
@@ -52,7 +52,7 @@ public class SchufflePermsTest
         int numItems = 5;
         int numPerms = fact(numItems);
         const int numDraws = 1000000;
-        var permGen = new EqualDistPermutator(numItems);
+        var permGen = new EqualDistPermutator_256(numItems);
         var permCounts = new ConcurrentDictionary<(int, int, int, int, int), int>();
 
         for (int i = 0; i < numDraws; i++)
@@ -71,7 +71,7 @@ public class SchufflePermsTest
         int numItems = 7;
         int numPerms = fact(numItems);
         const int numDraws = 10000000;
-        var permGen = new EqualDistPermutator(numItems);
+        var permGen = new EqualDistPermutator_256(numItems);
         var permCounts = new ConcurrentDictionary<(int, int, int, int, int, int, int), int>();
 
         for (int i = 0; i < numDraws; i++)

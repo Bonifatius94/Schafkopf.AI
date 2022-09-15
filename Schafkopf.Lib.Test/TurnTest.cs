@@ -43,7 +43,7 @@ public class TurnAddCardTest
     public void Test_ShouldYieldFinishedTurn_WhenApplying4Cards(int playerId)
     {
         var allCards = AllCards;
-        var permGen = new EqualDistPermutator(32);
+        var permGen = new EqualDistPermutator_256(32);
         var cardsToApply = permGen.NextPermutation().Take(4)
             .Select(i => (Card)allCards.ElementAt(i)[0]).ToList();
 

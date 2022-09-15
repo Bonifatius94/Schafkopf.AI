@@ -38,8 +38,8 @@ public class CardsDeck
 
     #region Shuffle
 
-    private static readonly EqualDistPermutator permGen =
-        new EqualDistPermutator(32);
+    private static readonly EqualDistPermutator_256 permGen =
+        new EqualDistPermutator_256(32);
 
     public void Shuffle()
     {
@@ -73,10 +73,10 @@ public class CardsDeck
         //       whether it's actually faster than the other one
 
         // TODO: init the permutators to generate different outputs
-        var permGenUpper = new EqualDistPermutator(16);
-        var permGenLower = new EqualDistPermutator(16);
-        var permGenInterm = new EqualDistPermutator(4);
-        var permGenOut = new EqualDistPermutator(4);
+        var permGenUpper = new EqualDistPermutator_256(16);
+        var permGenLower = new EqualDistPermutator_256(16);
+        var permGenInterm = new EqualDistPermutator_256(4);
+        var permGenOut = new EqualDistPermutator_256(4);
 
         // shuffle bytes within higher and lower 16 bytes
         var upperPerm = permGenUpper.NextPermutation();
@@ -167,11 +167,11 @@ public class CardsDeck
     #endregion VectorizedShuffle
 }
 
-public class EqualDistPermutator
+public class EqualDistPermutator_256
 {
     private readonly byte[] ids;
 
-    public EqualDistPermutator(int numItems)
+    public EqualDistPermutator_256(int numItems)
     {
         this.numItems = numItems;
         ids = Enumerable.Range(0, numItems)
