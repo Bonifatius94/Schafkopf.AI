@@ -77,20 +77,34 @@ public class CardsDeck
 
     public void Shuffle()
     {
-        // shuffle bytes within higher and lower 16 bytes
+        // init perms with 0, 1, 2, ..., n
+        var inputPerm = new byte[4];
         var shufPerms = new byte[32];
-        permGenHighLow.NextPermutation(shufPerms[0..16]);
-        permGenHighLow.NextPermutation(shufPerms[16..32]);
-        var intermPerm = permGenInput.NextPermutation();
+        initPerms(inputPerm, shufPerms);
 
+        // draw perms for shuffling
+        permGenHighLow.NextPermutation(shufPerms.AsSpan(0, 16));
+        permGenHighLow.NextPermutation(shufPerms.AsSpan(16, 16));
+        permGenInput.NextPermutation(inputPerm);
+
+        // load cards and permutation vector for SIMD shuffle
         Vector256<byte> cardsVec; Vector256<byte> permVec;
         unsafe
         {
             fixed (byte* permBytes = &shufPerms[0])
                 permVec = Vector256.Load<byte>(permBytes);
 
+            // permutate input bytes in 8-byte chunks
+            // -> all cards can reach every deck position eventually
+            // -> takes 2 shuffles for cards to be equal dist.
             fixed (Hand* hp = &hands[0])
-                cardsVec = cardsToVec(hp, intermPerm);
+            {
+                ulong* cards_u64 = (ulong*)hp;
+                var vecAsUlong = Vector256.Create(
+                    cards_u64[inputPerm[0]], cards_u64[inputPerm[1]],
+                    cards_u64[inputPerm[2]], cards_u64[inputPerm[3]]);
+                cardsVec = vecAsUlong.AsByte();
+            }
         }
 
         // shuffle bytes within upper and lower 128 bit vector
@@ -98,18 +112,29 @@ public class CardsDeck
         unsafe { fixed (Hand* hp = &hands[0]) shufVec.Store((byte*)hp); }
     }
 
-    private unsafe Vector256<byte> cardsToVec(Hand* hands, byte[] perm)
+    private void initPerms(byte[] inputPerms, byte[] shufPerms)
     {
-        // TODO: replace this with Gather() in .NET 7
-        Vector256<byte> vec;
+        const ulong defaultShufPerm_0 = 0x0706050403020100;
+        const ulong defaultShufPerm_1 = 0x0F0E0D0C0B0A0908;
+        const uint defaultInputPerm = 0x00010203;
 
-        ulong* cardBytes = (ulong*)hands;
-        var vecAsUlong = Vector256.Create(
-            cardBytes[perm[0]], cardBytes[perm[1]],
-            cardBytes[perm[2]], cardBytes[perm[3]]);
-        vec = vecAsUlong.AsByte();
+        unsafe
+        {
+            fixed (byte* permBytes = &inputPerms[0])
+            {
+                uint* permBytes_u32 = (uint*)permBytes;
+                permBytes_u32[0] = defaultInputPerm;
+            }
 
-        return vec;
+            fixed (byte* permBytes = &shufPerms[0])
+            {
+                ulong* permBytes_u64 = (ulong*)permBytes;
+                permBytes_u64[0] = defaultShufPerm_0;
+                permBytes_u64[1] = defaultShufPerm_1;
+                permBytes_u64[2] = defaultShufPerm_0;
+                permBytes_u64[3] = defaultShufPerm_1;
+            }
+        }
     }
 
     #endregion VectorizedShuffle
@@ -117,12 +142,12 @@ public class CardsDeck
 
 public class EqualDistPermutator_256
 {
-    private readonly byte[] ids;
+    private readonly byte[] cache_ids;
 
     public EqualDistPermutator_256(int numItems)
     {
         this.numItems = numItems;
-        ids = Enumerable.Range(0, numItems)
+        cache_ids = Enumerable.Range(0, numItems)
             .Select(i => (byte)i).ToArray();
     }
 
@@ -149,20 +174,7 @@ public class EqualDistPermutator_256
 
     public byte[] NextPermutation()
     {
-        // TODO: find an intrinsic for doing this
-
-        for (int i = 0; i < numItems; i++)
-        {
-            int j = rng.Next(i, numItems);
-
-            if (i != j)
-            {
-                byte temp = ids[i];
-                ids[i] = ids[j];
-                ids[j] = temp;
-            }
-        }
-
-        return ids;
+        NextPermutation(cache_ids);
+        return cache_ids;
     }
 }
