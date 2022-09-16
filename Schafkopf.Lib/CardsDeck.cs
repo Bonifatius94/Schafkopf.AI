@@ -5,8 +5,6 @@ namespace Schafkopf.Lib;
 
 public class CardsDeck
 {
-    // TODO: re-design this to ensure that the meta-data of Hand is always initialized
-
     public static readonly IReadOnlySet<Card> AllCards =
         Enumerable.Range(0, 32)
             .Select(id => new Card((byte)id))
@@ -46,7 +44,7 @@ public class CardsDeck
     private static readonly EqualDistPermutator_256 permGen =
         new EqualDistPermutator_256(32);
 
-    public void Shuffle()
+    public void ShuffleSimple()
     {
         var cards = AllCards.ToList();
         var perm = permGen.NextPermutation();
@@ -70,106 +68,51 @@ public class CardsDeck
 
     #endregion Shuffle
 
-    // #region VectorizedShuffle
+    #region VectorizedShuffle
 
-    // public void ShuffleSimd()
-    // {
-    //     // info: this implementation works, but it's unclear
-    //     //       whether it's actually faster than the other one
+    private static readonly EqualDistPermutator_256 permGenHighLow =
+        new EqualDistPermutator_256(16);
+    private static readonly EqualDistPermutator_256 permGenInput =
+        new EqualDistPermutator_256(4);
 
-    //     // TODO: init the permutators to generate different outputs
-    //     var permGenUpper = new EqualDistPermutator_256(16);
-    //     var permGenLower = new EqualDistPermutator_256(16);
-    //     var permGenInterm = new EqualDistPermutator_256(4);
-    //     var permGenOut = new EqualDistPermutator_256(4);
+    public void Shuffle()
+    {
+        // shuffle bytes within higher and lower 16 bytes
+        var shufPerms = new byte[32];
+        permGenHighLow.NextPermutation(shufPerms[0..16]);
+        permGenHighLow.NextPermutation(shufPerms[16..32]);
+        var intermPerm = permGenInput.NextPermutation();
 
-    //     // shuffle bytes within higher and lower 16 bytes
-    //     var upperPerm = permGenUpper.NextPermutation();
-    //     var lowerPerm = permGenLower.NextPermutation();
-    //     var intermPerm = permGenInterm.NextPermutation();
-    //     var outPerm = permGenOut.NextPermutation();
+        Vector256<byte> cardsVec; Vector256<byte> permVec;
+        unsafe
+        {
+            fixed (byte* permBytes = &shufPerms[0])
+                permVec = Vector256.Load<byte>(permBytes);
 
-    //     Vector256<byte> cardsVec;
-    //     unsafe
-    //     {
-    //         fixed (Hand* hp = &hands[0])
-    //             cardsVec = cardsToVec(hp);
-    //     }
+            fixed (Hand* hp = &hands[0])
+                cardsVec = cardsToVec(hp, intermPerm);
+        }
 
-    //     // shuffle bytes within upper and lower 128 bit vector
-    //     var permVec = permToVec(upperPerm, lowerPerm);
-    //     var intermVec = Avx2.Shuffle(cardsVec, permVec).AsUInt64();
-    //     // pull shuffled bytes out by random order as 64-bit blocks
-    //     cardsVec = Vector256.Create(
-    //             intermVec.GetElement(intermPerm[0]),
-    //             intermVec.GetElement(intermPerm[1]),
-    //             intermVec.GetElement(intermPerm[2]),
-    //             intermVec.GetElement(intermPerm[3])
-    //         ).AsByte();
-    //     upperPerm = permGenUpper.NextPermutation();
-    //     lowerPerm = permGenLower.NextPermutation();
-    //     permVec = permToVec(upperPerm, lowerPerm);
-    //     // shuffle bytes again within upper and lower 128-bit vector
-    //     var shuffledCardsVec = Avx2.Shuffle(cardsVec, permVec);
+        // shuffle bytes within upper and lower 128 bit vector
+        var shufVec = Avx2.Shuffle(cardsVec, permVec);
+        unsafe { fixed (Hand* hp = &hands[0]) shufVec.Store((byte*)hp); }
+    }
 
-    //     unsafe
-    //     {
-    //         fixed (Hand* hp = &hands[0])
-    //         {
-    //             Card* cards = (Card*)hp;
-    //             var vecAsUlong = shuffledCardsVec.AsUInt64();
-    //             ulong* pul = (ulong*)cards;
-    //             *(pul++) = vecAsUlong.GetElement(outPerm[0]);
-    //             *(pul++) = vecAsUlong.GetElement(outPerm[1]);
-    //             *(pul++) = vecAsUlong.GetElement(outPerm[2]);
-    //             *(pul++) = vecAsUlong.GetElement(outPerm[3]);
-    //         }
-    //     }
-    // }
+    private unsafe Vector256<byte> cardsToVec(Hand* hands, byte[] perm)
+    {
+        // TODO: replace this with Gather() in .NET 7
+        Vector256<byte> vec;
 
-    // private unsafe Vector256<byte> cardsToVec(Hand* hands)
-    // {
-    //     // TODO: replace this with Gather() in .NET 7
-    //     Vector256<byte> vec;
+        ulong* cardBytes = (ulong*)hands;
+        var vecAsUlong = Vector256.Create(
+            cardBytes[perm[0]], cardBytes[perm[1]],
+            cardBytes[perm[2]], cardBytes[perm[3]]);
+        vec = vecAsUlong.AsByte();
 
-    //     unsafe
-    //     {
-    //         ulong* cardBytes = (ulong*)hands;
-    //         var vecAsUlong = Vector256.Create(
-    //             cardBytes[0],
-    //             cardBytes[1],
-    //             cardBytes[2],
-    //             cardBytes[3]);
-    //         vec = vecAsUlong.AsByte();
-    //     }
+        return vec;
+    }
 
-    //     return vec;
-    // }
-
-    // private Vector256<byte> permToVec(byte[] upperPerm, byte[] lowerPerm)
-    // {
-    //     // TODO: replace this with Gather() in .NET 7
-    //     Vector256<byte> vec;
-
-    //     unsafe
-    //     {
-    //         fixed (byte* up = &upperPerm[0])
-    //         {
-    //             fixed (byte* lp = &lowerPerm[0])
-    //             {
-    //                 ulong* up_u64 = (ulong*)up;
-    //                 ulong* lp_u64 = (ulong*)lp;
-    //                 var vecAsUlong = Vector256.Create(
-    //                     up_u64[0], up_u64[1], lp_u64[0], lp_u64[1]);
-    //                 vec = vecAsUlong.AsByte();
-    //             }
-    //         }
-    //     }
-
-    //     return vec;
-    // }
-
-    // #endregion VectorizedShuffle
+    #endregion VectorizedShuffle
 }
 
 public class EqualDistPermutator_256
@@ -186,6 +129,23 @@ public class EqualDistPermutator_256
     private int numItems;
 
     private static readonly Random rng = new Random();
+
+    public void NextPermutation(Span<byte> ids)
+    {
+        // TODO: find an intrinsic for doing this
+
+        for (int i = 0; i < numItems; i++)
+        {
+            int j = rng.Next(i, numItems);
+
+            if (i != j)
+            {
+                byte temp = ids[i];
+                ids[i] = ids[j];
+                ids[j] = temp;
+            }
+        }
+    }
 
     public byte[] NextPermutation()
     {

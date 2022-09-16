@@ -165,6 +165,35 @@ public readonly struct Hand : IEnumerable<Card>
         return count;
     }
 
+    #region SimpleImplForBenchmarks
+
+    public bool HasTrumpfSimple()
+    {
+        for (int i = 0; i < 8; i++)
+            if (hasCardAt(i) && cardAt(i).IsTrumpf)
+                return true;
+        return false;
+    }
+
+    public bool HasFarbeSimple(CardColor farbe)
+    {
+        for (int i = 0; i < 8; i++)
+            if (hasCardAt(i) && !cardAt(i).IsTrumpf && cardAt(i).Color == farbe)
+                return true;
+        return false;
+    }
+
+    public int FarbeCountSimple(CardColor farbe)
+    {
+        int count = 0;
+        for (int i = 0; i < 8; i++)
+            if (hasCardAt(i) && !cardAt(i).IsTrumpf && cardAt(i).Color == farbe)
+                count++;
+        return count;
+    }
+
+    #endregion SimpleImplForBenchmarks
+
     public override string ToString()
         => string.Join(", ", this);
 }
