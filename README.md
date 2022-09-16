@@ -33,15 +33,32 @@ cd Schafkopf.AI
 
 ### Build + Run Tests
 
+Just run the tests
+
 ```sh
-dotnet restore
 dotnet test
 ```
 
 Test with code coverage
 
 ```sh
-dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=lcov /p:CoverletOutput=./lcov.info
+dotnet test /p:CollectCoverage=true \
+    /p:CoverletOutputFormat=lcov \
+    /p:CoverletOutput=./lcov.info
+```
+
+---
+
+***Note:** This workflow requires 'Coverlet' and 'Coverage Gutters'
+VSCode extensions to be installed. Moreover, the 'coverlet.msbuild'
+NuGet package needs to be installed to the unit test projects
+to collect coverage logs from.*
+
+### Run Benchmarks
+
+```sh
+dotnet run --project Schafkopf.Lib.Benchmarks/Schafkopf.Lib.Benchmarks.csproj \
+    --configuration Release --arch x64 --os linux
 ```
 
 ### Run AI Training
