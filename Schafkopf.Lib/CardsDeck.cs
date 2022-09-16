@@ -1,9 +1,10 @@
+using System.Collections;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
 
 namespace Schafkopf.Lib;
 
-public class CardsDeck
+public class CardsDeck : IEnumerable<Hand>
 {
     public static readonly IReadOnlySet<Card> AllCards =
         Enumerable.Range(0, 32)
@@ -17,26 +18,62 @@ public class CardsDeck
             .Select(cards => new Hand(cards.ToArray()))
             .ToArray();
 
-    public Hand HandOfPlayer(int playerId)
-        => hands[playerId];
+    #region Enumerate
 
-    public Hand HandOfPlayerWithMeta(int playerId, GameCall call)
-        => hands[playerId].CacheTrumpf(call.IsTrumpf);
+    public Card this[int i] => hands[i / 4][i % 8];
+
+    public IEnumerator<Hand> GetEnumerator()
+    {
+        for (int i = 0; i < 4; i++)
+            yield return hands[i];
+    }
+
+    IEnumerator IEnumerable.GetEnumerator()
+        => GetEnumerator();
+
+    #endregion Enumerate
+
+    // public Hand HandOfPlayerWithMeta(int playerId, GameCall call)
+    //     => hands[playerId].CacheTrumpf(call.IsTrumpf);
 
     public Hand[] InitialHands()
-        => Enumerable.Range(0, 4)
-            .Select(i => HandOfPlayer(i))
-            .ToArray();
+    {
+        var hands = new Hand[4];
+        hands[0] = this.hands[0];
+        hands[1] = this.hands[1];
+        hands[2] = this.hands[2];
+        hands[3] = this.hands[3];
+        return hands;
+    }
 
     public Hand[] InitialHands(GameCall call)
+    {
+        var hands = new Hand[4];
+        hands[0] = this.hands[0].CacheTrumpf(call.IsTrumpf);
+        hands[1] = this.hands[1].CacheTrumpf(call.IsTrumpf);
+        hands[2] = this.hands[2].CacheTrumpf(call.IsTrumpf);
+        hands[3] = this.hands[3].CacheTrumpf(call.IsTrumpf);
+        return hands;
+    }
+
+    #region Simple
+
+    public Hand[] InitialHandsSimple()
         => Enumerable.Range(0, 4)
-            .Select(i => HandOfPlayerWithMeta(i, call))
+            .Select(i => hands[i])
             .ToArray();
 
-    // TODO: find a better performing implementation
+    public Hand[] InitialHandsSimple(GameCall call)
+        => Enumerable.Range(0, 4)
+            .Select(i => hands[i].CacheTrumpf(call.IsTrumpf))
+            .ToArray();
+
+    #endregion Simple
+
+    // TODO: think of not exposing this because it's only used by tests
     public IEnumerable<Card> AllCardsWithMeta(GameCall call)
         => Enumerable.Range(0, 4)
-            .SelectMany(i => HandOfPlayerWithMeta(i, call))
+            .SelectMany(i => hands[i].CacheTrumpf(call.IsTrumpf))
             .ToList();
 
     #region Shuffle

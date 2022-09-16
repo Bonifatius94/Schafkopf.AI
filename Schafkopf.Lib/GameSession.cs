@@ -18,8 +18,8 @@ public class GameSession
     {
         deck.Shuffle();
 
-        int klopfer = askForKlopfer();
         var initialHandsWithoutMeta = deck.InitialHands();
+        int klopfer = askForKlopfer(initialHandsWithoutMeta);
         var call = makeCalls(klopfer, initialHandsWithoutMeta);
 
         if (call.Mode == GameMode.Weiter)
@@ -50,7 +50,7 @@ public class GameSession
 
         foreach (var player in table.PlayersInDrawingOrder())
         {
-            var hand = deck.HandOfPlayer(player.Id);
+            var hand = initialHands[player.Id];
             var possibleCalls = callGen.AllPossibleCalls(player.Id, initialHands, call);
             var nextCall = player.MakeCall(possibleCalls, pos++, hand, klopfer);
             if (nextCall.Mode == GameMode.Weiter)
@@ -61,12 +61,12 @@ public class GameSession
         return call;
     }
 
-    private int askForKlopfer()
+    private int askForKlopfer(Hand[] initialHands)
     {
         return Enumerable.Range(0, 4).Zip(table.PlayersInDrawingOrder())
             .Select(x => (Pos: x.First, Player: x.Second))
             .Where(x => x.Player.IsKlopfer(
-                x.Pos, deck.HandOfPlayer(x.Player.Id).Take(4)))
+                x.Pos, initialHands[x.Player.Id].Take(4)))
             .Count();
     }
 

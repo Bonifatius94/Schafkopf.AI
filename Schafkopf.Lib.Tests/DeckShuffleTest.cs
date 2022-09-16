@@ -93,12 +93,7 @@ public class DeckShuffleTest
         var deck = new CardsDeck();
         deck.Shuffle();
 
-        var allCardsAfterShuffle =
-            deck.HandOfPlayer(0)
-                .Concat(deck.HandOfPlayer(1))
-                .Concat(deck.HandOfPlayer(2))
-                .Concat(deck.HandOfPlayer(3))
-            .ToHashSet();
+        var allCardsAfterShuffle = deck.SelectMany(x => x);
         allCardsAfterShuffle.Should().BeEquivalentTo(CardsDeck.AllCards);
     }
 
@@ -107,10 +102,6 @@ public class DeckShuffleTest
     {
         var deck = new CardsDeck();
         deck.Shuffle();
-
-        var hands = Enumerable.Range(0, 4)
-            .Select(i => deck.HandOfPlayer(i))
-            .ToList();
-        hands.Should().Match(x => x.All(h => h.CardsCount == 8));
+        deck.Should().Match(x => x.All(h => h.CardsCount == 8));
     }
 }
