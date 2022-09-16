@@ -86,8 +86,19 @@ public readonly struct Hand : IEnumerable<Card>
         return (int)(id | noMatch);
     }
 
+    public Card this[int i] => cardAt(i);
+
+    // TODO: figure out why this logic fails
+    // private int indexOf(Card card)
+    //     => indexOf((byte)(Card.EXISTING_FLAG | card.Id), 0x3F);
+
     private int indexOf(Card card)
-        => indexOf((byte)(Card.EXISTING_FLAG | card.Id), 0x3F);
+    {
+        for (int i = 0; i < 8; i++)
+            if (hasCardAt(i) && cardAt(i) == card)
+                return i;
+        return -1;
+    }
 
     private Card cardAt(int index)
         => new Card((byte)((cards >> (index * CARD_OFFSET)) & Card.CARD_MASK_WITH_META));
@@ -125,10 +136,11 @@ public readonly struct Hand : IEnumerable<Card>
         => GetEnumerator();
 
     public bool HasTrumpf()
-        => (cards & TRUMPF_BITMASK) > 0;
+        => indexOf((byte)0x60, 0x60) >= 0;
+        // info: trumpf bit and exists bit set
 
     public bool HasFarbe(CardColor farbe)
-        => indexOf((byte)farbe, 0x43) >= 0;
+        => indexOf((byte)((byte)farbe | Card.EXISTING_FLAG), 0x63) >= 0;
         // info: trumpf bit not set and farbe same as parameter
 
     public int FarbeCount(CardColor farbe)
@@ -152,4 +164,7 @@ public readonly struct Hand : IEnumerable<Card>
         int count = bitsSet >> 3; // div by 8
         return count;
     }
+
+    public override string ToString()
+        => string.Join(", ", this);
 }

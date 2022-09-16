@@ -21,25 +21,6 @@ public readonly struct TurnMetaData
         Call = call;
     }
 
-    public TurnMetaData(GameCall call, ushort id)
-    {
-        Id = id;
-        Call = call;
-    }
-
-    public static TurnMetaData NewMeta(
-            GameCall call,
-            int firstDrawingPlayerId)
-        => new TurnMetaData(call, firstDrawingPlayerId);
-
-    public static TurnMetaData UpdateMeta(
-            TurnMetaData last, bool alreadyGsucht)
-    {
-        ushort id = (ushort)(last.Id |
-            (alreadyGsucht ? ALREADY_GSUCHT_FLAG : 0x00));
-        return new TurnMetaData(last.Call, id);
-    }
-
     #endregion Init
 
     public readonly ushort Id;
@@ -119,6 +100,10 @@ public readonly struct Turn
     private Card c2 => new Card((byte)((Cards >> 8) & Card.CARD_MASK_WITH_META));
     private Card c3 => new Card((byte)((Cards >> 16) & Card.CARD_MASK_WITH_META));
     private Card c4 => new Card((byte)((Cards >> 24) & Card.CARD_MASK_WITH_META));
+
+    public bool IsTrumpfPlayed => FirstCard.IsTrumpf;
+    public bool IsFarbePlayed => !FirstCard.IsTrumpf;
+    public CardColor FarbePlayed => FirstCard.Color;
 
     public int FirstDrawingPlayerId => Meta.FirstDrawingPlayerId;
     public bool AlreadyGsucht => Meta.AlreadyGsucht;

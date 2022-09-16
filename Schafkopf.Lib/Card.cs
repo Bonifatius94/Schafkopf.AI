@@ -71,6 +71,6 @@ public readonly struct Card
 
     #endregion Equality
 
-    public override string ToString() => $"{Color} {Type}";
+    public override string ToString() => $"{Color} {Type}{(IsTrumpf ? " (trumpf)" : "")}";
     // TODO: add an emoji format
 }

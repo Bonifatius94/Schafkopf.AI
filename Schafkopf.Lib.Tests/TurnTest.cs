@@ -156,6 +156,8 @@ public class TurnAugenCountTest
 
 public class TurnWinnerTest
 {
+    #region Init
+
     public static IEnumerable<object[]> CardsWithExpWinner =
         new List<object[]> {
             new object[] {
@@ -219,6 +221,8 @@ public class TurnWinnerTest
                 3, 3
             },
         };
+
+    #endregion Init
 
     [Theory]
     [MemberData(nameof(CardsWithExpWinner))]

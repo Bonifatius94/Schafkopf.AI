@@ -19,20 +19,24 @@ public class GameSession
         deck.Shuffle();
 
         int klopfer = askForKlopfer();
-        var call = makeCalls(klopfer, deck.InitialHands());
+        var initialHandsWithoutMeta = deck.InitialHands();
+        var call = makeCalls(klopfer, initialHandsWithoutMeta);
+
+        if (call.Mode == GameMode.Weiter)
+        {
+            table.Shift();
+            return new GameHistory(
+                call, initialHandsWithoutMeta, table.FirstDrawingPlayerId);
+        }
 
         var initialHands = deck.InitialHands(call);
         int kommtRaus = table.FirstDrawingPlayerId;
         var history = new GameHistory(call, initialHands, kommtRaus);
 
-        if (call.Mode == GameMode.Weiter)
-            goto Leave;
-
         foreach (var player in table.PlayersInDrawingOrder())
             player.NewGame(initialHands[player.Id]);
         history = playGameUntilEnd(history);
 
-     Leave:
         table.Shift();
         return history;
     }
@@ -95,7 +99,7 @@ public class GameSession
             foreach (var player in
                 table.PlayersInDrawingOrder(history.KommtRaus))
             {
-                if (history.CanKontraRe())
+                if (history.CanKontraRe)
                     askForKontraRe(history);
 
                 var possibleCards = player.Hand

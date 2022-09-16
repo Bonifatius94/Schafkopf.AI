@@ -11,9 +11,9 @@ public class DrawValidator
         throw new NotSupportedException($"Game mode {call.Mode} is currently not supported!");
     }
 
-    public bool validateSauspiel(GameCall call, Card cardPlayed, Turn currentTurn, Hand playerHand)
+    public bool validateSauspiel(GameCall call, Card cardPlayed, Turn turn, Hand playerHand)
     {
-        bool kommtRaus = currentTurn.CardsCount == 0;
+        bool kommtRaus = turn.CardsCount == 0;
         bool darfNichtUntenDurch = kommtRaus && playerHand.HasCard(call.GsuchteSau)
             && playerHand.FarbeCount(call.GsuchteFarbe) < 4;
 
@@ -23,20 +23,22 @@ public class DrawValidator
         else if (kommtRaus)
             return true;
 
-        bool trumpfZugeben = currentTurn.FirstCard.IsTrumpf;
-        if (trumpfZugeben && !cardPlayed.IsTrumpf && playerHand.HasTrumpf())
+        bool trumpfZugeben = turn.IsTrumpfPlayed && playerHand.HasTrumpf();
+        if (trumpfZugeben && !cardPlayed.IsTrumpf)
             return false;
 
-        bool farbeZugeben = !trumpfZugeben &&
-            playerHand.HasFarbe(currentTurn.FirstCard.Color);
-        if (farbeZugeben && cardPlayed.Color != currentTurn.FirstCard.Color)
+        bool farbeZugeben = turn.IsFarbePlayed &&
+            playerHand.HasFarbe(turn.FarbePlayed);
+        if (farbeZugeben && (cardPlayed.Color != turn.FarbePlayed || cardPlayed.IsTrumpf))
             return false;
 
-        bool gsuchtIs = farbeZugeben && call.GsuchteFarbe == currentTurn.FirstCard.Color;
-        if (gsuchtIs && cardPlayed.Type != CardType.Sau)
+        bool gsuchteSauZugeben = farbeZugeben &&
+            call.GsuchteFarbe == turn.FarbePlayed &&
+            playerHand.HasCard(call.GsuchteSau);
+        if (gsuchteSauZugeben && cardPlayed.Type != CardType.Sau)
             return false;
 
-        if (!gsuchtIs && !currentTurn.AlreadyGsucht && cardPlayed == call.GsuchteSau)
+        if (!gsuchteSauZugeben && !turn.AlreadyGsucht && cardPlayed == call.GsuchteSau)
             return false;
 
         return true;
@@ -54,7 +56,7 @@ public class DrawValidator
 
         bool mussAngeben = !isTrumpfTurn &&
             playerHand.HasFarbe(currentTurn.FirstCard.Color);
-        if (mussAngeben && cardPlayed.Color != currentTurn.FirstCard.Color)
+        if (mussAngeben && (cardPlayed.Color != currentTurn.FirstCard.Color || cardPlayed.IsTrumpf))
             return false;
 
         return true;

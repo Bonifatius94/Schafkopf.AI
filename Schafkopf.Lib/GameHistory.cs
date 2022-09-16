@@ -31,7 +31,8 @@ public class GameHistory : IEnumerable<Turn>
 
     public IEnumerator<Turn> GetEnumerator()
     {
-        for (int i = 0; i < 8; i++)
+        yield return turns[0];
+        for (int i = 0; i < 7; i++)
             yield return nextTurn();
     }
 
@@ -62,7 +63,7 @@ public class GameHistory : IEnumerable<Turn>
 
     #region Klopfer/Kontra/Re
 
-    public bool CanKontraRe()
+    public bool CanKontraRe
         => turnCount == 1 && CurrentTurn.CardsCount <= 1;
 
     private int klopfer = 0;

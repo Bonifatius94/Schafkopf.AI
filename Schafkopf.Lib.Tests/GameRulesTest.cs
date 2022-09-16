@@ -72,6 +72,60 @@ public class GameRulesTest
 
     [Theory]
     [InlineData(0, true)]
+    [InlineData(1, false)]
+    [InlineData(2, true)]
+    [InlineData(3, false)]
+    [InlineData(4, false)]
+    public void Test_TrumpfZugeben_WhenTrumpfPlayedAndTrumpfInHand_GivenSauspiel(
+        int indexOfCardToPlay, bool canPlayCard)
+    {
+        var call = GameCall.Sauspiel(0, 1, CardColor.Schell);
+        var hand = new Hand(new Card[] {
+            new Card(CardType.Unter, CardColor.Schell),
+            new Card(CardType.Sieben, CardColor.Schell),
+            new Card(CardType.Acht, CardColor.Herz),
+            new Card(CardType.Neun, CardColor.Eichel),
+            new Card(CardType.Sau, CardColor.Gras),
+        });
+        hand = hand.CacheTrumpf(call.IsTrumpf);
+        var turn = turnOfCards(call, new Card[] {
+            new Card(CardType.Unter, CardColor.Eichel, true, true)
+        });
+
+        var cardToPlay = hand.ElementAt(indexOfCardToPlay);
+        drawEval.CanPlayCard(call, cardToPlay, turn, hand)
+            .Should().Be(canPlayCard);
+    }
+
+    [Theory]
+    [InlineData(0, false)]
+    [InlineData(1, false)]
+    [InlineData(2, false)]
+    [InlineData(3, true)]
+    [InlineData(4, false)]
+    public void Test_FarbeZugeben_WhenFarbePlayedAndFarbeInHand_GivenSauspiel(
+        int indexOfCardToPlay, bool canPlayCard)
+    {
+        var call = GameCall.Sauspiel(0, 1, CardColor.Schell);
+        var hand = new Hand(new Card[] {
+            new Card(CardType.Unter, CardColor.Schell),
+            new Card(CardType.Sieben, CardColor.Schell),
+            new Card(CardType.Acht, CardColor.Herz),
+            new Card(CardType.Neun, CardColor.Eichel),
+            new Card(CardType.Sau, CardColor.Gras),
+        });
+        hand = hand.CacheTrumpf(call.IsTrumpf);
+        var turn = turnOfCards(call, new Card[] {
+            new Card(CardType.Neun, CardColor.Eichel, true, false)
+        });
+
+        var cardToPlay = hand.ElementAt(indexOfCardToPlay);
+        drawEval.CanPlayCard(call, cardToPlay, turn, hand)
+            .Should().Be(canPlayCard);
+    }
+
+    [Theory]
+    [InlineData(0, true)]
     [InlineData(1, true)]
     [InlineData(2, true)]
     [InlineData(3, true)]
@@ -304,5 +358,46 @@ public class GameRulesTest
         var cardToPlay = hand.ElementAt(indexOfCardToPlay);
         drawEval.CanPlayCard(call, cardToPlay, turn, hand)
             .Should().Be(canPlayCard);
+    }
+}
+
+public class GameRules_RegressionTests
+{
+    [Fact]
+    public void Test_MussFarbeZugeben()
+    {
+        // player 3 called Sauspiel mit der Gras Sau
+        // player 0 holding Schell Sau, Eichel Koenig, Herz Ober (trumpf), Schell Sieben, Eichel Acht, Herz Sau (trumpf), Herz Sieben (trumpf), Herz Koenig (trumpf)
+        // player 1 holding Schell Ober (trumpf), Herz Acht (trumpf), Gras Sau, Gras Ober (trumpf), Herz Zehn (trumpf), Gras Unter (trumpf), Schell Zehn, Eichel Ober (trumpf)
+        // player 2 holding Gras Acht, Schell Koenig, Gras Koenig, Herz Neun (trumpf), Gras Zehn, Eichel Zehn, Eichel Sau, Gras Sieben
+        // player 3 holding Eichel Unter (trumpf), Eichel Sieben, Schell Unter (trumpf), Gras Neun, Schell Neun, Herz Unter (trumpf), Schell Acht, Eichel Neun
+        // -----------------------------
+        // started turn 1, 0 kommt raus
+        // player 0 played Schell Sau
+        // player 1 played Schell Ober (trumpf)
+        // player 2 played Schell Koenig
+        // player 3 played Schell Neun
+
+        var call = GameCall.Sauspiel(3, 1, CardColor.Gras);
+        var hand = new Hand(new Card[] {
+                new Card(CardType.Ober, CardColor.Schell),
+                new Card(CardType.Acht, CardColor.Herz),
+                new Card(CardType.Sau, CardColor.Gras),
+                new Card(CardType.Ober, CardColor.Gras),
+                new Card(CardType.Zehn, CardColor.Herz),
+                new Card(CardType.Unter, CardColor.Gras),
+                new Card(CardType.Zehn, CardColor.Schell),
+                new Card(CardType.Ober, CardColor.Eichel),
+            });
+        hand = hand.CacheTrumpf(call.IsTrumpf);
+
+        var turn = Turn.InitFirstTurn(0, call);
+        turn = turn.NextCard(new Card(CardType.Sau, CardColor.Schell, true, false));
+
+        var drawEval = new DrawValidator();
+        drawEval.CanPlayCard(call, hand[0], turn, hand)
+            .Should().BeFalse();
+        drawEval.CanPlayCard(call, hand[6], turn, hand)
+            .Should().BeTrue();
     }
 }
