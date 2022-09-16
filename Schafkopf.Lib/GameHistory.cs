@@ -38,10 +38,6 @@ public class GameHistory : IEnumerable<Turn>
 
     private Turn nextTurn()
     {
-        if (turnCount >= 8)
-            throw new InvalidOperationException(
-                "Game is already over, only has 8 rounds!");
-
         var lastTurn = CurrentTurn;
         KommtRaus = CurrentTurn.WinnerId;
         var nextTurn = Turn.InitNextTurn(lastTurn);

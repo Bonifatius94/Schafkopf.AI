@@ -63,6 +63,8 @@ public class TestGameSession
         for (int i = 0; i < 10000; i++)
             session.ProcessGame();
     }
+
+    // TODO: enforce at least one game call of each mode
 }
 
 public class RandomAgent : ISchafkopfAIAgent
