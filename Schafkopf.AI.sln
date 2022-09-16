@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Schafkopf.Lib.Tests", "Scha
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Schafkopf.Training", "Schafkopf.Training\Schafkopf.Training.csproj", "{C140BAC8-A092-4F05-874A-52723441962C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Schafkopf.Lib.Benchmarks", "Schafkopf.Lib.Benchmarks\Schafkopf.Lib.Benchmarks.csproj", "{DD963242-E945-4588-97AF-C13704EEC82E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -30,5 +32,9 @@ Global
 		{C140BAC8-A092-4F05-874A-52723441962C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C140BAC8-A092-4F05-874A-52723441962C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C140BAC8-A092-4F05-874A-52723441962C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DD963242-E945-4588-97AF-C13704EEC82E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DD963242-E945-4588-97AF-C13704EEC82E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DD963242-E945-4588-97AF-C13704EEC82E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DD963242-E945-4588-97AF-C13704EEC82E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
