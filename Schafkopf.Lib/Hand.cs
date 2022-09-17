@@ -1,8 +1,3 @@
-using System.Collections;
-using System.Numerics;
-using System.Runtime.Intrinsics;
-using System.Runtime.Intrinsics.X86;
-
 namespace Schafkopf.Lib;
 
 public readonly struct Hand : IEnumerable<Card>

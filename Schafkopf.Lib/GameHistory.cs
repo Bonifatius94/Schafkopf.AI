@@ -1,5 +1,3 @@
-using System.Collections;
-
 namespace Schafkopf.Lib;
 
 public class GameHistory : IEnumerable<Turn>

@@ -1,8 +1,4 @@
-﻿using System.Numerics;
-using System.Runtime.Intrinsics;
-using System.Runtime.Intrinsics.X86;
-
-namespace Schafkopf.Lib;
+﻿namespace Schafkopf.Lib;
 
 public readonly struct TurnMetaData
 {
@@ -67,10 +63,6 @@ public readonly struct Turn
 
     public static Turn InitFirstTurn(int firstDrawingPlayerId, GameCall call)
     {
-        // if (firstDrawingPlayerId < 0 || firstDrawingPlayerId > 3)
-        //     throw new ArgumentException(
-        //         $"Invalid player id {firstDrawingPlayerId}, needs to be within [0, 3]");
-
         var meta = new TurnMetaData(call, firstDrawingPlayerId);
         return new Turn(meta, EMPTY_CARDS);
     }
@@ -80,10 +72,6 @@ public readonly struct Turn
 
     public Turn NextCard(Card card)
     {
-        // if (CardsCount >= 4)
-        //     throw new InvalidOperationException(
-        //         "Cannot add another card. The turn is already over!");
-
         int playerId = (Meta.FirstDrawingPlayerId + CardsCount) % 4;
         uint newId = Cards | ((uint)card.Id << (playerId * CARD_OFFSET));
         bool alreadyGsucht = Meta.AlreadyGsucht
@@ -113,7 +101,6 @@ public readonly struct Turn
             & Card.CARD_MASK_WITH_META));
 
     public int CardsCount => BitOperations.PopCount(Cards & EXISTING_BITMASK);
-    // public bool IsDone => CardsCount == 4;
 
     public Card[] AllCards
     {
@@ -138,19 +125,11 @@ public readonly struct Turn
     }
 
     public int Augen
-    {
-        get
-        {
-            // TODO: implement this with AVX2 256-bit vector ops
-            //         -> should be even more efficient
-
-            return cardCountByType(Cards, CardType.Unter) * 2
-                + cardCountByType(Cards, CardType.Ober) * 3
-                + cardCountByType(Cards, CardType.Koenig) * 4
-                + cardCountByType(Cards, CardType.Zehn) * 10
-                + cardCountByType(Cards, CardType.Sau) * 11;
-        }
-    }
+        => cardCountByType(Cards, CardType.Unter) * 2
+            + cardCountByType(Cards, CardType.Ober) * 3
+            + cardCountByType(Cards, CardType.Koenig) * 4
+            + cardCountByType(Cards, CardType.Zehn) * 10
+            + cardCountByType(Cards, CardType.Sau) * 11;
 
     #endregion Augen
 
@@ -222,6 +201,27 @@ public readonly struct Turn
 
         return (int)((firstPlayerHatRechtMask & (ulong)firstPlayerId)
             | (~firstPlayerHatRechtMask & winnerId));
+    }
+
+    public int WinnerIdSimple()
+    {
+        var c1 = FirstCard;
+        bool isTrumpfTurn = c1.IsTrumpf;
+
+        var cards = new Card[4];
+        unsafe { fixed (Card* cp = &cards[0]) *((uint*)cp) = Cards; }
+
+        var cardsByPlayer = Enumerable.Range(FirstDrawingPlayerId, CardsCount)
+            .ToDictionary(i => i % 4, i => cards[i]);
+
+        var comparer = new CardComparer(Meta.Call.Mode);
+        if (isTrumpfTurn)
+            return cardsByPlayer.MaxBy(x => x.Value, comparer).Key;
+
+        var farbePlayed = FarbePlayed;
+        return cardsByPlayer
+            .Where(x => x.Value.Color == farbePlayed || x.Value.IsTrumpf)
+            .MaxBy(x => x.Value, comparer).Key;
     }
 
     #endregion Winner

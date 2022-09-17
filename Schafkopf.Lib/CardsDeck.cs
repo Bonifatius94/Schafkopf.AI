@@ -1,7 +1,3 @@
-using System.Collections;
-using System.Runtime.Intrinsics;
-using System.Runtime.Intrinsics.X86;
-
 namespace Schafkopf.Lib;
 
 public class CardsDeck : IEnumerable<Hand>

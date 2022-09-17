@@ -1,5 +1,3 @@
-using FluentAssertions;
-
 namespace Schafkopf.Lib.Test;
 
 public class TurnAddCardTest

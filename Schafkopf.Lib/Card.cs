@@ -1,5 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace Schafkopf.Lib;
 
 public enum CardType

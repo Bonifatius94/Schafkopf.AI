@@ -3,22 +3,22 @@ namespace Schafkopf.Lib;
 public class GameTable
 {
     public GameTable(
-        ISchafkopfPlayer p1,
-        ISchafkopfPlayer p2,
-        ISchafkopfPlayer p3,
-        ISchafkopfPlayer p4)
+        Player p1,
+        Player p2,
+        Player p3,
+        Player p4)
     {
-        players = new ISchafkopfPlayer[] { p1, p2, p3, p4 };
+        players = new Player[] { p1, p2, p3, p4 };
         FirstDrawingPlayerId = 0;
     }
 
-    private ISchafkopfPlayer[] players;
+    private Player[] players;
     public int FirstDrawingPlayerId { get; private set; }
 
-    public IEnumerable<ISchafkopfPlayer> PlayersInDrawingOrder()
+    public IEnumerable<Player> PlayersInDrawingOrder()
         => PlayersInDrawingOrder(FirstDrawingPlayerId);
 
-    public IEnumerable<ISchafkopfPlayer> PlayersInDrawingOrder(int kommtRaus)
+    public IEnumerable<Player> PlayersInDrawingOrder(int kommtRaus)
     {
         int id = kommtRaus;
         yield return players[id];
@@ -30,7 +30,7 @@ public class GameTable
         yield return players[id];
     }
 
-    public IEnumerable<ISchafkopfPlayer> PlayersById(IEnumerable<int> ids)
+    public IEnumerable<Player> PlayersById(IEnumerable<int> ids)
         => ids.Select(id => players[id]);
 
     public void Shift()

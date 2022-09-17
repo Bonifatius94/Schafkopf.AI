@@ -1,6 +1,4 @@
 using System.Collections.Concurrent;
-using System.Diagnostics.CodeAnalysis;
-using FluentAssertions;
 
 namespace Schafkopf.Lib.Test;
 

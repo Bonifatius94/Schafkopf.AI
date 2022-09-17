@@ -2,7 +2,9 @@ namespace Schafkopf.Lib;
 
 public interface ISchafkopfAIAgent
 {
-    GameCall MakeCall(IEnumerable<GameCall> possibleCalls, int position, Hand hand, int klopfer);
+    GameCall MakeCall(
+        IEnumerable<GameCall> possibleCalls,
+        int position, Hand hand, int klopfer);
     Card ChooseCard(GameHistory history, IEnumerable<Card> possibleCards);
     void OnGameFinished(GameResult result);
 
@@ -11,15 +13,7 @@ public interface ISchafkopfAIAgent
     bool CallRe(GameHistory history);
 }
 
-public interface ISchafkopfPlayer : ISchafkopfAIAgent
-{
-    public int Id { get; }
-    Hand Hand { get; }
-    void NewGame(Hand hand);
-    void Discard(Card card);
-}
-
-public class Player : ISchafkopfPlayer
+public class Player
 {
     public Player(int id, ISchafkopfAIAgent agent)
     {
@@ -50,7 +44,9 @@ public class Player : ISchafkopfPlayer
     public bool IsKlopfer(int position, IEnumerable<Card> firstFourCards)
         => agent.IsKlopfer(position, firstFourCards);
 
-    public GameCall MakeCall(IEnumerable<GameCall> possibleCalls, int position, Hand hand, int klopfer)
+    public GameCall MakeCall(
+            IEnumerable<GameCall> possibleCalls,
+            int position, Hand hand, int klopfer)
         => agent.MakeCall(possibleCalls, position, hand, klopfer);
 
     public void OnGameFinished(GameResult result)
