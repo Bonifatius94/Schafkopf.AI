@@ -1,6 +1,4 @@
-﻿using Schafkopf.Lib;
-
-var deck = new CardsDeck();
+﻿var deck = new CardsDeck();
 var table = new GameTable(
     new Player(0, new RandomAgent()),
     new Player(1, new RandomAgent()),

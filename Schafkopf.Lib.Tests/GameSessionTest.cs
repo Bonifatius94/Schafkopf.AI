@@ -62,7 +62,64 @@ public class TestGameSession
             session.ProcessGame();
     }
 
+    public static IEnumerable<object[]> gsuchteFarben =
+        new List<CardColor>() { CardColor.Schell, CardColor.Gras, CardColor.Eichel }
+        .Select(c => new object[] { c });
+
+    [Theory]
+    [MemberData(nameof(gsuchteFarben))]
+    public void Test_CanPlaySauspielForAnyGsuchteFarbe(CardColor gsuchteFarbe)
+    {
+        var deck = new CardsDeck();
+        var sauspielCall = GameCall.Sauspiel(0, 1, gsuchteFarbe);
+        var weiter = GameCall.Weiter();
+
+        GameHistory history;
+        do
+        {
+            // either play a sauspiel or call weiter
+            var table = new GameTable(
+                new Player(0, new SauspielAgent(sauspielCall)),
+                new Player(1, new RandomAgent(weiter)),
+                new Player(2, new RandomAgent(weiter)),
+                new Player(3, new RandomAgent(weiter)));
+            var session = new GameSession(table, deck);
+            history = session.ProcessGame();
+        }
+        // ensure that actually one sauspiel was played
+        while (history.Call.Mode == GameMode.Weiter);
+    }
+
     // TODO: enforce at least one game call of each mode
+}
+
+public class SauspielAgent : ISchafkopfAIAgent
+{
+    public SauspielAgent(GameCall callToMake)
+        => this.callToMake = callToMake;
+
+    private GameCall callToMake;
+
+    private static readonly Random rng = new Random();
+
+    public void OnGameFinished(GameResult result) { }
+
+    public GameCall MakeCall(
+            IEnumerable<GameCall> possibleCalls,
+            int position, Hand hand, int klopfer)
+        => possibleCalls.Contains(callToMake) ? callToMake : GameCall.Weiter();
+
+    public Card ChooseCard(GameHistory history, IEnumerable<Card> possibleCards)
+        => possibleCards.ElementAt(rng.Next(possibleCards.Count()));
+
+    public bool IsKlopfer(int position, IEnumerable<Card> firstFourCards)
+        => false;
+
+    public bool CallKontra(GameHistory history)
+        => false;
+
+    public bool CallRe(GameHistory history)
+        => false;
 }
 
 public class RandomAgent : ISchafkopfAIAgent
@@ -73,28 +130,15 @@ public class RandomAgent : ISchafkopfAIAgent
 
     private GameCall? callToMake = null;
 
-    private GameCall call;
-    public Hand Hand { get; private set; }
-
-    public int Id => throw new NotImplementedException();
-
-    public void NewGame(GameCall call, Hand hand)
-    {
-        Hand = hand;
-        this.call = call;
-    }
-
     private static readonly Random rng = new Random();
-
-    public Card ChooseCard(Turn state)
-        => Hand.ElementAt(rng.Next(0, Hand.CardsCount));
 
     public void OnGameFinished(GameResult result) { }
 
     public GameCall MakeCall(
             IEnumerable<GameCall> possibleCalls,
             int position, Hand hand, int klopfer)
-        => callToMake ?? possibleCalls.ElementAt(rng.Next(possibleCalls.Count()));
+        => callToMake != null && possibleCalls.Contains(callToMake.Value) ? callToMake.Value
+            : possibleCalls.ElementAt(rng.Next(possibleCalls.Count()));
 
     public Card ChooseCard(GameHistory history, IEnumerable<Card> possibleCards)
         => possibleCards.ElementAt(rng.Next(possibleCards.Count()));
