@@ -11,7 +11,7 @@ public class GameHistory : IEnumerable<Turn>
         this.initialHands = initialHands;
         turns = new Turn[8];
         turns[0] = Turn.InitFirstTurn((byte)kommtRaus, call);
-        turnCount = 1;
+        TurnCount = 1;
         this.KommtRaus = kommtRaus;
     }
 
@@ -20,12 +20,12 @@ public class GameHistory : IEnumerable<Turn>
 
     #region Turns
 
-    private int turnCount;
+    public int TurnCount { get; private set; }
     private Turn[] turns;
     private Hand[] initialHands;
 
-    public Turn CurrentTurn => turns[turnCount - 1];
-    public IReadOnlyList<Turn> Turns => turns[0..turnCount];
+    public Turn CurrentTurn => turns[TurnCount - 1];
+    public IReadOnlyList<Turn> Turns => turns[0..TurnCount];
 
     public IEnumerator<Turn> GetEnumerator()
     {
@@ -39,7 +39,7 @@ public class GameHistory : IEnumerable<Turn>
         var lastTurn = CurrentTurn;
         KommtRaus = CurrentTurn.WinnerId;
         var nextTurn = Turn.InitNextTurn(lastTurn);
-        turns[turnCount++] = nextTurn;
+        turns[TurnCount++] = nextTurn;
         return nextTurn;
     }
 
@@ -49,7 +49,7 @@ public class GameHistory : IEnumerable<Turn>
     public Turn NextCard(Card card)
     {
         var turnWithCardApplied = CurrentTurn.NextCard(card);
-        turns[turnCount - 1] = turnWithCardApplied;
+        turns[TurnCount - 1] = turnWithCardApplied;
         return turnWithCardApplied;
     }
 
@@ -58,7 +58,7 @@ public class GameHistory : IEnumerable<Turn>
     #region Klopfer/Kontra/Re
 
     public bool CanKontraRe
-        => turnCount == 1 && CurrentTurn.CardsCount <= 1;
+        => TurnCount == 1 && CurrentTurn.CardsCount <= 1;
 
     private int klopfer = 0;
     public bool IsKontraCalled { get; private set; } = false;
@@ -113,7 +113,9 @@ public class GameHistory : IEnumerable<Turn>
 
     #endregion Score
 
-    public bool DidCallerWin => ScoreCaller >= 61;
+    public bool DidCallerWin
+        => (ScoreCaller >= 61 && !Call.IsTout) || (Call.IsTout && ScoreCaller == 120);
+        // TODO: transform this into a XOR
     public bool IsSchneider => ScoreCaller > 90 || ScoreOpponents >= 90;
     public bool IsSchwarz => ScoreCaller == 0 || ScoreCaller == 120;
 

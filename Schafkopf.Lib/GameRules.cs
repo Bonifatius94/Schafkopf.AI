@@ -13,53 +13,58 @@ public class DrawValidator
 
     public bool validateSauspiel(GameCall call, Card cardPlayed, Turn turn, Hand playerHand)
     {
+        bool gsuchtIs = turn.FarbePlayed == call.GsuchteFarbe;
         bool kommtRaus = turn.CardsCount == 0;
-        bool darfNichtUntenDurch = kommtRaus && playerHand.HasCard(call.GsuchteSau)
-            && playerHand.FarbeCount(call.GsuchteFarbe) < 4;
-
-        if (darfNichtUntenDurch && cardPlayed.Color == call.GsuchteFarbe
-                && cardPlayed.Type != CardType.Sau)
-            return false;
-        else if (kommtRaus)
-            return true;
-
-        bool trumpfZugeben = turn.IsTrumpfPlayed && playerHand.HasTrumpf();
-        if (trumpfZugeben && !cardPlayed.IsTrumpf)
-            return false;
-
-        bool farbeZugeben = turn.IsFarbePlayed &&
-            playerHand.HasFarbe(turn.FarbePlayed);
-        if (farbeZugeben && (cardPlayed.Color != turn.FarbePlayed || cardPlayed.IsTrumpf))
-            return false;
-
-        bool gsuchteSauZugeben = farbeZugeben &&
-            call.GsuchteFarbe == turn.FarbePlayed &&
-            playerHand.HasCard(call.GsuchteSau);
-        if (gsuchteSauZugeben && cardPlayed.Type != CardType.Sau)
-            return false;
-
-        if (!gsuchteSauZugeben && !turn.AlreadyGsucht && cardPlayed == call.GsuchteSau)
-            return false;
-
-        return true;
+        if (kommtRaus)
+        {
+            bool darfNichtUntenDurch = playerHand.HasCard(call.GsuchteSau)
+                && playerHand.FarbeCount(call.GsuchteFarbe) < 4;
+            bool mussGsuchteAnspielen = gsuchtIs && darfNichtUntenDurch;
+            return !mussGsuchteAnspielen || cardPlayed == call.GsuchteSau;
+        }
+        else // kommt nicht raus
+        {
+            if (turn.IsTrumpfPlayed && playerHand.HasTrumpf())
+            {
+                return cardPlayed.IsTrumpf;
+            }
+            else if (turn.IsFarbePlayed && playerHand.HasFarbe(turn.FarbePlayed))
+            {
+                bool gsuchteZugeben = gsuchtIs && playerHand.HasCard(call.GsuchteSau);
+                return !cardPlayed.IsTrumpf && cardPlayed.Color == turn.FarbePlayed
+                    && (!gsuchteZugeben || cardPlayed == call.GsuchteSau);
+            }
+            else // schmieren / einstechen
+            {
+                return turn.AlreadyGsucht
+                    || !playerHand.HasCard(call.GsuchteSau)
+                    || cardPlayed != call.GsuchteSau;
+            }
+        }
     }
 
-    private bool validateSoloOrWenz(GameCall call, Card cardPlayed, Turn currentTurn, Hand playerHand)
+    private bool validateSoloOrWenz(GameCall call, Card cardPlayed, Turn turn, Hand playerHand)
     {
-        bool kommtRaus = currentTurn.CardsCount == 0;
-        if (kommtRaus)
+        bool kommtRaus = turn.CardsCount == 0;
+        if (!kommtRaus)
+        {
+            if (turn.IsTrumpfPlayed && playerHand.HasTrumpf())
+            {
+                return cardPlayed.IsTrumpf;
+            }
+            else if (turn.IsFarbePlayed && playerHand.HasFarbe(turn.FarbePlayed))
+            {
+                return !cardPlayed.IsTrumpf && cardPlayed.Color == turn.FarbePlayed;
+            }
+            else // schmieren / einstechen
+            {
+                return true;
+            }
+        }
+        else // kommt raus
+        {
             return true;
-
-        bool isTrumpfTurn = currentTurn.FirstCard.IsTrumpf;
-        if (isTrumpfTurn && !cardPlayed.IsTrumpf && playerHand.HasTrumpf())
-            return false;
-
-        bool mussAngeben = !isTrumpfTurn &&
-            playerHand.HasFarbe(currentTurn.FirstCard.Color);
-        if (mussAngeben && (cardPlayed.Color != currentTurn.FirstCard.Color || cardPlayed.IsTrumpf))
-            return false;
-
-        return true;
+        }
     }
 }
 

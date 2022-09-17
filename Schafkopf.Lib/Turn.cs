@@ -203,27 +203,6 @@ public readonly struct Turn
             | (~firstPlayerHatRechtMask & winnerId));
     }
 
-    public int WinnerIdSimple()
-    {
-        var c1 = FirstCard;
-        bool isTrumpfTurn = c1.IsTrumpf;
-
-        var cards = new Card[4];
-        unsafe { fixed (Card* cp = &cards[0]) *((uint*)cp) = Cards; }
-
-        var cardsByPlayer = Enumerable.Range(FirstDrawingPlayerId, CardsCount)
-            .ToDictionary(i => i % 4, i => cards[i]);
-
-        var comparer = new CardComparer(Meta.Call.Mode);
-        if (isTrumpfTurn)
-            return cardsByPlayer.MaxBy(x => x.Value, comparer).Key;
-
-        var farbePlayed = FarbePlayed;
-        return cardsByPlayer
-            .Where(x => x.Value.Color == farbePlayed || x.Value.IsTrumpf)
-            .MaxBy(x => x.Value, comparer).Key;
-    }
-
     #endregion Winner
 
     #region Matching
@@ -243,4 +222,41 @@ public readonly struct Turn
 
     public override string ToString()
         => $"{string.Join(", ", AllCards.Select(x => x.ToString()))}";
+
+    #region Simple
+
+    private static readonly Dictionary<CardType, int> augenByType =
+        new Dictionary<CardType, int>() {
+            { CardType.Sieben, 0 },
+            { CardType.Acht, 0 },
+            { CardType.Neun, 0 },
+            { CardType.Unter, 2 },
+            { CardType.Ober, 3 },
+            { CardType.Koenig, 4 },
+            { CardType.Zehn, 10 },
+            { CardType.Sau, 11 },
+        };
+
+    public int AugenSimple()
+        => AllCards.Select(c => augenByType[c.Type]).Sum();
+
+    public int WinnerIdSimple()
+    {
+        var cards = new Card[4];
+        unsafe { fixed (Card* cp = &cards[0]) *((uint*)cp) = Cards; }
+
+        var cardsByPlayer = Enumerable.Range(FirstDrawingPlayerId, CardsCount)
+            .ToDictionary(i => i % 4, i => cards[i]);
+
+        var comparer = new CardComparer(Meta.Call.Mode);
+        if (IsTrumpfPlayed)
+            return cardsByPlayer.MaxBy(x => x.Value, comparer).Key;
+
+        var farbePlayed = FarbePlayed;
+        return cardsByPlayer
+            .Where(x => x.Value.Color == farbePlayed || x.Value.IsTrumpf)
+            .MaxBy(x => x.Value, comparer).Key;
+    }
+
+    #endregion Simple
 }

@@ -96,20 +96,33 @@ public class GameSession
         foreach (var newTurn in history)
         {
             var turn = newTurn;
-            foreach (var player in
-                table.PlayersInDrawingOrder(history.KommtRaus))
+
+            if (history.TurnCount == 8)
             {
-                if (history.CanKontraRe)
-                    askForKontraRe(history);
+                foreach (var player in
+                    table.PlayersInDrawingOrder(history.KommtRaus))
+                {
+                    var lastCard = player.Hand.First();
+                    turn = history.NextCard(lastCard);
+                }
+            }
+            else
+            {
+                foreach (var player in
+                    table.PlayersInDrawingOrder(history.KommtRaus))
+                {
+                    if (history.CanKontraRe)
+                        askForKontraRe(history);
 
-                var possibleCards = player.Hand
-                    .Where(card => validator.CanPlayCard(
-                        history.Call, card, turn, player.Hand))
-                    .ToArray();
+                    var possibleCards = player.Hand
+                        .Where(card => validator.CanPlayCard(
+                            history.Call, card, turn, player.Hand))
+                        .ToArray();
 
-                var card = player.ChooseCard(history, possibleCards);
-                player.Discard(card);
-                turn = history.NextCard(card);
+                    var card = player.ChooseCard(history, possibleCards);
+                    player.Discard(card);
+                    turn = history.NextCard(card);
+                }
             }
         }
 

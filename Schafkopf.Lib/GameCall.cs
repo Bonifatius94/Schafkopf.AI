@@ -106,6 +106,15 @@ public readonly struct GameCall
             return $"{Trumpf} Solo{(IsTout ? " Tout" : "")}";
         return $"unknown game mode {Mode}";
     }
+
+    #region Equality
+
+    public override bool Equals([NotNullWhen(true)] object? obj)
+        => obj is GameCall call && call.Id == Id;
+
+    public override int GetHashCode() => Id;
+
+    #endregion Equality
 }
 
 public class GameCallComparer : IComparer<GameCall>

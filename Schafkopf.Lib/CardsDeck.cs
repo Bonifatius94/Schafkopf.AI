@@ -16,7 +16,7 @@ public class CardsDeck : IEnumerable<Hand>
 
     #region Enumerate
 
-    public Card this[int i] => hands[i / 4][i % 8];
+    public Card this[int i] => hands[i / 8][i % 8];
 
     public IEnumerator<Hand> GetEnumerator()
     {
