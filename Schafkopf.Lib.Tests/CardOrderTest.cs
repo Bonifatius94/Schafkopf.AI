@@ -15,7 +15,7 @@ public class WenzTrumpfCardOrderTest
     {
         var call = newWenz();
         var deck = new CardsDeck();
-        var allCardsWithMeta = deck.AllCardsWithMeta(call);
+        var allCardsWithMeta = deck.SelectMany(h => h.CacheTrumpf(call.IsTrumpf)).ToArray();
         var allTrumpf = allCardsWithMeta.Where(x => x.Type == CardType.Unter);
         var allNonTrumpf = allCardsWithMeta.Except(allTrumpf);
 
@@ -29,7 +29,7 @@ public class WenzTrumpfCardOrderTest
         var call = newWenz();
         var comp = new CardComparer(call.Mode);
         var deck = new CardsDeck();
-        var allCardsWithMeta = deck.AllCardsWithMeta(call);
+        var allCardsWithMeta = deck.SelectMany(h => h.CacheTrumpf(call.IsTrumpf)).ToArray();
         var allTrumpf = allCardsWithMeta.Where(x => x.Type == CardType.Unter).ToList();
         var allOtherCards = allCardsWithMeta.Except(allTrumpf).ToList();
 
@@ -43,7 +43,7 @@ public class WenzTrumpfCardOrderTest
         var call = newWenz();
         var comp = new CardComparer(call.Mode);
         var deck = new CardsDeck();
-        var allCardsWithMeta = deck.AllCardsWithMeta(call);
+        var allCardsWithMeta = deck.SelectMany(h => h.CacheTrumpf(call.IsTrumpf)).ToArray();
 
         IEnumerable<Card> orderedTrumpf = allCardsWithMeta
             .Where(x => x.Type == CardType.Unter)
@@ -125,7 +125,7 @@ public class SauspielTrumpfCardOrderTest
     {
         var call = newSauspiel();
         var deck = new CardsDeck();
-        var allCardsWithMeta = deck.AllCardsWithMeta(call);
+        var allCardsWithMeta = deck.SelectMany(h => h.CacheTrumpf(call.IsTrumpf)).ToArray();
         var allTrumpf = allTrumpfOfDeck(allCardsWithMeta, CardColor.Herz);
         var notTrumpf = allCardsWithMeta.Except(allTrumpf);
         allTrumpf.Should().Match(x => x.All(card => card.IsTrumpf));
@@ -138,7 +138,7 @@ public class SauspielTrumpfCardOrderTest
         var call = newSauspiel();
         var comp = new CardComparer(call.Mode);
         var deck = new CardsDeck();
-        var allCardsWithMeta = deck.AllCardsWithMeta(call);
+        var allCardsWithMeta = deck.SelectMany(h => h.CacheTrumpf(call.IsTrumpf)).ToArray();
         var allTrumpf = allTrumpfOfDeck(allCardsWithMeta, CardColor.Herz);
         var notTrumpf = allCardsWithMeta.Except(allTrumpf);
 
@@ -152,7 +152,7 @@ public class SauspielTrumpfCardOrderTest
         var call = newSauspiel();
         var comp = new CardComparer(call.Mode);
         var deck = new CardsDeck();
-        var allCardsWithMeta = deck.AllCardsWithMeta(call);
+        var allCardsWithMeta = deck.SelectMany(h => h.CacheTrumpf(call.IsTrumpf)).ToArray();
         var allTrumpf = allTrumpfOfDeck(allCardsWithMeta, CardColor.Herz);
 
         var orderedTrumpf = allTrumpf
@@ -226,7 +226,7 @@ public class SoloTrumpfCardOrderTest
     {
         var call = newSolo(trumpf);
         var deck = new CardsDeck();
-        var allCardsWithMeta = deck.AllCardsWithMeta(call);
+        var allCardsWithMeta = deck.SelectMany(h => h.CacheTrumpf(call.IsTrumpf)).ToArray();
         var allTrumpf = allTrumpfOfDeck(allCardsWithMeta, trumpf);
         var notTrumpf = allCardsWithMeta.Except(allTrumpf);
         allTrumpf.Should().Match(x => x.All(card => card.IsTrumpf));
@@ -243,7 +243,7 @@ public class SoloTrumpfCardOrderTest
         var call = newSolo(trumpf);
         var comp = new CardComparer(call.Mode);
         var deck = new CardsDeck();
-        var allCardsWithMeta = deck.AllCardsWithMeta(call);
+        var allCardsWithMeta = deck.SelectMany(h => h.CacheTrumpf(call.IsTrumpf)).ToArray();
         var allTrumpf = allTrumpfOfDeck(allCardsWithMeta, trumpf);
         var notTrumpf = allCardsWithMeta.Except(allTrumpf);
 
@@ -261,7 +261,7 @@ public class SoloTrumpfCardOrderTest
         var call = newSolo(trumpf);
         var comp = new CardComparer(call.Mode);
         var deck = new CardsDeck();
-        var allCardsWithMeta = deck.AllCardsWithMeta(call);
+        var allCardsWithMeta = deck.SelectMany(h => h.CacheTrumpf(call.IsTrumpf)).ToArray();
         var allTrumpf = allTrumpfOfDeck(allCardsWithMeta, trumpf);
 
         var orderedTrumpf = allTrumpf

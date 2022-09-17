@@ -29,9 +29,6 @@ public class CardsDeck : IEnumerable<Hand>
 
     #endregion Enumerate
 
-    // public Hand HandOfPlayerWithMeta(int playerId, GameCall call)
-    //     => hands[playerId].CacheTrumpf(call.IsTrumpf);
-
     public Hand[] InitialHands()
     {
         var hands = new Hand[4];
@@ -65,12 +62,6 @@ public class CardsDeck : IEnumerable<Hand>
             .ToArray();
 
     #endregion Simple
-
-    // TODO: think of not exposing this because it's only used by tests
-    public IEnumerable<Card> AllCardsWithMeta(GameCall call)
-        => Enumerable.Range(0, 4)
-            .SelectMany(i => hands[i].CacheTrumpf(call.IsTrumpf))
-            .ToList();
 
     #region Shuffle
 

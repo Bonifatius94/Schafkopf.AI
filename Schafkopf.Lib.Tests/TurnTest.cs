@@ -228,10 +228,10 @@ public class TurnWinnerTest
         GameCall call, List<Card> cardsToApply, int beginningPlayer, int expWinner)
     {
         var deck = new CardsDeck();
-        var cardsWithMeta = deck.AllCardsWithMeta(call).ToList();
+        var allCardsWithMeta = deck.SelectMany(h => h.CacheTrumpf(call.IsTrumpf)).ToArray();
         var turn = Turn.InitFirstTurn((byte)beginningPlayer, GameCall.Wenz(0));
         var cardsToApplyWithMeta = cardsToApply
-            .Select(x => cardsWithMeta.First(y => y == x));
+            .Select(x => allCardsWithMeta.First(y => y == x));
         foreach (var card in cardsToApplyWithMeta)
             turn = turn.NextCard(card);
 
