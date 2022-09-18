@@ -11,8 +11,8 @@ public class RandomAgent : ISchafkopfAIAgent
             int position, Hand hand, int klopfer)
         => possibleCalls.ElementAt(rng.Next(possibleCalls.Count()));
 
-    public Card ChooseCard(GameHistory history, IEnumerable<Card> possibleCards)
-        => possibleCards.ElementAt(rng.Next(possibleCards.Count()));
+    public Card ChooseCard(GameHistory history, ReadOnlySpan<Card> possibleCards)
+        => possibleCards[rng.Next(possibleCards.Length)];
 
     public bool IsKlopfer(int position, IEnumerable<Card> firstFourCards)
         => false;

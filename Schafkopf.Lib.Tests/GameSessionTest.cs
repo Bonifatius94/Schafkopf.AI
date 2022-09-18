@@ -5,14 +5,11 @@ public class TestGameTable
     [Fact]
     public void Test_YieldsAllPlayers_WhenIteratingFromZero()
     {
-        var players = new Player[] {
+        var table = new GameTable(
             new Player(0, new RandomAgent()),
             new Player(1, new RandomAgent()),
             new Player(2, new RandomAgent()),
-            new Player(3, new RandomAgent())
-        };
-        var table = new GameTable(
-            players[0], players[1], players[2], players[3]);
+            new Player(3, new RandomAgent()));
 
         var playerIter = table.PlayersInDrawingOrder();
 
@@ -26,14 +23,11 @@ public class TestGameTable
     [MemberData(nameof(NumShifts))]
     public void Test_YieldsAllPlayers_WhenIteratingShifted(int shifts)
     {
-        var players = new Player[] {
+        var table = new GameTable(
             new Player(0, new RandomAgent()),
             new Player(1, new RandomAgent()),
             new Player(2, new RandomAgent()),
-            new Player(3, new RandomAgent())
-        };
-        var table = new GameTable(
-            players[0], players[1], players[2], players[3]);
+            new Player(3, new RandomAgent()));
 
         for (int i = 0; i < shifts; i++)
             table.Shift();

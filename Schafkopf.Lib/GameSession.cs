@@ -130,16 +130,13 @@ public class GameSession
                         askForKontraRe(history);
 
                     int p = 0;
-                    for (int i = 0; i < 8; i++)
+                    foreach (var card in player.Hand)
                     {
-                        var card = player.Hand[i];
-                        if (validator.CanPlayCard(
-                                history.Call, card, turn, player.Hand))
+                        if (validator.CanPlayCard(history.Call, card, turn, player.Hand))
                             possibleCards[p++] = card;
                     }
 
-                    var possCardsSpan = possibleCards.AsSpan(0, p);
-                    var cardToPlay = player.ChooseCard(history, possCardsSpan);
+                    var cardToPlay = player.ChooseCard(history, possibleCards[0..p]);
                     player.Discard(cardToPlay);
                     turn = history.NextCard(cardToPlay);
                 }
