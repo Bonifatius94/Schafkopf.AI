@@ -3,12 +3,12 @@ namespace Schafkopf.Lib;
 public interface ISchafkopfAIAgent
 {
     GameCall MakeCall(
-        IEnumerable<GameCall> possibleCalls,
+        ReadOnlySpan<GameCall> possibleCalls,
         int position, Hand hand, int klopfer);
     Card ChooseCard(GameHistory history, ReadOnlySpan<Card> possibleCards);
     void OnGameFinished(GameResult result);
 
-    bool IsKlopfer(int position, IEnumerable<Card> firstFourCards);
+    bool IsKlopfer(int position, ReadOnlySpan<Card> firstFourCards);
     bool CallKontra(GameHistory history);
     bool CallRe(GameHistory history);
 }
@@ -41,11 +41,11 @@ public class Player
     public Card ChooseCard(GameHistory history, ReadOnlySpan<Card> possibleCards)
         => agent.ChooseCard(history, possibleCards);
 
-    public bool IsKlopfer(int position, IEnumerable<Card> firstFourCards)
+    public bool IsKlopfer(int position, ReadOnlySpan<Card> firstFourCards)
         => agent.IsKlopfer(position, firstFourCards);
 
     public GameCall MakeCall(
-            IEnumerable<GameCall> possibleCalls,
+            ReadOnlySpan<GameCall> possibleCalls,
             int position, Hand hand, int klopfer)
         => agent.MakeCall(possibleCalls, position, hand, klopfer);
 

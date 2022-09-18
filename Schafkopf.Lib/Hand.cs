@@ -83,6 +83,16 @@ public readonly struct Hand : IEnumerable<Card>
 
     public Card this[int i] => cardAt(i);
 
+    // info: cache has to be of size 4 !!!
+    public void FirstFour(Card[] cache)
+    {
+        unsafe
+        {
+            fixed (Card* cp = &cache[0])
+                *((uint*)cp) = (uint)cards;
+        }
+    }
+
     // TODO: figure out why this logic fails
     // private int indexOf(Card card)
     //     => indexOf((byte)(Card.EXISTING_FLAG | card.Id), 0x3F);
@@ -129,6 +139,18 @@ public readonly struct Hand : IEnumerable<Card>
 
     IEnumerator IEnumerable.GetEnumerator()
         => GetEnumerator();
+
+    private static readonly Card[] sauenByFarbe =
+        new Card[] {
+            new Card(CardType.Sau, CardColor.Schell),
+            new Card(CardType.Sau, CardColor.Herz),
+            new Card(CardType.Sau, CardColor.Gras),
+            new Card(CardType.Sau, CardColor.Eichel),
+        };
+
+    public bool IsSauRufbar(CardColor farbe)
+        => !HasCard(sauenByFarbe[(int)farbe]) && HasFarbe(farbe);
+        // TODO: think of even better optimizations
 
     public bool HasTrumpf()
         => indexOf((byte)0x60, 0x60) >= 0;

@@ -140,13 +140,6 @@ public class GameCallGenerator
 
     private static readonly GameCallComparer callComp = new GameCallComparer();
 
-    private static readonly List<CardColor> sauspielColors =
-        new List<CardColor>() {
-            CardColor.Schell,
-            CardColor.Gras,
-            CardColor.Eichel
-        };
-
     private static readonly List<CardColor> soloTrumpf =
         new List<CardColor>() {
             CardColor.Schell,
@@ -156,11 +149,81 @@ public class GameCallGenerator
         };
 
     private static readonly List<bool> touts =
-        new List<bool>() { true, false };
+        new List<bool>() { false, true };
 
     #endregion Init
 
-    public IEnumerable<GameCall> AllPossibleCalls(
+    private static readonly GameCall[][] wenzenByPlayer =
+        Enumerable.Range(0, 4)
+            .Select(playerId => touts.Select(
+                tout => GameCall.Wenz(playerId, tout)).ToArray())
+            .ToArray();
+    private static readonly GameCall[][] soliByPlayer =
+        Enumerable.Range(0, 4)
+            .Select(playerId => touts.SelectMany(
+                tout => soloTrumpf.Select(
+                    trumpf => GameCall.Solo(playerId, trumpf, tout)))
+                .ToArray())
+            .ToArray();
+    private static readonly TrumpfEval sauspielEval =
+        new TrumpfEval(GameMode.Sauspiel);
+
+    private static readonly CardColor[] allRufbareFarben =
+        new CardColor[] { CardColor.Schell, CardColor.Gras, CardColor.Eichel };
+
+    private GameCall[] sauspiele = new GameCall[3];
+    private GameCall[] allCalls = new GameCall[14];
+    // info: 3x sauspiel + wenz + wenz tout + 4x solo + 4x solo tout
+    private static readonly int[] lastCallOffsets = new int[] { 0, 1, 2, 6, 10 };
+    private static readonly GameCall weiter = GameCall.Weiter();
+
+    public ReadOnlySpan<GameCall> AllPossibleCalls(
+        int playerId, Hand[] initialHandsWithoutMeta, GameCall last)
+    {
+        int p = 3;
+        if (last.Mode == GameMode.Weiter)
+        {
+            var handSauspiel = initialHandsWithoutMeta[playerId]
+                .CacheTrumpf(sauspielEval.IsTrumpf);
+            for (int i = 0; i < 3; i++)
+            {
+                var farbe = allRufbareFarben[i];
+                if (handSauspiel.IsSauRufbar(farbe))
+                {
+                    int partnerId = findSauspielPartner(
+                        initialHandsWithoutMeta, farbe);
+                    sauspiele[--p] = GameCall.Sauspiel(
+                        playerId, partnerId, farbe);
+                }
+            }
+        }
+
+        sauspiele.CopyTo(allCalls, 0);
+        wenzenByPlayer[playerId].CopyTo(allCalls, 3);
+        soliByPlayer[playerId].CopyTo(allCalls, 5);
+        allCalls[13] = weiter;
+
+        // info: weiter=0, sauspiel=0, wenz=1, wenz_tout=2, solo=3, solo_tout=4
+        int mode = (int)last.Mode < 2 ? 0 :
+            ((((int)last.Mode - 2) * 2) + (last.IsTout ? 1 : 0) + 1);
+        int offset = lastCallOffsets[mode] + p;
+        return allCalls[offset..14];
+    }
+
+    private int findSauspielPartner(Hand[] initialHands, CardColor gsuchte)
+    {
+        // TODO: perform this lookup with a 256-bit SIMD register for all hands at once
+        //       -> cards are unique, so it'll always yield the correct player
+        var gsuchteSau = new Card(CardType.Sau, gsuchte);
+        for (int i = 0; i < 4; i++)
+            if (initialHands[i].HasCard(gsuchteSau))
+                return i;
+        return -1;
+    }
+
+    #region Simple
+
+    public ReadOnlySpan<GameCall> AllPossibleCallsSimple(
         int playerId, Hand[] initialHandsWithoutMeta, GameCall last)
     {
         // TODO: cache this, so it doesn't need to be allocated
@@ -168,14 +231,14 @@ public class GameCallGenerator
         var hand = initialHandsWithoutMeta[playerId];
         var handSauspiel = hand.CacheTrumpf(
             new TrumpfEval(GameMode.Sauspiel).IsTrumpf);
-        var possibleSauspielColors = sauspielColors
+        var possibleSauspielColors = allRufbareFarben
             .Where(c => !handSauspiel.HasCard(new Card(CardType.Sau, c))
                         && handSauspiel.HasFarbe(c));
 
         var sauspiele = possibleSauspielColors
             .Select(color => GameCall.Sauspiel(
                 playerId,
-                findSauspielPartner(initialHandsWithoutMeta, color),
+                findSauspielPartnerSimple(initialHandsWithoutMeta, color),
                 color));
 
         var wenzen = touts.Select(tout => GameCall.Wenz(playerId, tout));
@@ -185,13 +248,15 @@ public class GameCallGenerator
         var allGameCalls = sauspiele.Union(wenzen).Union(soli);
         var possibleCalls = last.Mode == GameMode.Weiter ? allGameCalls
             : allGameCalls.Where(call => callComp.Compare(call, last) > 0);
-        return possibleCalls.Append(GameCall.Weiter()).ToList();
+        return possibleCalls.Append(GameCall.Weiter()).ToArray();
     }
 
-    private int findSauspielPartner(Hand[] initialHands, CardColor gsuchte)
+    private int findSauspielPartnerSimple(Hand[] initialHands, CardColor gsuchte)
     {
         var gsuchteSau = new Card(CardType.Sau, gsuchte);
         return Enumerable.Range(0, 4)
             .First(i => initialHands[i].HasCard(gsuchteSau));
     }
+
+    #endregion Simple
 }

@@ -99,14 +99,15 @@ public class SauspielAgent : ISchafkopfAIAgent
     public void OnGameFinished(GameResult result) { }
 
     public GameCall MakeCall(
-            IEnumerable<GameCall> possibleCalls,
+            ReadOnlySpan<GameCall> possibleCalls,
             int position, Hand hand, int klopfer)
-        => possibleCalls.Contains(callToMake) ? callToMake : GameCall.Weiter();
+        => possibleCalls.ToArray().Contains(callToMake)
+            ? callToMake : GameCall.Weiter();
 
     public Card ChooseCard(GameHistory history, ReadOnlySpan<Card> possibleCards)
         => possibleCards[rng.Next(possibleCards.Length)];
 
-    public bool IsKlopfer(int position, IEnumerable<Card> firstFourCards)
+    public bool IsKlopfer(int position, ReadOnlySpan<Card> firstFourCards)
         => false;
 
     public bool CallKontra(GameHistory history)
@@ -129,15 +130,16 @@ public class RandomAgent : ISchafkopfAIAgent
     public void OnGameFinished(GameResult result) { }
 
     public GameCall MakeCall(
-            IEnumerable<GameCall> possibleCalls,
+            ReadOnlySpan<GameCall> possibleCalls,
             int position, Hand hand, int klopfer)
-        => callToMake != null && possibleCalls.Contains(callToMake.Value) ? callToMake.Value
-            : possibleCalls.ElementAt(rng.Next(possibleCalls.Count()));
+        => callToMake != null && possibleCalls.ToArray().Contains(callToMake.Value)
+            ? callToMake.Value
+            : possibleCalls[rng.Next(possibleCalls.Length)];
 
     public Card ChooseCard(GameHistory history, ReadOnlySpan<Card> possibleCards)
         => possibleCards[rng.Next(possibleCards.Length)];
 
-    public bool IsKlopfer(int position, IEnumerable<Card> firstFourCards)
+    public bool IsKlopfer(int position, ReadOnlySpan<Card> firstFourCards)
         => false;
 
     public bool CallKontra(GameHistory history)

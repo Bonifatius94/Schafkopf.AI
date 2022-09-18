@@ -61,13 +61,16 @@ public class GameSession
         return call;
     }
 
+    private Card[] firstFourCache = new Card[4];
+
     private int askForKlopfer(Hand[] initialHands)
     {
         int pos = 0;
         int klopfer = 0;
         foreach (var player in table.PlayersInDrawingOrder())
         {
-            if (player.IsKlopfer(pos++, initialHands[player.Id].Take(4)))
+            initialHands[player.Id].FirstFour(firstFourCache);
+            if (player.IsKlopfer(pos++, firstFourCache))
                 klopfer++;
         }
         return klopfer;

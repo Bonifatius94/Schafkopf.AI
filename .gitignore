@@ -5,3 +5,4 @@ bin
 lcov.info
 coverage.json
 BenchmarkDotNet.Artifacts
+perfcollect

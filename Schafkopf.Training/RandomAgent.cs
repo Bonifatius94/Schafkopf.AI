@@ -7,14 +7,14 @@ public class RandomAgent : ISchafkopfAIAgent
     public void OnGameFinished(GameResult result) { }
 
     public GameCall MakeCall(
-            IEnumerable<GameCall> possibleCalls,
+            ReadOnlySpan<GameCall> possibleCalls,
             int position, Hand hand, int klopfer)
-        => possibleCalls.ElementAt(rng.Next(possibleCalls.Count()));
+        => possibleCalls[rng.Next(possibleCalls.Length)];
 
     public Card ChooseCard(GameHistory history, ReadOnlySpan<Card> possibleCards)
         => possibleCards[rng.Next(possibleCards.Length)];
 
-    public bool IsKlopfer(int position, IEnumerable<Card> firstFourCards)
+    public bool IsKlopfer(int position, ReadOnlySpan<Card> firstFourCards)
         => false;
 
     public bool CallKontra(GameHistory history)

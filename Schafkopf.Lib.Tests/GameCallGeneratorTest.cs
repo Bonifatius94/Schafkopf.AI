@@ -34,7 +34,7 @@ public class TestCallGenerator_GenerateSauspielCalls_NoPreviousCalls
         var callGen = new GameCallGenerator();
         var possCalls = callGen.AllPossibleCalls(0, initialHands, GameCall.Weiter());
 
-        var possSauspiele = possCalls.Where(c => c.Mode == GameMode.Sauspiel);
+        var possSauspiele = possCalls.ToArray().Where(c => c.Mode == GameMode.Sauspiel);
         possSauspiele.Select(x => x.GsuchteFarbe).Should().BeEquivalentTo(rufbareFarben);
     }
 
@@ -60,7 +60,7 @@ public class TestCallGenerator_GenerateSauspielCalls_NoPreviousCalls
         var initialHands = new Hand[] { hand }.Concat(otherHands).ToArray();
 
         var callGen = new GameCallGenerator();
-        var possCalls = callGen.AllPossibleCalls(0, initialHands, GameCall.Weiter());
+        var possCalls = callGen.AllPossibleCalls(0, initialHands, GameCall.Weiter()).ToArray();
 
         possCalls.Should().Match(x => x.All(call => call.Mode != GameMode.Sauspiel));
     }
@@ -85,7 +85,7 @@ public class TestCallGenerator_GenerateSauspielCalls_NoPreviousCalls
         var initialHands = new Hand[] { hand }.Concat(otherHands).ToArray();
 
         var callGen = new GameCallGenerator();
-        var possCalls = callGen.AllPossibleCalls(0, initialHands, GameCall.Weiter());
+        var possCalls = callGen.AllPossibleCalls(0, initialHands, GameCall.Weiter()).ToArray();
 
         possCalls.Should().Match(x => x.All(call => call.Mode != GameMode.Sauspiel));
     }
@@ -101,7 +101,7 @@ public class TestCallGenerator_GenerateSoloOrWenzCalls_NoPreviousCalls
         var initialHands = deck.InitialHands();
 
         var callGen = new GameCallGenerator();
-        var possCalls = callGen.AllPossibleCalls(0, initialHands, GameCall.Weiter());
+        var possCalls = callGen.AllPossibleCalls(0, initialHands, GameCall.Weiter()).ToArray();
 
         possCalls.Where(x => x.Mode == GameMode.Wenz && x.IsTout).Should().HaveCount(1);
         possCalls.Where(x => x.Mode == GameMode.Wenz && !x.IsTout).Should().HaveCount(1);
@@ -188,7 +188,7 @@ public class TestCallGenerator_CallRankFilter
         var previousCall = GameCall.Sauspiel(0, 1, CardColor.Schell);
 
         var callGen = new GameCallGenerator();
-        var possCalls = callGen.AllPossibleCalls(2, initialHands, previousCall);
+        var possCalls = callGen.AllPossibleCalls(2, initialHands, previousCall).ToArray();
 
         possCalls.Should().Match(calls =>
             calls.All(c => c.Mode != GameMode.Sauspiel));
@@ -203,7 +203,7 @@ public class TestCallGenerator_CallRankFilter
         var previousCall = GameCall.Wenz(0);
 
         var callGen = new GameCallGenerator();
-        var possCalls = callGen.AllPossibleCalls(2, initialHands, previousCall);
+        var possCalls = callGen.AllPossibleCalls(2, initialHands, previousCall).ToArray();
 
         possCalls.Should().Match(calls =>
             calls.All(c => c.Mode != GameMode.Wenz || c.IsTout));
@@ -218,7 +218,7 @@ public class TestCallGenerator_CallRankFilter
         var previousCall = GameCall.Wenz(0, isTout: true);
 
         var callGen = new GameCallGenerator();
-        var possCalls = callGen.AllPossibleCalls(2, initialHands, previousCall);
+        var possCalls = callGen.AllPossibleCalls(2, initialHands, previousCall).ToArray();
 
         possCalls.Should().Match(calls =>
             calls.All(c => c.Mode != GameMode.Wenz));
@@ -233,7 +233,7 @@ public class TestCallGenerator_CallRankFilter
         var previousCall = GameCall.Solo(0, CardColor.Schell);
 
         var callGen = new GameCallGenerator();
-        var possCalls = callGen.AllPossibleCalls(2, initialHands, previousCall);
+        var possCalls = callGen.AllPossibleCalls(2, initialHands, previousCall).ToArray();
 
         possCalls.Should().Match(calls =>
             calls.All(c => c.Mode != GameMode.Solo || c.IsTout));
@@ -248,7 +248,7 @@ public class TestCallGenerator_CallRankFilter
         var previousCall = GameCall.Solo(0, CardColor.Schell, isTout: true);
 
         var callGen = new GameCallGenerator();
-        var possCalls = callGen.AllPossibleCalls(2, initialHands, previousCall);
+        var possCalls = callGen.AllPossibleCalls(2, initialHands, previousCall).ToArray();
 
         possCalls.Should().BeEquivalentTo(new List<GameCall>() { GameCall.Weiter() });
     }
