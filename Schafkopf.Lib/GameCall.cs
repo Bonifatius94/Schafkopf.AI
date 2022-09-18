@@ -117,6 +117,7 @@ public readonly struct GameCall
     #endregion Equality
 }
 
+[Obsolete("New AllPossibleCalls() function implements this by other convention.")]
 public class GameCallComparer : IComparer<GameCall>
 {
     public int Compare(GameCall x, GameCall y)
@@ -223,6 +224,7 @@ public class GameCallGenerator
 
     #region Simple
 
+    [Obsolete("Optimized version is faster!")]
     public ReadOnlySpan<GameCall> AllPossibleCallsSimple(
         int playerId, Hand[] initialHandsWithoutMeta, GameCall last)
     {

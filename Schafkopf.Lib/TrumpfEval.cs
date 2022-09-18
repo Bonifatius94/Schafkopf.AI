@@ -72,6 +72,7 @@ public class TrumpfEval
     private readonly GameMode mode;
     private readonly CardColor trumpf;
 
+    [Obsolete("Simple version is faster!")]
     public bool IsTrumpfSimd(Card card)
     {
         var cardVec = Vector128.Create((byte)(card.Id & 0x1F));

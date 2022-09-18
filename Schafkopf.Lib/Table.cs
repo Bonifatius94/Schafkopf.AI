@@ -1,8 +1,8 @@
 namespace Schafkopf.Lib;
 
-public class GameTable
+public class Table
 {
-    public GameTable(
+    public Table(
         Player p1,
         Player p2,
         Player p3,

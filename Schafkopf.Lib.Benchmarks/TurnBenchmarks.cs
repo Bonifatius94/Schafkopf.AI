@@ -10,7 +10,7 @@ public class TurnAttributesBenchmark
     public void Setup()
     {
         var deck = new CardsDeck();
-        var table = new GameTable(
+        var table = new Table(
             new Player(0, new RandomAgent()),
             new Player(1, new RandomAgent()),
             new Player(2, new RandomAgent()),

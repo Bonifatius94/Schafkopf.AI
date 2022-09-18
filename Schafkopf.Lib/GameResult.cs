@@ -3,17 +3,17 @@ namespace Schafkopf.Lib;
 public class GameResult
 {
     public GameResult(
-        GameHistory history,
+        GameLog log,
         int playerId,
         GameScoreEvaluation eval)
     {
         this.playerId = playerId;
-        History = history;
-        Reward = computeReward(history, playerId, eval);
+        Log = log;
+        Reward = computeReward(log, playerId, eval);
     }
 
     private int playerId;
-    public GameHistory History { get; private set; }
+    public GameLog Log { get; private set; }
     public double Reward { get; private set; }
 
     #region RewardComputation
@@ -30,18 +30,18 @@ public class GameResult
     private const double additionalChargeSchwarz = 20;
 
     private static double computeReward(
-        GameHistory history, int playerId, GameScoreEvaluation eval)
+        GameLog log, int playerId, GameScoreEvaluation eval)
     {
-        double baseCharge = baseChargeOfGame[history.Call.Mode]
+        double baseCharge = baseChargeOfGame[log.Call.Mode]
             + (eval.Laufende >= 3 ? eval.Laufende * chargePerLaufendem : 0)
             + (eval.IsSchneider ? additionalChargeSchneider : 0)
             + (eval.IsSchwarz ? additionalChargeSchwarz : 0);
-        double gameCost = baseCharge * (1 << history.Multipliers);
+        double gameCost = baseCharge * (1 << log.Multipliers);
 
-        bool isPlayer = history.CallerIds.Contains(playerId);
+        bool isPlayer = log.CallerIds.Contains(playerId);
         int numMates = isPlayer
-            ? history.CallerIds.Count()
-            : history.OpponentIds.Count();
+            ? log.CallerIds.Count()
+            : log.OpponentIds.Count();
 
         bool isPlayerWinner =
             (isPlayer && eval.DidCallerWin) ||
@@ -54,23 +54,23 @@ public class GameResult
 
 public class GameScoreEvaluation
 {
-    public GameScoreEvaluation(GameHistory history)
+    public GameScoreEvaluation(GameLog log)
     {
-        scoreByPlayer = history.Turns
+        scoreByPlayer = log.Turns
             .GroupBy(t => t.WinnerId)
             .ToDictionary(
                 g => g.Key,
                 g => g.Select(x => x.Augen).Sum());
 
-        ScoreCaller = history.CallerIds
+        ScoreCaller = log.CallerIds
             .Select(id => scoreByPlayer[id]).Sum();
         ScoreOpponents = 120 - ScoreCaller;
 
-        DidCallerWin = (ScoreCaller >= 61 && !history.Call.IsTout)
-            || (history.Call.IsTout && ScoreCaller == 120);
+        DidCallerWin = (ScoreCaller >= 61 && !log.Call.IsTout)
+            || (log.Call.IsTout && ScoreCaller == 120);
         IsSchneider = ScoreCaller > 90 || ScoreOpponents >= 90;
         IsSchwarz = ScoreCaller == 0 || ScoreCaller == 120;
-        Laufende = laufende(history);
+        Laufende = laufende(log);
     }
 
     private Dictionary<int, int> scoreByPlayer;
@@ -83,17 +83,17 @@ public class GameScoreEvaluation
     public bool IsSchwarz { get; private set; }
     public int Laufende { get; private set; }
 
-    private static int laufende(GameHistory history)
+    private static int laufende(GameLog log)
     {
         // TODO: optimize this, seems very inefficient
-        var comp = new CardComparer(history.Call.Mode);
+        var comp = new CardComparer(log.Call.Mode);
         var allCardsOrdered = Enumerable.Range(0, 4)
-            .SelectMany(id => history.InitialHands[id])
+            .SelectMany(id => log.InitialHands[id])
             .Where(c => c.IsTrumpf)
             .OrderByDescending(x => x, comp)
             .ToList();
-        var callerCardsOrdered = history.CallerIds
-            .SelectMany(id => history.InitialHands[id])
+        var callerCardsOrdered = log.CallerIds
+            .SelectMany(id => log.InitialHands[id])
             .OrderByDescending(x => x, comp)
             .ToList();
 

@@ -2,21 +2,21 @@ namespace Schafkopf.Lib;
 
 public class GameSession
 {
-    public GameSession(GameTable table, CardsDeck deck)
+    public GameSession(Table table, CardsDeck deck)
     {
         this.table = table;
         this.deck = deck;
     }
 
     private CardsDeck deck;
-    private GameTable table;
+    private Table table;
 
     private static readonly DrawValidator validator = new DrawValidator();
     private static readonly GameCallGenerator callGen = new GameCallGenerator();
 
     private Hand[] initialHands = new Hand[4];
 
-    public GameHistory ProcessGame()
+    public GameLog ProcessGame()
     {
         deck.Shuffle();
 
@@ -27,13 +27,13 @@ public class GameSession
         if (call.Mode == GameMode.Weiter)
         {
             table.Shift();
-            return new GameHistory(
+            return new GameLog(
                 call, initialHands, table.FirstDrawingPlayerId);
         }
 
         deck.InitialHands(call, initialHands);
         int kommtRaus = table.FirstDrawingPlayerId;
-        var history = new GameHistory(call, initialHands, kommtRaus);
+        var history = new GameLog(call, initialHands, kommtRaus);
 
         foreach (var player in table.PlayersInDrawingOrder())
             player.NewGame(initialHands[player.Id]);
@@ -78,7 +78,7 @@ public class GameSession
         return klopfer;
     }
 
-    private void askForKontraRe(GameHistory history)
+    private void askForKontraRe(GameLog history)
     {
         if (!history.IsKontraCalled)
         {
@@ -111,7 +111,7 @@ public class GameSession
 
     private Card[] possibleCards = new Card[8];
 
-    private GameHistory playGameUntilEnd(GameHistory history)
+    private GameLog playGameUntilEnd(GameLog history)
     {
         foreach (var newTurn in history)
         {

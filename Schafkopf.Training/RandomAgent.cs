@@ -11,15 +11,15 @@ public class RandomAgent : ISchafkopfAIAgent
             int position, Hand hand, int klopfer)
         => possibleCalls[rng.Next(possibleCalls.Length)];
 
-    public Card ChooseCard(GameHistory history, ReadOnlySpan<Card> possibleCards)
+    public Card ChooseCard(GameLog history, ReadOnlySpan<Card> possibleCards)
         => possibleCards[rng.Next(possibleCards.Length)];
 
     public bool IsKlopfer(int position, ReadOnlySpan<Card> firstFourCards)
         => false;
 
-    public bool CallKontra(GameHistory history)
+    public bool CallKontra(GameLog history)
         => false;
 
-    public bool CallRe(GameHistory history)
+    public bool CallRe(GameLog history)
         => false;
 }

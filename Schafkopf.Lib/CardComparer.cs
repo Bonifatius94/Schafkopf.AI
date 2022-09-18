@@ -74,6 +74,7 @@ public class CardComparer : IComparer<Card>
     private readonly GameMode mode;
     private readonly CardColor trumpf;
 
+    [Obsolete("Simple version is faster!")]
     public int CompareSimd(Card x, Card y)
         => cardScore(x) - cardScore(y);
 

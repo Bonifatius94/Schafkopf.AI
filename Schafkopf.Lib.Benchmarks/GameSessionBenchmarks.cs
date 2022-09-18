@@ -11,7 +11,7 @@ public class GameSessionBenchmark
     public void Init()
     {
         var deck = new CardsDeck();
-        var table = new GameTable(
+        var table = new Table(
             new Player(0, new RandomAgent()),
             new Player(1, new RandomAgent()),
             new Player(2, new RandomAgent()),
@@ -44,15 +44,15 @@ public class RandomAgent : ISchafkopfAIAgent
             int position, Hand hand, int klopfer)
         => callToMake ?? possibleCalls[rng.Next(possibleCalls.Length)];
 
-    public Card ChooseCard(GameHistory history, ReadOnlySpan<Card> possibleCards)
+    public Card ChooseCard(GameLog history, ReadOnlySpan<Card> possibleCards)
         => possibleCards[rng.Next(possibleCards.Length)];
 
     public bool IsKlopfer(int position, ReadOnlySpan<Card> firstFourCards)
         => false;
 
-    public bool CallKontra(GameHistory history)
+    public bool CallKontra(GameLog history)
         => false;
 
-    public bool CallRe(GameHistory history)
+    public bool CallRe(GameLog history)
         => false;
 }

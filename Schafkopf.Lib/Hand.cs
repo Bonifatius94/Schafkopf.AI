@@ -150,7 +150,6 @@ public readonly struct Hand : IEnumerable<Card>
 
     public bool IsSauRufbar(CardColor farbe)
         => !HasCard(sauenByFarbe[(int)farbe]) && HasFarbe(farbe);
-        // TODO: think of even better optimizations
 
     public bool HasTrumpf()
         => indexOf((byte)0x60, 0x60) >= 0;
@@ -184,6 +183,7 @@ public readonly struct Hand : IEnumerable<Card>
 
     #region SimpleImplForBenchmarks
 
+    [Obsolete("Optimized version is faster!")]
     public bool HasTrumpfSimple()
     {
         for (int i = 0; i < 8; i++)
@@ -192,6 +192,7 @@ public readonly struct Hand : IEnumerable<Card>
         return false;
     }
 
+    [Obsolete("Optimized version is faster!")]
     public bool HasFarbeSimple(CardColor farbe)
     {
         for (int i = 0; i < 8; i++)
@@ -200,6 +201,7 @@ public readonly struct Hand : IEnumerable<Card>
         return false;
     }
 
+    [Obsolete("Optimized version is faster!")]
     public int FarbeCountSimple(CardColor farbe)
     {
         int count = 0;

@@ -24,7 +24,7 @@ public class TestGameHistory_Initialization
         var initialHands = new Hand[4];
         deck.InitialHands(call, initialHands);
 
-        var history = new GameHistory(call, initialHands, kommtRaus);
+        var history = new GameLog(call, initialHands, kommtRaus);
 
         history.Call.Should().Be(call);
         history.KommtRaus.Should().Be(kommtRaus);
@@ -43,7 +43,7 @@ public class GameHistoryTest_IteratingOverTurnsWhileApplyingCards
         deck.Shuffle();
         var initialHands = new Hand[4];
         deck.InitialHands(call, initialHands);
-        var history = new GameHistory(call, initialHands, 0);
+        var history = new GameLog(call, initialHands, 0);
 
         var cardToPlay = initialHands[0].PickRandom();
         var turnBefore = history.CurrentTurn;

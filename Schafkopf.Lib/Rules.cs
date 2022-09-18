@@ -49,21 +49,11 @@ public class DrawValidator
         if (!kommtRaus)
         {
             if (turn.IsTrumpfPlayed && playerHand.HasTrumpf())
-            {
                 return cardPlayed.IsTrumpf;
-            }
             else if (turn.IsFarbePlayed && playerHand.HasFarbe(turn.FarbePlayed))
-            {
                 return !cardPlayed.IsTrumpf && cardPlayed.Color == turn.FarbePlayed;
-            }
-            else // schmieren / einstechen
-            {
-                return true;
-            }
         }
-        else // kommt raus
-        {
-            return true;
-        }
+
+        return true;
     }
 }

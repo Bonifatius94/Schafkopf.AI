@@ -5,7 +5,7 @@ public class TestGameTable
     [Fact]
     public void Test_YieldsAllPlayers_WhenIteratingFromZero()
     {
-        var table = new GameTable(
+        var table = new Table(
             new Player(0, new RandomAgent()),
             new Player(1, new RandomAgent()),
             new Player(2, new RandomAgent()),
@@ -23,7 +23,7 @@ public class TestGameTable
     [MemberData(nameof(NumShifts))]
     public void Test_YieldsAllPlayers_WhenIteratingShifted(int shifts)
     {
-        var table = new GameTable(
+        var table = new Table(
             new Player(0, new RandomAgent()),
             new Player(1, new RandomAgent()),
             new Player(2, new RandomAgent()),
@@ -45,7 +45,7 @@ public class TestGameSession
     public void Test_PlaySomeGames()
     {
         var deck = new CardsDeck();
-        var table = new GameTable(
+        var table = new Table(
             new Player(0, new RandomAgent()),
             new Player(1, new RandomAgent()),
             new Player(2, new RandomAgent()),
@@ -68,11 +68,11 @@ public class TestGameSession
         var sauspielCall = GameCall.Sauspiel(0, 1, gsuchteFarbe);
         var weiter = GameCall.Weiter();
 
-        GameHistory history;
+        GameLog history;
         do
         {
             // either play a sauspiel or call weiter
-            var table = new GameTable(
+            var table = new Table(
                 new Player(0, new SauspielAgent(sauspielCall)),
                 new Player(1, new RandomAgent(weiter)),
                 new Player(2, new RandomAgent(weiter)),
@@ -104,16 +104,16 @@ public class SauspielAgent : ISchafkopfAIAgent
         => possibleCalls.ToArray().Contains(callToMake)
             ? callToMake : GameCall.Weiter();
 
-    public Card ChooseCard(GameHistory history, ReadOnlySpan<Card> possibleCards)
+    public Card ChooseCard(GameLog history, ReadOnlySpan<Card> possibleCards)
         => possibleCards[rng.Next(possibleCards.Length)];
 
     public bool IsKlopfer(int position, ReadOnlySpan<Card> firstFourCards)
         => false;
 
-    public bool CallKontra(GameHistory history)
+    public bool CallKontra(GameLog history)
         => false;
 
-    public bool CallRe(GameHistory history)
+    public bool CallRe(GameLog history)
         => false;
 }
 
@@ -136,15 +136,15 @@ public class RandomAgent : ISchafkopfAIAgent
             ? callToMake.Value
             : possibleCalls[rng.Next(possibleCalls.Length)];
 
-    public Card ChooseCard(GameHistory history, ReadOnlySpan<Card> possibleCards)
+    public Card ChooseCard(GameLog history, ReadOnlySpan<Card> possibleCards)
         => possibleCards[rng.Next(possibleCards.Length)];
 
     public bool IsKlopfer(int position, ReadOnlySpan<Card> firstFourCards)
         => false;
 
-    public bool CallKontra(GameHistory history)
+    public bool CallKontra(GameLog history)
         => false;
 
-    public bool CallRe(GameHistory history)
+    public bool CallRe(GameLog history)
         => false;
 }

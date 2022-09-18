@@ -72,7 +72,7 @@ public readonly struct Turn
 
     public Turn NextCard(Card card)
     {
-        int playerId = (Meta.FirstDrawingPlayerId + CardsCount) % 4;
+        int playerId = (Meta.FirstDrawingPlayerId + CardsCount) & 0x03;
         uint newId = Cards | ((uint)card.Id << (playerId * CARD_OFFSET));
         bool alreadyGsucht = Meta.AlreadyGsucht
             || (FirstCard.Exists && FirstCard.Color == Meta.Call.GsuchteFarbe);
@@ -249,9 +249,11 @@ public readonly struct Turn
             { CardType.Sau, 11 },
         };
 
+    [Obsolete("Optimized version is faster!")]
     public int AugenSimple()
         => AllCards.Select(c => augenByType[c.Type]).Sum();
 
+    [Obsolete("Optimized version is faster!")]
     public int WinnerIdSimple()
     {
         var cards = new Card[4];

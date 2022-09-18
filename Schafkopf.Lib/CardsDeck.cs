@@ -47,11 +47,13 @@ public class CardsDeck : IEnumerable<Hand>
 
     #region Simple
 
+    [Obsolete("Optimized version is faster!")]
     public Hand[] InitialHandsSimple()
         => Enumerable.Range(0, 4)
             .Select(i => hands[i])
             .ToArray();
 
+    [Obsolete("Optimized version is faster!")]
     public Hand[] InitialHandsSimple(GameCall call)
         => Enumerable.Range(0, 4)
             .Select(i => hands[i].CacheTrumpf(call.IsTrumpf))
@@ -60,6 +62,7 @@ public class CardsDeck : IEnumerable<Hand>
     private static readonly EqualDistPermutator_256 permGen =
         new EqualDistPermutator_256(32);
 
+    [Obsolete("Optimized version is faster!")]
     public void ShuffleSimple()
     {
         var cards = AllCards.ToList();

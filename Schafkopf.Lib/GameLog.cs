@@ -1,8 +1,8 @@
 namespace Schafkopf.Lib;
 
-public class GameHistory : IEnumerable<Turn>
+public class GameLog : IEnumerable<Turn>
 {
-    public GameHistory(
+    public GameLog(
         GameCall call,
         Hand[] initialHands, // ordered by player id
         int kommtRaus)
