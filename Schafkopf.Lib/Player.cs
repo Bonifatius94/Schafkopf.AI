@@ -5,7 +5,7 @@ public interface ISchafkopfAIAgent
     GameCall MakeCall(
         IEnumerable<GameCall> possibleCalls,
         int position, Hand hand, int klopfer);
-    Card ChooseCard(GameHistory history, IEnumerable<Card> possibleCards);
+    Card ChooseCard(GameHistory history, ReadOnlySpan<Card> possibleCards);
     void OnGameFinished(GameResult result);
 
     bool IsKlopfer(int position, IEnumerable<Card> firstFourCards);
@@ -38,7 +38,7 @@ public class Player
     public bool CallRe(GameHistory history)
         => agent.CallRe(history);
 
-    public Card ChooseCard(GameHistory history, IEnumerable<Card> possibleCards)
+    public Card ChooseCard(GameHistory history, ReadOnlySpan<Card> possibleCards)
         => agent.ChooseCard(history, possibleCards);
 
     public bool IsKlopfer(int position, IEnumerable<Card> firstFourCards)

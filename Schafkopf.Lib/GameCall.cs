@@ -163,6 +163,8 @@ public class GameCallGenerator
     public IEnumerable<GameCall> AllPossibleCalls(
         int playerId, Hand[] initialHandsWithoutMeta, GameCall last)
     {
+        // TODO: cache this, so it doesn't need to be allocated
+
         var hand = initialHandsWithoutMeta[playerId];
         var handSauspiel = hand.CacheTrumpf(
             new TrumpfEval(GameMode.Sauspiel).IsTrumpf);

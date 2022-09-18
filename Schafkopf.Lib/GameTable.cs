@@ -31,7 +31,10 @@ public class GameTable
     }
 
     public IEnumerable<Player> PlayersById(IEnumerable<int> ids)
-        => ids.Select(id => players[id]);
+    {
+        foreach (int id in ids)
+            yield return players[id];
+    }
 
     public void Shift()
         => FirstDrawingPlayerId = (FirstDrawingPlayerId + 1) & 0x03;

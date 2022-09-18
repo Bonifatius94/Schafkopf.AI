@@ -99,13 +99,18 @@ public class CardsDeck : IEnumerable<Hand>
     private static readonly EqualDistPermutator_256 permGenInput =
         new EqualDistPermutator_256(4);
 
+    private byte[] inputPerm = new byte[] {
+        0x00, 0x01, 0x02, 0x03
+    };
+    private byte[] shufPerms = new byte[] {
+        0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00,
+        0x0F, 0x0E, 0x0D, 0x0C, 0x0B, 0x0A, 0x09, 0x08,
+        0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00,
+        0x0F, 0x0E, 0x0D, 0x0C, 0x0B, 0x0A, 0x09, 0x08,
+    };
+
     public void Shuffle()
     {
-        // init perms with 0, 1, 2, ..., n
-        var inputPerm = new byte[4];
-        var shufPerms = new byte[32];
-        initPerms(inputPerm, shufPerms);
-
         // draw perms for shuffling
         permGenHighLow.NextPermutation(shufPerms.AsSpan(0, 16));
         permGenHighLow.NextPermutation(shufPerms.AsSpan(16, 16));
@@ -136,30 +141,30 @@ public class CardsDeck : IEnumerable<Hand>
         unsafe { fixed (Hand* hp = &hands[0]) shufVec.Store((byte*)hp); }
     }
 
-    private void initPerms(byte[] inputPerms, byte[] shufPerms)
-    {
-        const ulong defaultShufPerm_0 = 0x0706050403020100;
-        const ulong defaultShufPerm_1 = 0x0F0E0D0C0B0A0908;
-        const uint defaultInputPerm = 0x00010203;
+    // private void initPerms(byte[] inputPerms, byte[] shufPerms)
+    // {
+    //     const ulong defaultShufPerm_0 = 0x0706050403020100;
+    //     const ulong defaultShufPerm_1 = 0x0F0E0D0C0B0A0908;
+    //     const uint defaultInputPerm = 0x00010203;
 
-        unsafe
-        {
-            fixed (byte* permBytes = &inputPerms[0])
-            {
-                uint* permBytes_u32 = (uint*)permBytes;
-                permBytes_u32[0] = defaultInputPerm;
-            }
+    //     unsafe
+    //     {
+    //         fixed (byte* permBytes = &inputPerms[0])
+    //         {
+    //             uint* permBytes_u32 = (uint*)permBytes;
+    //             permBytes_u32[0] = defaultInputPerm;
+    //         }
 
-            fixed (byte* permBytes = &shufPerms[0])
-            {
-                ulong* permBytes_u64 = (ulong*)permBytes;
-                permBytes_u64[0] = defaultShufPerm_0;
-                permBytes_u64[1] = defaultShufPerm_1;
-                permBytes_u64[2] = defaultShufPerm_0;
-                permBytes_u64[3] = defaultShufPerm_1;
-            }
-        }
-    }
+    //         fixed (byte* permBytes = &shufPerms[0])
+    //         {
+    //             ulong* permBytes_u64 = (ulong*)permBytes;
+    //             permBytes_u64[0] = defaultShufPerm_0;
+    //             permBytes_u64[1] = defaultShufPerm_1;
+    //             permBytes_u64[2] = defaultShufPerm_0;
+    //             permBytes_u64[3] = defaultShufPerm_1;
+    //         }
+    //     }
+    // }
 
     #endregion VectorizedShuffle
 }

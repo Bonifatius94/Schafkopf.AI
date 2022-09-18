@@ -63,11 +63,14 @@ public class GameSession
 
     private int askForKlopfer(Hand[] initialHands)
     {
-        return Enumerable.Range(0, 4).Zip(table.PlayersInDrawingOrder())
-            .Select(x => (Pos: x.First, Player: x.Second))
-            .Where(x => x.Player.IsKlopfer(
-                x.Pos, initialHands[x.Player.Id].Take(4)))
-            .Count();
+        int pos = 0;
+        int klopfer = 0;
+        foreach (var player in table.PlayersInDrawingOrder())
+        {
+            if (player.IsKlopfer(pos++, initialHands[player.Id].Take(4)))
+                klopfer++;
+        }
+        return klopfer;
     }
 
     private void askForKontraRe(GameHistory history)
@@ -75,7 +78,10 @@ public class GameSession
         if (!history.IsKontraCalled)
         {
             var opponents = table.PlayersById(history.OpponentIds);
-            bool kontraCalled = opponents.Any(p => p.CallKontra(history));
+            bool kontraCalled = false;
+            foreach (var player in opponents)
+                if (player.CallKontra(history))
+                    kontraCalled = true;
             if (kontraCalled)
                 history.CallKontra();
         }
@@ -83,13 +89,18 @@ public class GameSession
         if (history.IsKontraCalled)
         {
             var callers = table.PlayersById(history.CallerIds);
-            bool reCalled = callers.Any(p => p.CallKontra(history));
+            bool reCalled = false;
+            foreach (var player in callers)
+                if (player.CallRe(history))
+                    reCalled = true;
             if (reCalled)
                 history.CallRe();
         }
     }
 
     #endregion Call
+
+    private Card[] possibleCards = new Card[8];
 
     private GameHistory playGameUntilEnd(GameHistory history)
     {
@@ -114,14 +125,19 @@ public class GameSession
                     if (history.CanKontraRe)
                         askForKontraRe(history);
 
-                    var possibleCards = player.Hand
-                        .Where(card => validator.CanPlayCard(
-                            history.Call, card, turn, player.Hand))
-                        .ToArray();
+                    int p = 0;
+                    for (int i = 0; i < 8; i++)
+                    {
+                        var card = player.Hand[i];
+                        if (validator.CanPlayCard(
+                                history.Call, card, turn, player.Hand))
+                            possibleCards[p++] = card;
+                    }
 
-                    var card = player.ChooseCard(history, possibleCards);
-                    player.Discard(card);
-                    turn = history.NextCard(card);
+                    var possCardsSpan = possibleCards.AsSpan(0, p);
+                    var cardToPlay = player.ChooseCard(history, possCardsSpan);
+                    player.Discard(cardToPlay);
+                    turn = history.NextCard(cardToPlay);
                 }
             }
         }
