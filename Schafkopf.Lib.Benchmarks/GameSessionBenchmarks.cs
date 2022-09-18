@@ -19,7 +19,7 @@ public class GameSessionBenchmark
     }
 
     [Benchmark]
-    public void PlayGames()
+    public void PlayGames_10k()
     {
         for (int i = 0; i < 10000; i++)
             session.ProcessGame();

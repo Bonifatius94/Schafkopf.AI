@@ -229,7 +229,7 @@ public class TurnWinnerTest
     {
         var deck = new CardsDeck();
         var allCardsWithMeta = deck.SelectMany(h => h.CacheTrumpf(call.IsTrumpf)).ToArray();
-        var turn = Turn.InitFirstTurn((byte)beginningPlayer, GameCall.Wenz(0));
+        var turn = Turn.InitFirstTurn((byte)beginningPlayer, call);
         var cardsToApplyWithMeta = cardsToApply
             .Select(x => allCardsWithMeta.First(y => y == x));
         foreach (var card in cardsToApplyWithMeta)

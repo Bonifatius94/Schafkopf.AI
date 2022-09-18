@@ -27,7 +27,7 @@ public class WenzTrumpfCardOrderTest
     public void Test_AnyTrumpfWinsAgainstAnyOtherCard_WhenPlayingWenz()
     {
         var call = newWenz();
-        var comp = new CardComparer(call.Mode);
+        var comp = new CardComparer(call.Mode, call.Trumpf);
         var deck = new CardsDeck();
         var allCardsWithMeta = deck.SelectMany(h => h.CacheTrumpf(call.IsTrumpf)).ToArray();
         var allTrumpf = allCardsWithMeta.Where(x => x.Type == CardType.Unter).ToList();
@@ -41,7 +41,7 @@ public class WenzTrumpfCardOrderTest
     public void Test_TrumpfAreInCorrectOrder_WhenPlayingWenz()
     {
         var call = newWenz();
-        var comp = new CardComparer(call.Mode);
+        var comp = new CardComparer(call.Mode, call.Trumpf);
         var deck = new CardsDeck();
         var allCardsWithMeta = deck.SelectMany(h => h.CacheTrumpf(call.IsTrumpf)).ToArray();
 
@@ -136,7 +136,7 @@ public class SauspielTrumpfCardOrderTest
     public void Test_AnyTrumpfWinsAgainstAnyOtherCard_WhenPlayingSauspiel()
     {
         var call = newSauspiel();
-        var comp = new CardComparer(call.Mode);
+        var comp = new CardComparer(call.Mode, call.Trumpf);
         var deck = new CardsDeck();
         var allCardsWithMeta = deck.SelectMany(h => h.CacheTrumpf(call.IsTrumpf)).ToArray();
         var allTrumpf = allTrumpfOfDeck(allCardsWithMeta, CardColor.Herz);
@@ -150,7 +150,7 @@ public class SauspielTrumpfCardOrderTest
     public void Test_TrumpfAreInCorrectOrder_WhenPlayingSauspiel()
     {
         var call = newSauspiel();
-        var comp = new CardComparer(call.Mode);
+        var comp = new CardComparer(call.Mode, call.Trumpf);
         var deck = new CardsDeck();
         var allCardsWithMeta = deck.SelectMany(h => h.CacheTrumpf(call.IsTrumpf)).ToArray();
         var allTrumpf = allTrumpfOfDeck(allCardsWithMeta, CardColor.Herz);
@@ -241,7 +241,7 @@ public class SoloTrumpfCardOrderTest
     public void Test_AnyTrumpfWinsAgainstAnyOtherCard_WhenPlayingSolo(CardColor trumpf)
     {
         var call = newSolo(trumpf);
-        var comp = new CardComparer(call.Mode);
+        var comp = new CardComparer(call.Mode, call.Trumpf);
         var deck = new CardsDeck();
         var allCardsWithMeta = deck.SelectMany(h => h.CacheTrumpf(call.IsTrumpf)).ToArray();
         var allTrumpf = allTrumpfOfDeck(allCardsWithMeta, trumpf);
@@ -259,7 +259,7 @@ public class SoloTrumpfCardOrderTest
     public void Test_TrumpfAreInCorrectOrder_WhenPlayingSolo(CardColor trumpf)
     {
         var call = newSolo(trumpf);
-        var comp = new CardComparer(call.Mode);
+        var comp = new CardComparer(call.Mode, call.Trumpf);
         var deck = new CardsDeck();
         var allCardsWithMeta = deck.SelectMany(h => h.CacheTrumpf(call.IsTrumpf)).ToArray();
         var allTrumpf = allTrumpfOfDeck(allCardsWithMeta, trumpf);

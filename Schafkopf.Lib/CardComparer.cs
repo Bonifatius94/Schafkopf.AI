@@ -1,6 +1,6 @@
 namespace Schafkopf.Lib;
 
-public class TrumpfEval
+public class CardComparer : IComparer<Card>
 {
     #region Masks
 
@@ -18,11 +18,12 @@ public class TrumpfEval
     private const byte EICHEL = (byte)CardColor.Eichel;
 
     private static readonly Vector128<byte> WENZ_TRUMPF_CARDS =
-        Vector128.Create(
+        Sse2.Or(Vector128.Create(
             EICHEL | UNTER, GRAS | UNTER, HERZ | UNTER, SCHELL | UNTER,
                       0xFF,         0xFF,         0xFF,           0xFF,
                       0xFF,         0xFF,         0xFF,           0xFF,
-                      0xFF,         0xFF,         0xFF,           0xFF);
+                      0xFF,         0xFF,         0xFF,           0xFF),
+            Vector128.Create((byte)Card.TRUMPF_FLAG));
 
     private static readonly Vector128<byte>[] SOLO_TRUMPF_CARDS =
         new Vector128<byte>[] {
@@ -46,7 +47,8 @@ public class TrumpfEval
                 EICHEL | UNTER,   GRAS |  UNTER,   HERZ |  UNTER, SCHELL | UNTER,
                 EICHEL |   SAU, EICHEL |   ZEHN, EICHEL | KOENIG, EICHEL |  NEUN,
                 EICHEL |  ACHT, EICHEL | SIEBEN,            0xFF,           0xFF),
-        };
+        }
+        .Select(vec => Sse2.Or(vec, Vector128.Create((byte)Card.TRUMPF_FLAG))).ToArray();
 
     private static readonly Vector128<byte> ZERO =
         Vector128.Create((byte)0);
@@ -61,9 +63,11 @@ public class TrumpfEval
             Vector128.Create((byte)GameMode.Solo),
         };
 
+    private static readonly Vector128<ulong> ZERO_64 = Vector128.Create(0ul);
+
     #endregion Masks
 
-    public TrumpfEval(GameMode mode, CardColor trumpf = CardColor.Herz)
+    public CardComparer(GameMode mode, CardColor trumpf = CardColor.Herz)
     {
         this.mode = mode;
         this.trumpf = trumpf;
@@ -72,20 +76,59 @@ public class TrumpfEval
     private readonly GameMode mode;
     private readonly CardColor trumpf;
 
-    public bool IsTrumpf(Card card)
+    public int Compare(Card x, Card y)
+        => cardScore(x) - cardScore(y);
+
+    private int cardScore(Card card)
     {
-        var cardVec = Vector128.Create((byte)(card.Id & 0x1F));
+        var cardVec = Vector128.Create((byte)(card.Id & 0x5F));
         var modeMask = MODE_MASKS[(byte)mode];
         var wenzModeMask = Sse2.CompareEqual(modeMask, WENZ_MODE);
         var soloModeMask = Sse2.CompareEqual(wenzModeMask, ZERO);
-        var soloOrSauspielTrumpf = SOLO_TRUMPF_CARDS[(byte)trumpf];
 
         var wenzCmp = Sse2.Xor(cardVec, WENZ_TRUMPF_CARDS);
-        var soloCmp = Sse2.Xor(cardVec, soloOrSauspielTrumpf);
+        var soloCmp = Sse2.Xor(cardVec, SOLO_TRUMPF_CARDS[(byte)trumpf]);
         var wenzMatches = Sse2.And(Sse2.CompareEqual(wenzCmp, ZERO), wenzModeMask);
         var soloMatches = Sse2.And(Sse2.CompareEqual(soloCmp, ZERO), soloModeMask);
         var allMatches = Sse2.Or(wenzMatches, soloMatches).AsUInt64();
-        bool isTrumpf = (allMatches.GetElement(0) | allMatches.GetElement(1)) > 0;
-        return isTrumpf;
+
+        int upperTrumpfRank = (64 - BitOperations.TrailingZeroCount(allMatches.GetElement(0))) << 1;
+        int lowerTrumpfRank = (64 - BitOperations.TrailingZeroCount(allMatches.GetElement(1))) >> 3;
+        ulong trumpfRank = (ulong)(upperTrumpfRank | lowerTrumpfRank);
+        var farbeMaskVec = Sse42.CompareEqual(allMatches, ZERO_64);
+        ulong farbeMask = farbeMaskVec.GetElement(0) & farbeMaskVec.GetElement(1);
+
+        return (int)(((ulong)card.Type & farbeMask) | ((trumpfRank + 8) & ~farbeMask));
     }
+
+    #region Simple
+
+    public int CompareSimple(Card x, Card y)
+    {
+        bool isXTrumpf = x.IsTrumpf;
+        bool isYTrumpf = y.IsTrumpf;
+
+        if (isXTrumpf && !isYTrumpf)
+            return 1;
+        if (!isXTrumpf && isYTrumpf)
+            return -1;
+
+        if (!isXTrumpf && !isYTrumpf)
+            return x.Type - y.Type;
+
+        if (mode == GameMode.Wenz)
+            return x.Color - y.Color;
+
+        // case: both Trumpf in Solo or Sauspiel
+        int scoreX = trumpfScore(x);
+        int scoreY = trumpfScore(y);
+        return scoreX - scoreY;
+    }
+
+    private int trumpfScore(Card x)
+        => x.Type == CardType.Ober || x.Type == CardType.Unter
+            ? (int)x.Type * 4 + (int)x.Color + 8
+            : (int)x.Type;
+
+    #endregion Simple
 }
