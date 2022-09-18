@@ -80,8 +80,10 @@ public class GameSession
             var opponents = table.PlayersById(history.OpponentIds);
             bool kontraCalled = false;
             foreach (var player in opponents)
-                if (player.CallKontra(history))
+                if (player.CallKontra(history)) {
                     kontraCalled = true;
+                    break;
+                }
             if (kontraCalled)
                 history.CallKontra();
         }
@@ -91,8 +93,10 @@ public class GameSession
             var callers = table.PlayersById(history.CallerIds);
             bool reCalled = false;
             foreach (var player in callers)
-                if (player.CallRe(history))
+                if (player.CallRe(history)) {
                     reCalled = true;
+                    break;
+                }
             if (reCalled)
                 history.CallRe();
         }
