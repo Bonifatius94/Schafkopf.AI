@@ -106,6 +106,7 @@ public readonly struct Turn
     {
         get
         {
+            // info: don't optimize, it's only used for printing
             var allCards = new Card[] { c1, c2, c3, c4 };
             return Enumerable.Range(Meta.FirstDrawingPlayerId, 4)
                 .Select(i => allCards[i % 4])
@@ -246,7 +247,7 @@ public readonly struct Turn
         unsafe { fixed (Card* cp = &cards[0]) *((uint*)cp) = Cards; }
 
         var cardsByPlayer = Enumerable.Range(FirstDrawingPlayerId, CardsCount)
-            .ToDictionary(i => i % 4, i => cards[i]);
+            .ToDictionary(i => i % 4, i => cards[i % 4]);
 
         var comparer = new CardComparer(Meta.Call.Mode);
         if (IsTrumpfPlayed)

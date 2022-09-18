@@ -57,8 +57,7 @@ to collect coverage logs from.*
 ### Run Benchmarks
 
 ```sh
-dotnet run --project Schafkopf.Lib.Benchmarks/Schafkopf.Lib.Benchmarks.csproj \
-    --configuration Release --arch x64 --os linux
+dotnet run --project Schafkopf.Lib.Benchmarks/Schafkopf.Lib.Benchmarks.csproj --configuration Release
 ```
 
 ### Run AI Training

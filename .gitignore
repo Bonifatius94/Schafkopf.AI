@@ -1,5 +1,6 @@
 obj
 bin
+.vs
 .vscode
 lcov.info
 coverage.json
