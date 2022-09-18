@@ -152,8 +152,6 @@ public class EqualDistPermutator_256
 
     public void NextPermutation(Span<byte> ids)
     {
-        // TODO: find an intrinsic for doing this
-
         for (int i = 0; i < numItems; i++)
         {
             int j = rng.Next(i, numItems);

@@ -82,9 +82,56 @@ public class TestGameSession
         }
         // ensure that actually one sauspiel was played
         while (history.Call.Mode == GameMode.Weiter);
+
+        history.Call.Mode.Should().Be(GameMode.Sauspiel);
+        history.TurnCount.Should().Be(8);
     }
 
-    // TODO: enforce at least one game call of each mode
+    public static IEnumerable<object[]> soloTrumpf
+        => new List<CardColor>() {
+                CardColor.Schell, CardColor.Herz,
+                CardColor.Gras, CardColor.Eichel
+            }
+            .Select(x => new object[] { x });
+
+    [Theory]
+    [MemberData(nameof(soloTrumpf))]
+    public void Test_CanPlaySolo(CardColor soloTrumpf)
+    {
+        var deck = new CardsDeck();
+        var soloCall = GameCall.Solo(0, soloTrumpf);
+        var weiter = GameCall.Weiter();
+
+        var table = new Table(
+            new Player(0, new SauspielAgent(soloCall)),
+            new Player(1, new RandomAgent(weiter)),
+            new Player(2, new RandomAgent(weiter)),
+            new Player(3, new RandomAgent(weiter)));
+        var session = new GameSession(table, deck);
+        var history = session.ProcessGame();
+
+        history.Call.Mode.Should().Be(GameMode.Solo);
+        history.TurnCount.Should().Be(8);
+    }
+
+    [Fact]
+    public void Test_CanPlayWenz()
+    {
+        var deck = new CardsDeck();
+        var wenzCall = GameCall.Wenz(0);
+        var weiter = GameCall.Weiter();
+
+        var table = new Table(
+            new Player(0, new SauspielAgent(wenzCall)),
+            new Player(1, new RandomAgent(weiter)),
+            new Player(2, new RandomAgent(weiter)),
+            new Player(3, new RandomAgent(weiter)));
+        var session = new GameSession(table, deck);
+        var history = session.ProcessGame();
+
+        history.Call.Mode.Should().Be(GameMode.Wenz);
+        history.TurnCount.Should().Be(8);
+    }
 }
 
 public class SauspielAgent : ISchafkopfAIAgent

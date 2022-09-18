@@ -211,15 +211,42 @@ public class GameCallGenerator
         return allCalls[offset..14];
     }
 
+    private static readonly Vector128<byte> gsuchteQueryMask =
+        Vector128.Create((byte)0x1F);
+    private static readonly Vector128<byte>[] gsuchteQueries =
+        new Vector128<byte>[] {
+            Vector128.Create((byte)((byte)CardColor.Schell | ((byte)CardType.Sau << 2))),
+            Vector128.Create((byte)((byte)CardColor.Herz   | ((byte)CardType.Sau << 2))),
+            Vector128.Create((byte)((byte)CardColor.Gras   | ((byte)CardType.Sau << 2))),
+            Vector128.Create((byte)((byte)CardColor.Eichel | ((byte)CardType.Sau << 2))),
+        };
+
     private int findSauspielPartner(Hand[] initialHands, CardColor gsuchte)
     {
-        // TODO: perform this lookup with a 256-bit SIMD register for all hands at once
-        //       -> cards are unique, so it'll always yield the correct player
-        var gsuchteSau = new Card(CardType.Sau, gsuchte);
-        for (int i = 0; i < 4; i++)
-            if (initialHands[i].HasCard(gsuchteSau))
-                return i;
-        return -1;
+        Vector128<byte> handsVec_01; Vector128<byte> handsVec_23;
+        unsafe
+        {
+            fixed (Hand* hp = &initialHands[0])
+            {
+                handsVec_01 = Vector128.Load<ulong>((ulong*)hp).AsByte();
+                handsVec_23 = Vector128.Load<ulong>((ulong*)(hp + 2)).AsByte();
+            }
+        }
+
+        var query = gsuchteQueries[(int)gsuchte];
+        var res_01 = Sse2.Xor(Sse2.And(handsVec_01, gsuchteQueryMask), query);
+        var res_23 = Sse2.Xor(Sse2.And(handsVec_23, gsuchteQueryMask), query);
+        var eq_01 = Sse2.CompareEqual(res_01, Vector128<byte>.Zero).AsUInt64();
+        var eq_23 = Sse2.CompareEqual(res_23, Vector128<byte>.Zero).AsUInt64();
+
+        uint tzcnt_0 = (uint)BitOperations.TrailingZeroCount(eq_01.GetElement(0));
+        uint tzcnt_1 = (uint)BitOperations.TrailingZeroCount(eq_01.GetElement(1));
+        uint tzcnt_2 = (uint)BitOperations.TrailingZeroCount(eq_23.GetElement(0));
+        uint tzcnt_3 = (uint)BitOperations.TrailingZeroCount(eq_23.GetElement(1));
+
+        uint res_id = ((64 - tzcnt_0)) | ((64 - tzcnt_1) << 8)
+            | ((64 - tzcnt_2) << 16) | ((64 - tzcnt_3) << 24);
+        return BitOperations.TrailingZeroCount(res_id) >> 3;
     }
 
     #region Simple
