@@ -166,17 +166,20 @@ public readonly struct Turn
         uint sameFarbeMatches = matchMask(cards_u32, sameFarbeQuery, sameFarbeMask);
         uint trumpfMatches = matchMask(cards_u32, Card.TRUMPF_FLAG, Card.TRUMPF_FLAG);
         cards_u32 = (cards_u32 & sameFarbeMatches) | (cards_u32 & trumpfMatches);
-
-        var cards = new Card[4];
-        unsafe { fixed (Card* cp = &cards[0]) *((uint*)cp) = cards_u32; }
-
         var comparer = compCache[(Meta.Call.Mode, Meta.Call.Trumpf)];
-        short cmp_01 = (short)comparer.Compare(cards[0], cards[1]);
-        short cmp_02 = (short)comparer.Compare(cards[0], cards[2]);
-        short cmp_03 = (short)comparer.Compare(cards[0], cards[3]);
-        short cmp_12 = (short)comparer.Compare(cards[1], cards[2]);
-        short cmp_13 = (short)comparer.Compare(cards[1], cards[3]);
-        short cmp_23 = (short)comparer.Compare(cards[2], cards[3]);
+
+        short cmp_01; short cmp_02; short cmp_03;
+        short cmp_12; short cmp_13; short cmp_23;
+        unsafe
+        {
+            Card* cp = (Card*)&cards_u32;
+            cmp_01 = (short)comparer.Compare(cp[0], cp[1]);
+            cmp_02 = (short)comparer.Compare(cp[0], cp[2]);
+            cmp_03 = (short)comparer.Compare(cp[0], cp[3]);
+            cmp_12 = (short)comparer.Compare(cp[1], cp[2]);
+            cmp_13 = (short)comparer.Compare(cp[1], cp[3]);
+            cmp_23 = (short)comparer.Compare(cp[2], cp[3]);
+        }
 
         // build a 4x4 matrix with comparisons
         var cmpVec = Vector256.Create(

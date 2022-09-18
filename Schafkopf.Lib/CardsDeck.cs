@@ -29,24 +29,20 @@ public class CardsDeck : IEnumerable<Hand>
 
     #endregion Enumerate
 
-    public Hand[] InitialHands()
+    public void InitialHands(Hand[] cache)
     {
-        var hands = new Hand[4];
-        hands[0] = this.hands[0];
-        hands[1] = this.hands[1];
-        hands[2] = this.hands[2];
-        hands[3] = this.hands[3];
-        return hands;
+        cache[0] = this.hands[0];
+        cache[1] = this.hands[1];
+        cache[2] = this.hands[2];
+        cache[3] = this.hands[3];
     }
 
-    public Hand[] InitialHands(GameCall call)
+    public void InitialHands(GameCall call, Hand[] cache)
     {
-        var hands = new Hand[4];
-        hands[0] = this.hands[0].CacheTrumpf(call.IsTrumpf);
-        hands[1] = this.hands[1].CacheTrumpf(call.IsTrumpf);
-        hands[2] = this.hands[2].CacheTrumpf(call.IsTrumpf);
-        hands[3] = this.hands[3].CacheTrumpf(call.IsTrumpf);
-        return hands;
+        cache[0] = this.hands[0].CacheTrumpf(call.IsTrumpf);
+        cache[1] = this.hands[1].CacheTrumpf(call.IsTrumpf);
+        cache[2] = this.hands[2].CacheTrumpf(call.IsTrumpf);
+        cache[3] = this.hands[3].CacheTrumpf(call.IsTrumpf);
     }
 
     #region Simple

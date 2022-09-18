@@ -74,7 +74,7 @@ public class CardComparer : IComparer<Card>
     private readonly GameMode mode;
     private readonly CardColor trumpf;
 
-    public int Compare(Card x, Card y)
+    public int CompareSimd(Card x, Card y)
         => cardScore(x) - cardScore(y);
 
     private int cardScore(Card card)
@@ -100,7 +100,7 @@ public class CardComparer : IComparer<Card>
 
     #region Simple
 
-    public int CompareSimple(Card x, Card y)
+    public int Compare(Card x, Card y)
     {
         bool isXTrumpf = x.IsTrumpf;
         bool isYTrumpf = y.IsTrumpf;

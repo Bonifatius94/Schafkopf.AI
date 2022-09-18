@@ -21,7 +21,8 @@ public class TestGameHistory_Initialization
     {
         var deck = new CardsDeck();
         deck.Shuffle();
-        var initialHands = deck.InitialHands(call);
+        var initialHands = new Hand[4];
+        deck.InitialHands(call, initialHands);
 
         var history = new GameHistory(call, initialHands, kommtRaus);
 
@@ -40,7 +41,8 @@ public class GameHistoryTest_IteratingOverTurnsWhileApplyingCards
         var call = GameCall.Wenz(0);
         var deck = new CardsDeck();
         deck.Shuffle();
-        var initialHands = deck.InitialHands(call);
+        var initialHands = new Hand[4];
+        deck.InitialHands(call, initialHands);
         var history = new GameHistory(call, initialHands, 0);
 
         var cardToPlay = initialHands[0].PickRandom();

@@ -14,22 +14,24 @@ public class GameSession
     private static readonly DrawValidator validator = new DrawValidator();
     private static readonly GameCallGenerator callGen = new GameCallGenerator();
 
+    private Hand[] initialHands = new Hand[4];
+
     public GameHistory ProcessGame()
     {
         deck.Shuffle();
 
-        var initialHandsWithoutMeta = deck.InitialHands();
-        int klopfer = askForKlopfer(initialHandsWithoutMeta);
-        var call = makeCalls(klopfer, initialHandsWithoutMeta);
+        deck.InitialHands(initialHands);
+        int klopfer = askForKlopfer(initialHands);
+        var call = makeCalls(klopfer, initialHands);
 
         if (call.Mode == GameMode.Weiter)
         {
             table.Shift();
             return new GameHistory(
-                call, initialHandsWithoutMeta, table.FirstDrawingPlayerId);
+                call, initialHands, table.FirstDrawingPlayerId);
         }
 
-        var initialHands = deck.InitialHands(call);
+        deck.InitialHands(call, initialHands);
         int kommtRaus = table.FirstDrawingPlayerId;
         var history = new GameHistory(call, initialHands, kommtRaus);
 

@@ -1,5 +1,6 @@
 namespace Schafkopf.Lib.Benchmarks;
 
+[MemoryDiagnoser(false)]
 public class TurnAttributesBenchmark
 {
     private const int numTurns = 8192;

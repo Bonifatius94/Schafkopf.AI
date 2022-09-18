@@ -17,7 +17,8 @@ public class HandAttributesBenchmark
         foreach (int i in Enumerable.Range(0, handsCount / 4))
         {
             deck.Shuffle();
-            var deckHands = deck.InitialHands(call);
+            var deckHands = new Hand[4];
+            deck.InitialHands(call, deckHands);
             int offset = i * 4;
             hands[offset] = deckHands[0];
             hands[offset + 1] = deckHands[1];
@@ -70,5 +71,20 @@ public class HandAttributesBenchmark
         foreach (var hand in hands)
             foreach (var farbe in farben)
                 hand.FarbeCountSimple(farbe);
+    }
+
+    [Benchmark]
+    public void Baseline_FirstFourCards()
+    {
+        var cache = new Card[4];
+        foreach (var hand in hands)
+            hand.FirstFour(cache);
+    }
+
+    [Benchmark]
+    public void Simple_FirstFourCards()
+    {
+        foreach (var hand in hands)
+            hand.Take(4).ToArray();
     }
 }

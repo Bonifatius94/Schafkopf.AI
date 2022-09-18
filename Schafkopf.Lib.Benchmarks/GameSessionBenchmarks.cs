@@ -1,5 +1,6 @@
 namespace Schafkopf.Lib.Benchmarks;
 
+[MemoryDiagnoser(false)]
 public class GameSessionBenchmark
 {
     // [Params(100, 10000, 1000000)]

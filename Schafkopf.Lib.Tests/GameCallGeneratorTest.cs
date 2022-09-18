@@ -98,7 +98,8 @@ public class TestCallGenerator_GenerateSoloOrWenzCalls_NoPreviousCalls
     {
         var deck = new CardsDeck();
         deck.Shuffle();
-        var initialHands = deck.InitialHands();
+        var initialHands = new Hand[4];
+        deck.InitialHands(initialHands);
 
         var callGen = new GameCallGenerator();
         var possCalls = callGen.AllPossibleCalls(0, initialHands, GameCall.Weiter()).ToArray();
@@ -184,7 +185,8 @@ public class TestCallGenerator_CallRankFilter
     {
         var deck = new CardsDeck();
         deck.Shuffle();
-        var initialHands = deck.InitialHands();
+        var initialHands = new Hand[4];
+        deck.InitialHands(initialHands);
         var previousCall = GameCall.Sauspiel(0, 1, CardColor.Schell);
 
         var callGen = new GameCallGenerator();
@@ -199,7 +201,8 @@ public class TestCallGenerator_CallRankFilter
     {
         var deck = new CardsDeck();
         deck.Shuffle();
-        var initialHands = deck.InitialHands();
+        var initialHands = new Hand[4];
+        deck.InitialHands(initialHands);
         var previousCall = GameCall.Wenz(0);
 
         var callGen = new GameCallGenerator();
@@ -214,7 +217,8 @@ public class TestCallGenerator_CallRankFilter
     {
         var deck = new CardsDeck();
         deck.Shuffle();
-        var initialHands = deck.InitialHands();
+        var initialHands = new Hand[4];
+        deck.InitialHands(initialHands);
         var previousCall = GameCall.Wenz(0, isTout: true);
 
         var callGen = new GameCallGenerator();
@@ -229,7 +233,8 @@ public class TestCallGenerator_CallRankFilter
     {
         var deck = new CardsDeck();
         deck.Shuffle();
-        var initialHands = deck.InitialHands();
+        var initialHands = new Hand[4];
+        deck.InitialHands(initialHands);
         var previousCall = GameCall.Solo(0, CardColor.Schell);
 
         var callGen = new GameCallGenerator();
@@ -244,7 +249,8 @@ public class TestCallGenerator_CallRankFilter
     {
         var deck = new CardsDeck();
         deck.Shuffle();
-        var initialHands = deck.InitialHands();
+        var initialHands = new Hand[4];
+        deck.InitialHands(initialHands);
         var previousCall = GameCall.Solo(0, CardColor.Schell, isTout: true);
 
         var callGen = new GameCallGenerator();

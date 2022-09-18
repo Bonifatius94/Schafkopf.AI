@@ -5,13 +5,14 @@ public class DeckShuffleBenchmark
 {
     private static readonly CardsDeck deck = new CardsDeck();
 
-    [Benchmark(Baseline = true)]
+    [Benchmark]
     public void SimpleShuffle() => deck.ShuffleSimple();
 
-    [Benchmark]
+    [Benchmark(Baseline = true)]
     public void SimdShuffle() => deck.Shuffle();
 }
 
+[MemoryDiagnoser(false)]
 public class DeckAttributesBenchmark
 {
     const int decksCount = 1024;
@@ -32,8 +33,9 @@ public class DeckAttributesBenchmark
     [Benchmark]
     public void Baseline_InitialHands()
     {
+        var cache = new Hand[4];
         foreach (var deck in decks)
-            deck.InitialHands();
+            deck.InitialHands(cache);
     }
 
     [Benchmark]

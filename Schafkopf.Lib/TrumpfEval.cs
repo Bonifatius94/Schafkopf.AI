@@ -72,7 +72,7 @@ public class TrumpfEval
     private readonly GameMode mode;
     private readonly CardColor trumpf;
 
-    public bool IsTrumpf(Card card)
+    public bool IsTrumpfSimd(Card card)
     {
         var cardVec = Vector128.Create((byte)(card.Id & 0x1F));
         var modeMask = MODE_MASKS[(byte)mode];
@@ -87,5 +87,14 @@ public class TrumpfEval
         var allMatches = Sse2.Or(wenzMatches, soloMatches).AsUInt64();
         bool isTrumpf = (allMatches.GetElement(0) | allMatches.GetElement(1)) > 0;
         return isTrumpf;
+    }
+
+    public bool IsTrumpf(Card card)
+    {
+        if (mode == GameMode.Wenz)
+            return card.Type == CardType.Unter;
+
+        return card.Color == trumpf ||
+            card.Type == CardType.Unter || card.Type == CardType.Ober;
     }
 }
