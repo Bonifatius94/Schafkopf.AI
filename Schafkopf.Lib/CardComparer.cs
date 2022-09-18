@@ -18,12 +18,11 @@ public class CardComparer : IComparer<Card>
     private const byte EICHEL = (byte)CardColor.Eichel;
 
     private static readonly Vector128<byte> WENZ_TRUMPF_CARDS =
-        Sse2.Or(Vector128.Create(
+        Vector128.Create(
             EICHEL | UNTER, GRAS | UNTER, HERZ | UNTER, SCHELL | UNTER,
                       0xFF,         0xFF,         0xFF,           0xFF,
                       0xFF,         0xFF,         0xFF,           0xFF,
-                      0xFF,         0xFF,         0xFF,           0xFF),
-            Vector128.Create((byte)Card.TRUMPF_FLAG));
+                      0xFF,         0xFF,         0xFF,           0xFF);
 
     private static readonly Vector128<byte>[] SOLO_TRUMPF_CARDS =
         new Vector128<byte>[] {
@@ -47,8 +46,7 @@ public class CardComparer : IComparer<Card>
                 EICHEL | UNTER,   GRAS |  UNTER,   HERZ |  UNTER, SCHELL | UNTER,
                 EICHEL |   SAU, EICHEL |   ZEHN, EICHEL | KOENIG, EICHEL |  NEUN,
                 EICHEL |  ACHT, EICHEL | SIEBEN,            0xFF,           0xFF),
-        }
-        .Select(vec => Sse2.Or(vec, Vector128.Create((byte)Card.TRUMPF_FLAG))).ToArray();
+        };
 
     private static readonly Vector128<byte> ZERO =
         Vector128.Create((byte)0);
@@ -81,7 +79,10 @@ public class CardComparer : IComparer<Card>
 
     private int cardScore(Card card)
     {
-        var cardVec = Vector128.Create((byte)(card.Id & 0x5F));
+        if (!card.IsTrumpf)
+            return (int)card.Type;
+
+        var cardVec = Vector128.Create((byte)(card.Id & 0x1F));
         var modeMask = MODE_MASKS[(byte)mode];
         var wenzModeMask = Sse2.CompareEqual(modeMask, WENZ_MODE);
         var soloModeMask = Sse2.CompareEqual(wenzModeMask, ZERO);
@@ -94,11 +95,7 @@ public class CardComparer : IComparer<Card>
 
         int upperTrumpfRank = (64 - BitOperations.TrailingZeroCount(allMatches.GetElement(0))) << 1;
         int lowerTrumpfRank = (64 - BitOperations.TrailingZeroCount(allMatches.GetElement(1))) >> 3;
-        ulong trumpfRank = (ulong)(upperTrumpfRank | lowerTrumpfRank);
-        var farbeMaskVec = Sse42.CompareEqual(allMatches, ZERO_64);
-        ulong farbeMask = farbeMaskVec.GetElement(0) & farbeMaskVec.GetElement(1);
-
-        return (int)(((ulong)card.Type & farbeMask) | ((trumpfRank + 8) & ~farbeMask));
+        return (int)((upperTrumpfRank | lowerTrumpfRank) + 8);
     }
 
     #region Simple
