@@ -61,10 +61,6 @@ public class CardsDeck : IEnumerable<Hand>
             .Select(i => hands[i].CacheTrumpf(call.IsTrumpf))
             .ToArray();
 
-    #endregion Simple
-
-    #region Shuffle
-
     private static readonly EqualDistPermutator_256 permGen =
         new EqualDistPermutator_256(32);
 
@@ -90,9 +86,7 @@ public class CardsDeck : IEnumerable<Hand>
         }
     }
 
-    #endregion Shuffle
-
-    #region VectorizedShuffle
+    #endregion Simple
 
     private static readonly EqualDistPermutator_256 permGenHighLow =
         new EqualDistPermutator_256(16);
@@ -140,33 +134,6 @@ public class CardsDeck : IEnumerable<Hand>
         var shufVec = Avx2.Shuffle(cardsVec, permVec);
         unsafe { fixed (Hand* hp = &hands[0]) shufVec.Store((byte*)hp); }
     }
-
-    // private void initPerms(byte[] inputPerms, byte[] shufPerms)
-    // {
-    //     const ulong defaultShufPerm_0 = 0x0706050403020100;
-    //     const ulong defaultShufPerm_1 = 0x0F0E0D0C0B0A0908;
-    //     const uint defaultInputPerm = 0x00010203;
-
-    //     unsafe
-    //     {
-    //         fixed (byte* permBytes = &inputPerms[0])
-    //         {
-    //             uint* permBytes_u32 = (uint*)permBytes;
-    //             permBytes_u32[0] = defaultInputPerm;
-    //         }
-
-    //         fixed (byte* permBytes = &shufPerms[0])
-    //         {
-    //             ulong* permBytes_u64 = (ulong*)permBytes;
-    //             permBytes_u64[0] = defaultShufPerm_0;
-    //             permBytes_u64[1] = defaultShufPerm_1;
-    //             permBytes_u64[2] = defaultShufPerm_0;
-    //             permBytes_u64[3] = defaultShufPerm_1;
-    //         }
-    //     }
-    // }
-
-    #endregion VectorizedShuffle
 }
 
 public class EqualDistPermutator_256
