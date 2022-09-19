@@ -1,6 +1,6 @@
 namespace Schafkopf.Lib;
 
-public class TrumpfEval
+public class TrumpfEvaluator
 {
     #region Masks
 
@@ -63,7 +63,7 @@ public class TrumpfEval
 
     #endregion Masks
 
-    public TrumpfEval(GameMode mode, CardColor trumpf = CardColor.Herz)
+    public TrumpfEvaluator(GameMode mode, CardColor trumpf = CardColor.Herz)
     {
         this.mode = mode;
         this.trumpf = trumpf;

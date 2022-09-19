@@ -139,20 +139,24 @@ public readonly struct Turn
     // note: this only yields valid results when the turn is over
     public int WinnerId => winnerId();
 
-    private static readonly Dictionary<(GameMode, CardColor), CardComparer> compCache =
-        new Dictionary<(GameMode, CardColor), CardComparer>() {
-            { (GameMode.Sauspiel, CardColor.Herz),
-                new CardComparer(GameMode.Sauspiel) },
-            { (GameMode.Wenz, CardColor.Schell),
-                new CardComparer(GameMode.Wenz) },
-            { (GameMode.Solo, CardColor.Schell),
-                new CardComparer(GameMode.Solo, CardColor.Schell) },
-            { (GameMode.Solo, CardColor.Herz),
-                new CardComparer(GameMode.Solo, CardColor.Herz) },
-            { (GameMode.Solo, CardColor.Gras),
-                new CardComparer(GameMode.Solo, CardColor.Gras) },
-            { (GameMode.Solo, CardColor.Eichel),
-                new CardComparer(GameMode.Solo, CardColor.Eichel) },
+    private static readonly CardComparer[] compCache =
+        new CardComparer[] {
+            new CardComparer(GameMode.Weiter),
+            new CardComparer(GameMode.Weiter),
+            new CardComparer(GameMode.Weiter),
+            new CardComparer(GameMode.Weiter),
+            new CardComparer(GameMode.Sauspiel),
+            new CardComparer(GameMode.Sauspiel),
+            new CardComparer(GameMode.Sauspiel),
+            new CardComparer(GameMode.Sauspiel),
+            new CardComparer(GameMode.Wenz),
+            new CardComparer(GameMode.Wenz),
+            new CardComparer(GameMode.Wenz),
+            new CardComparer(GameMode.Wenz),
+            new CardComparer(GameMode.Solo, CardColor.Schell),
+            new CardComparer(GameMode.Solo, CardColor.Herz),
+            new CardComparer(GameMode.Solo, CardColor.Gras),
+            new CardComparer(GameMode.Solo, CardColor.Eichel),
         };
 
     private int winnerId()
@@ -166,7 +170,7 @@ public readonly struct Turn
         uint sameFarbeMatches = matchMask(cards_u32, sameFarbeQuery, sameFarbeMask);
         uint trumpfMatches = matchMask(cards_u32, Card.TRUMPF_FLAG, Card.TRUMPF_FLAG);
         cards_u32 = (cards_u32 & sameFarbeMatches) | (cards_u32 & trumpfMatches);
-        var comparer = compCache[(Meta.Call.Mode, Meta.Call.Trumpf)];
+        var comparer = compCache[(int)Meta.Call.Mode * 4 + (int)Meta.Call.Trumpf];
 
         short cmp_01; short cmp_02; short cmp_03;
         short cmp_12; short cmp_13; short cmp_23;
