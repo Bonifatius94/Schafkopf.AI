@@ -73,24 +73,28 @@ public readonly struct GameCall
 
     #region Trumpf
 
-    private static readonly Dictionary<(GameMode, CardColor), TrumpfEval> evalCache =
-        new Dictionary<(GameMode, CardColor), TrumpfEval>() {
-            { (GameMode.Sauspiel, CardColor.Herz),
-                new TrumpfEval(GameMode.Sauspiel, CardColor.Herz) },
-            { (GameMode.Wenz, CardColor.Schell),
-                new TrumpfEval(GameMode.Wenz) },
-            { (GameMode.Solo, CardColor.Schell),
-                new TrumpfEval(GameMode.Solo, CardColor.Schell) },
-            { (GameMode.Solo, CardColor.Herz),
-                new TrumpfEval(GameMode.Solo, CardColor.Herz) },
-            { (GameMode.Solo, CardColor.Gras),
-                new TrumpfEval(GameMode.Solo, CardColor.Gras) },
-            { (GameMode.Solo, CardColor.Eichel),
-                new TrumpfEval(GameMode.Solo, CardColor.Eichel) },
+    private static readonly TrumpfEvaluator[] evaluators =
+        new TrumpfEvaluator[] {
+            new TrumpfEvaluator(GameMode.Weiter),
+            new TrumpfEvaluator(GameMode.Weiter),
+            new TrumpfEvaluator(GameMode.Weiter),
+            new TrumpfEvaluator(GameMode.Weiter),
+            new TrumpfEvaluator(GameMode.Sauspiel),
+            new TrumpfEvaluator(GameMode.Sauspiel),
+            new TrumpfEvaluator(GameMode.Sauspiel),
+            new TrumpfEvaluator(GameMode.Sauspiel),
+            new TrumpfEvaluator(GameMode.Wenz),
+            new TrumpfEvaluator(GameMode.Wenz),
+            new TrumpfEvaluator(GameMode.Wenz),
+            new TrumpfEvaluator(GameMode.Wenz),
+            new TrumpfEvaluator(GameMode.Solo, CardColor.Schell),
+            new TrumpfEvaluator(GameMode.Solo, CardColor.Herz),
+            new TrumpfEvaluator(GameMode.Solo, CardColor.Gras),
+            new TrumpfEvaluator(GameMode.Solo, CardColor.Eichel),
         };
 
-    public bool IsTrumpf(Card card)
-        => evalCache[(Mode, Trumpf)].IsTrumpf(card);
+    public Func<Card, bool> IsTrumpf
+        => evaluators[(int)Mode * 4 + (int)Trumpf].IsTrumpf;
 
     #endregion Trumpf
 
@@ -166,8 +170,8 @@ public class GameCallGenerator
                     trumpf => GameCall.Solo(playerId, trumpf, tout)))
                 .ToArray())
             .ToArray();
-    private static readonly TrumpfEval sauspielEval =
-        new TrumpfEval(GameMode.Sauspiel);
+    private static readonly TrumpfEvaluator sauspielEval =
+        new TrumpfEvaluator(GameMode.Sauspiel);
 
     private static readonly CardColor[] allRufbareFarben =
         new CardColor[] { CardColor.Schell, CardColor.Gras, CardColor.Eichel };
@@ -259,7 +263,7 @@ public class GameCallGenerator
 
         var hand = initialHandsWithoutMeta[playerId];
         var handSauspiel = hand.CacheTrumpf(
-            new TrumpfEval(GameMode.Sauspiel).IsTrumpf);
+            new TrumpfEvaluator(GameMode.Sauspiel).IsTrumpf);
         var possibleSauspielColors = allRufbareFarben
             .Where(c => !handSauspiel.HasCard(new Card(CardType.Sau, c))
                         && handSauspiel.HasFarbe(c));

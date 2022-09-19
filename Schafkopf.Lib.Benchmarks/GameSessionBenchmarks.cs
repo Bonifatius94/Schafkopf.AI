@@ -1,6 +1,9 @@
+using BenchmarkDotNet.Diagnostics.Windows.Configs;
+
 namespace Schafkopf.Lib.Benchmarks;
 
 [MemoryDiagnoser(false)]
+[EtwProfiler(performExtraBenchmarksRun: false)]
 public class GameSessionBenchmark
 {
     // [Params(100, 10000, 1000000)]
