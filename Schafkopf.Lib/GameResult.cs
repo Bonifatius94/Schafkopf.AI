@@ -83,23 +83,61 @@ public class GameScoreEvaluation
     public bool IsSchwarz { get; private set; }
     public int Laufende { get; private set; }
 
+    private static IEnumerable<Card> allTrumpfDesc(GameMode mode, CardColor trumpf)
+        => (mode == GameMode.Wenz)
+            ? new List<Card>() {
+                new Card(CardType.Unter, CardColor.Eichel, true, true),
+                new Card(CardType.Unter, CardColor.Gras, true, true),
+                new Card(CardType.Unter, CardColor.Herz, true, true),
+                new Card(CardType.Unter, CardColor.Schell, true, true),
+            }
+            : new List<Card>() {
+                new Card(CardType.Ober, CardColor.Eichel, true, true),
+                new Card(CardType.Ober, CardColor.Gras, true, true),
+                new Card(CardType.Ober, CardColor.Herz, true, true),
+                new Card(CardType.Ober, CardColor.Schell, true, true),
+                new Card(CardType.Unter, CardColor.Eichel, true, true),
+                new Card(CardType.Unter, CardColor.Gras, true, true),
+                new Card(CardType.Unter, CardColor.Herz, true, true),
+                new Card(CardType.Unter, CardColor.Schell, true, true),
+                new Card(CardType.Sau, trumpf, true, true),
+                new Card(CardType.Zehn, trumpf, true, true),
+                new Card(CardType.Koenig, trumpf, true, true),
+                new Card(CardType.Neun, trumpf, true, true),
+                new Card(CardType.Acht, trumpf, true, true),
+                new Card(CardType.Sieben, trumpf, true, true),
+            };
+
+    private static readonly (GameMode, CardColor)[] calls =
+        new (GameMode, CardColor)[] {
+            (GameMode.Sauspiel, CardColor.Herz),
+            (GameMode.Wenz, CardColor.Schell),
+            (GameMode.Solo, CardColor.Schell),
+            (GameMode.Solo, CardColor.Herz),
+            (GameMode.Solo, CardColor.Gras),
+            (GameMode.Solo, CardColor.Eichel),
+        };
+
+    private static readonly Dictionary<(GameMode, CardColor), Card[]> trumpfByMode =
+        calls.ToDictionary(x => x, x => allTrumpfDesc(x.Item1, x.Item2).ToArray());
+
     private static int laufende(GameLog log)
     {
-        // TODO: optimize this, seems very inefficient
-        var comp = new CardComparer(log.Call.Mode);
-        var allCardsOrdered = Enumerable.Range(0, 4)
-            .SelectMany(id => log.InitialHands[id])
-            .Where(c => c.IsTrumpf)
-            .OrderByDescending(x => x, comp)
-            .ToList();
-        var callerCardsOrdered = log.CallerIds
-            .SelectMany(id => log.InitialHands[id])
-            .OrderByDescending(x => x, comp)
-            .ToList();
+        var comp = new CardComparer(log.Call.Mode, log.Call.Trumpf);
+        var allTrumpfDesc = trumpfByMode[(log.Call.Mode, log.Call.Trumpf)];
 
-        return Enumerable.Range(0, Math.Min(
-                allCardsOrdered.Count, callerCardsOrdered.Count))
-            .TakeWhile(i => allCardsOrdered[i] != callerCardsOrdered[i])
-            .Last();
+        bool callersHaveHighest = log.CallerIds
+            .Any(id => log.InitialHands[id].HasCard(allTrumpfDesc[0]));
+        var playerIds = callersHaveHighest ? log.CallerIds : log.OpponentIds;
+
+        int laufende = 1;
+        foreach (var laufender in allTrumpfDesc.Skip(1))
+        {
+            foreach (int id in playerIds)
+                if (log.InitialHands[id].HasCard(laufender))
+                { laufende++; break; }
+        }
+
+        return laufende;
     }
 }
