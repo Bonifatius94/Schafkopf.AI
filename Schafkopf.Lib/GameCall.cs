@@ -152,8 +152,6 @@ public class GameCallGenerator
     private static readonly List<bool> touts =
         new List<bool>() { false, true };
 
-    #endregion Init
-
     private static readonly GameCall[][] wenzenByPlayer =
         Enumerable.Range(0, 4)
             .Select(playerId => touts.Select(
@@ -177,6 +175,18 @@ public class GameCallGenerator
     // info: 3x sauspiel + wenz + wenz tout + 4x solo + 4x solo tout
     private static readonly int[] lastCallOffsets = new int[] { 0, 1, 2, 6, 10 };
     private static readonly GameCall weiter = GameCall.Weiter();
+
+    private static readonly Vector128<byte> gsuchteQueryMask =
+        Vector128.Create((byte)0x1F);
+    private static readonly Vector128<byte>[] gsuchteQueries =
+        new Vector128<byte>[] {
+            Vector128.Create((byte)((byte)CardColor.Schell | ((byte)CardType.Sau << 2))),
+            Vector128.Create((byte)((byte)CardColor.Herz   | ((byte)CardType.Sau << 2))),
+            Vector128.Create((byte)((byte)CardColor.Gras   | ((byte)CardType.Sau << 2))),
+            Vector128.Create((byte)((byte)CardColor.Eichel | ((byte)CardType.Sau << 2))),
+        };
+
+    #endregion Init
 
     public ReadOnlySpan<GameCall> AllPossibleCalls(
         int playerId, Hand[] initialHandsWithoutMeta, GameCall last)
@@ -210,16 +220,6 @@ public class GameCallGenerator
         int offset = lastCallOffsets[mode] + p;
         return allCalls[offset..14];
     }
-
-    private static readonly Vector128<byte> gsuchteQueryMask =
-        Vector128.Create((byte)0x1F);
-    private static readonly Vector128<byte>[] gsuchteQueries =
-        new Vector128<byte>[] {
-            Vector128.Create((byte)((byte)CardColor.Schell | ((byte)CardType.Sau << 2))),
-            Vector128.Create((byte)((byte)CardColor.Herz   | ((byte)CardType.Sau << 2))),
-            Vector128.Create((byte)((byte)CardColor.Gras   | ((byte)CardType.Sau << 2))),
-            Vector128.Create((byte)((byte)CardColor.Eichel | ((byte)CardType.Sau << 2))),
-        };
 
     private int findSauspielPartner(Hand[] initialHands, CardColor gsuchte)
     {
@@ -255,8 +255,6 @@ public class GameCallGenerator
     public ReadOnlySpan<GameCall> AllPossibleCallsSimple(
         int playerId, Hand[] initialHandsWithoutMeta, GameCall last)
     {
-        // TODO: cache this, so it doesn't need to be allocated
-
         var hand = initialHandsWithoutMeta[playerId];
         var handSauspiel = hand.CacheTrumpf(
             new TrumpfEval(GameMode.Sauspiel).IsTrumpf);
