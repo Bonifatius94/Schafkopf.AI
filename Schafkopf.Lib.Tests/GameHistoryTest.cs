@@ -54,33 +54,69 @@ public class GameHistoryTest_IteratingOverTurnsWhileApplyingCards
         turnAfter.AllCards.ElementAt(0).Should().Be(cardToPlay);
     }
 
-    [Fact]
-    public void Test_ApplyCardToHistory_WhenTurnIsNotEmpty()
+    public static IEnumerable<object[]> cardsAlreadyPlayed
+        => Enumerable.Range(1, 3).Select(x => new object[] { x });
+    [Theory]
+    [MemberData(nameof(cardsAlreadyPlayed))]
+    public void Test_ApplyCardToHistory_WhenTurnIsNotEmpty(int cardsAlreadyPlayed)
     {
-        // var call = GameCall.Wenz(0);
-        // var deck = new CardsDeck();
-        // deck.Shuffle();
-        // var initialHands = deck.InitialHands(call);
-        // var history = new GameHistory(call, initialHands, 0);
+        var call = GameCall.Wenz(0);
+        var deck = new CardsDeck();
+        deck.Shuffle();
+        var initialHands = new Hand[4];
+        deck.InitialHands(call, initialHands);
+        var history = new GameLog(call, initialHands, 0);
 
-        // var cardToPlay = initialHands[0].PickRandom();
-        // var turnBefore = history.CurrentTurn;
-        // var turnAfter = history.NextCard(cardToPlay);
+        foreach (int i in Enumerable.Range(0, cardsAlreadyPlayed))
+            history.NextCard(initialHands[i].PickRandom());
+        var turnBefore = history.CurrentTurn;
+        int cardPos = cardsAlreadyPlayed;
+        var cardToPlay = initialHands[cardPos].PickRandom();
+        var turnAfter = history.NextCard(cardToPlay);
 
-        // turnAfter.Should().Be(history.CurrentTurn);
-        // turnAfter.CardsCount.Should().Be(turnBefore.CardsCount + 1);
-        // turnAfter.AllCards.ElementAt(0).Should().Be(cardToPlay);
+        turnAfter.Should().Be(history.CurrentTurn);
+        turnAfter.CardsCount.Should().Be(turnBefore.CardsCount + 1);
+        turnAfter.AllCards.ElementAt(cardPos).Should().Be(cardToPlay);
     }
 
     [Fact]
     public void Test_TurnFinalizesAndStartsNewTurn_AfterApplyingLastCardOfTurn()
     {
-        // TODO: implement test
+        var call = GameCall.Wenz(0);
+        var deck = new CardsDeck();
+        deck.Shuffle();
+        var initialHands = new Hand[4];
+        deck.InitialHands(call, initialHands);
+        var history = new GameLog(call, initialHands, 0);
+
+        var turnEnumerator = history.GetEnumerator();
+        turnEnumerator.MoveNext();
+        foreach (int i in Enumerable.Range(0, 4))
+            history.NextCard(initialHands[i].PickRandom());
+        turnEnumerator.MoveNext();
+        var nextTurn = turnEnumerator.Current;
+
+        nextTurn.Should().Be(history.CurrentTurn);
+        nextTurn.CardsCount.Should().Be(0);
+        history.TurnCount.Should().Be(2);
     }
 
     [Fact]
     public void Test_HistoryFinalizes_AfterApplyingLastCardOfLastTurn()
     {
-        // TODO: implement test
+        var call = GameCall.Wenz(0);
+        var deck = new CardsDeck();
+        deck.Shuffle();
+        var initialHands = new Hand[4];
+        deck.InitialHands(call, initialHands);
+        var history = new GameLog(call, initialHands, 0);
+
+        foreach (var turn in history)
+            foreach (int i in Enumerable.Range(0, 4))
+                history.NextCard(initialHands[i].PickRandom());
+
+        history.Turns.Should().Match(turns => turns.All(t => t.CardsCount == 4));
+        history.TurnCount.Should().Be(8);
+        history.Turns.Should().HaveCount(8);
     }
 }
