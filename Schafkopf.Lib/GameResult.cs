@@ -63,7 +63,7 @@ public class GameScoreEvaluation
                 g => g.Select(x => x.Augen).Sum());
 
         ScoreCaller = log.CallerIds
-            .Select(id => scoreByPlayer[id]).Sum();
+            .Select(id => scoreByPlayer.ContainsKey(id) ? scoreByPlayer[id] : 0).Sum();
         ScoreOpponents = 120 - ScoreCaller;
 
         DidCallerWin = (ScoreCaller >= 61 && !log.Call.IsTout)
@@ -133,9 +133,13 @@ public class GameScoreEvaluation
         int laufende = 1;
         foreach (var laufender in allTrumpfDesc.Skip(1))
         {
-            foreach (int id in playerIds)
-                if (log.InitialHands[id].HasCard(laufender))
-                { laufende++; break; }
+            bool haveLaufenden = playerIds.Any(id =>
+                log.InitialHands[id].HasCard(laufender));
+
+            if (haveLaufenden)
+                laufende++;
+            else
+                break;
         }
 
         return laufende;
