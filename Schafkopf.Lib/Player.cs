@@ -54,6 +54,7 @@ public class Player
 
     #region Normalization
 
+    private Card[] turnCache = new Card[4];
     private GameLog normalizeLog(GameLog log)
     {
         // TODO: this needs to be optimized by a lot
@@ -70,10 +71,12 @@ public class Player
         foreach (var turn in log.Turns)
         {
             normLogIter.MoveNext();
+            turn.CopyCards(turnCache);
+            int kommtRaus = turn.FirstDrawingPlayerId;
 
             // info: this yields the cards in the order they were played
-            foreach (var card in turn.AllCards)
-                normLog.NextCard(card);
+            for (int i = 0; i < 4; i++)
+                normLog.NextCard(turnCache[(Id + i) & 0x03]);
         }
 
         return normLog;
@@ -99,9 +102,9 @@ public class Player
     private Hand[] normalizeHands(IReadOnlyList<Hand> hands)
     {
         cache[0] = hands[Id];
-        cache[1] = hands[(Id + 1) % 4];
-        cache[2] = hands[(Id + 2) % 4];
-        cache[3] = hands[(Id + 3) % 4];
+        cache[1] = hands[(Id + 1) & 0x03];
+        cache[2] = hands[(Id + 2) & 0x03];
+        cache[3] = hands[(Id + 3) & 0x03];
         return cache;
     }
 
