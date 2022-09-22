@@ -40,7 +40,7 @@ public class RandomAgent : ISchafkopfAIAgent
 
     private static readonly Random rng = new Random();
 
-    public void OnGameFinished(GameResult result) { }
+    public void OnGameFinished(GameLog final) { }
 
     public GameCall MakeCall(
             ReadOnlySpan<GameCall> possibleCalls,

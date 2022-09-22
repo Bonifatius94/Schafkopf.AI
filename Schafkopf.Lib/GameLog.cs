@@ -13,6 +13,7 @@ public class GameLog : IEnumerable<Turn>
         turns[0] = Turn.InitFirstTurn((byte)kommtRaus, call);
         TurnCount = 1;
         this.KommtRaus = kommtRaus;
+        scores = new int[4];
     }
 
     public GameCall Call { get; private set; }
@@ -33,16 +34,22 @@ public class GameLog : IEnumerable<Turn>
         yield return turns[0];
         for (int i = 0; i < 7; i++)
             yield return nextTurn();
+        updateScore(CurrentTurn.WinnerId, CurrentTurn.Augen);
     }
 
     private Turn nextTurn()
     {
         var lastTurn = CurrentTurn;
-        KommtRaus = CurrentTurn.WinnerId;
+        var winnerId = lastTurn.WinnerId;
+        updateScore(winnerId, lastTurn.Augen);
+        KommtRaus = winnerId;
         var nextTurn = Turn.InitNextTurn(lastTurn);
         turns[TurnCount++] = nextTurn;
         return nextTurn;
     }
+
+    private void updateScore(int winnerId, int augen)
+        => scores[winnerId] += augen;
 
     IEnumerator IEnumerable.GetEnumerator()
         => GetEnumerator();
@@ -55,6 +62,13 @@ public class GameLog : IEnumerable<Turn>
     }
 
     #endregion Turns
+
+    #region Scores
+
+    private int[] scores;
+    public ReadOnlySpan<int> Scores => scores;
+
+    #endregion Scores
 
     #region Klopfer/Kontra/Re
 

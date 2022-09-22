@@ -114,6 +114,11 @@ public readonly struct Turn
         }
     }
 
+    public void CopyCards(Card[] cache)
+    {
+        unsafe { fixed (Card* cp = &cache[0]) *((uint*)cp) = Cards; }
+    }
+
     #region Augen
 
     private int cardCountByType(uint cards, CardType type)

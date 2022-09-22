@@ -143,7 +143,7 @@ public class SauspielAgent : ISchafkopfAIAgent
 
     private static readonly Random rng = new Random();
 
-    public void OnGameFinished(GameResult result) { }
+    public void OnGameFinished(GameLog result) { }
 
     public GameCall MakeCall(
             ReadOnlySpan<GameCall> possibleCalls,
@@ -174,7 +174,7 @@ public class RandomAgent : ISchafkopfAIAgent
 
     private static readonly Random rng = new Random();
 
-    public void OnGameFinished(GameResult result) { }
+    public void OnGameFinished(GameLog result) { }
 
     public GameCall MakeCall(
             ReadOnlySpan<GameCall> possibleCalls,

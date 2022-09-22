@@ -1,6 +1,6 @@
 namespace Schafkopf.Lib.Test;
 
-public class TestGameResult_ComputedAttributes
+public class TestGameResult_Laufende
 {
     public static IEnumerable<object[]> CallersWithLaufende
         => allCalls.SelectMany(call => 

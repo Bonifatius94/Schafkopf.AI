@@ -56,14 +56,8 @@ public class GameScoreEvaluation
 {
     public GameScoreEvaluation(GameLog log)
     {
-        scoreByPlayer = log.Turns
-            .GroupBy(t => t.WinnerId)
-            .ToDictionary(
-                g => g.Key,
-                g => g.Select(x => x.Augen).Sum());
-
         ScoreCaller = log.CallerIds
-            .Select(id => scoreByPlayer.ContainsKey(id) ? scoreByPlayer[id] : 0).Sum();
+            .Select(id => log.Scores[id]).Sum();
         ScoreOpponents = 120 - ScoreCaller;
 
         DidCallerWin = (ScoreCaller >= 61 && !log.Call.IsTout)
@@ -72,8 +66,6 @@ public class GameScoreEvaluation
         IsSchwarz = ScoreCaller == 0 || ScoreCaller == 120;
         Laufende = laufende(log);
     }
-
-    private Dictionary<int, int> scoreByPlayer;
 
     public int ScoreCaller { get; private set; }
     public int ScoreOpponents { get; private set; }
