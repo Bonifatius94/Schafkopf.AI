@@ -60,10 +60,11 @@ to collect coverage logs from.*
 dotnet run --project Schafkopf.Lib.Benchmarks/Schafkopf.Lib.Benchmarks.csproj --configuration Release
 ```
 
-### Run AI Training
+### Run AI Training (Docker)
 
 ```sh
-dotnet run --project Schafkopf.Training/Schafkopf.Training.csproj
+docker build . -f TrainEnv.Dockerfile -t schafkopf-trainenv
+docker run schafkopf-trainenv
 ```
 
 This is still wip, game logic needs to be finished first

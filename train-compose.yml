@@ -1,0 +1,8 @@
+version: "2.3"
+services:
+  schafkopf-training:
+    image: schafkopf-trainenv
+    volumes:
+      - "./:/app"
+    working_dir: /app
+    entrypoint: dotnet run --project Schafkopf.Training/Schafkopf.Training.csproj
