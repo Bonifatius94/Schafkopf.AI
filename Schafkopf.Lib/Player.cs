@@ -19,64 +19,58 @@ public class Player
     {
         Id = id;
         this.agent = agent;
+
+        // this is just to make the linter happy, obviously makes no sense
+        normLog = new GameLog(GameCall.Weiter(), new Hand[4], 0);
     }
 
     private ISchafkopfAIAgent agent;
-
     public int Id { get; private set; }
+
+    #region Bookkeeping
+
+    private GameLog normLog;
     public Hand Hand { get; private set; }
 
     public void Discard(Card card)
         => Hand = Hand.Discard(card);
 
-    public void NewGame(Hand hand)
-        => Hand = hand;
-
-    public bool CallKontra(GameLog log)
-        => agent.CallKontra(normalizeLog(log));
-
-    public bool CallRe(GameLog log)
-        => agent.CallRe(normalizeLog(log));
-
-    public Card ChooseCard(GameLog log, ReadOnlySpan<Card> possibleCards)
-        => agent.ChooseCard(normalizeLog(log), possibleCards);
-
-    public bool IsKlopfer(int position, ReadOnlySpan<Card> firstFourCards)
-        => agent.IsKlopfer(position, firstFourCards);
-
-    public GameCall MakeCall(
-            ReadOnlySpan<GameCall> possibleCalls,
-            int position, Hand hand, int klopfer)
-        => agent.MakeCall(possibleCalls, position, hand, klopfer);
-
-    public void OnGameFinished(GameLog final)
-        => agent.OnGameFinished(normalizeLog(final));
-
-    #region Normalization
+    public void NewGame(GameLog newLog)
+    {
+        Hand = newLog.InitialHands[Id];
+        var normCall = normalizeCall(newLog.Call);
+        int normKommtRaus = normalizePlayerId(newLog.Turns[0].FirstDrawingPlayerId, Id);
+        var normHands = normalizeHands(newLog.InitialHands);
+        normLog = new GameLog(normCall, normHands, normKommtRaus);
+    }
 
     private Card[] turnCache = new Card[4];
     private GameLog normalizeLog(GameLog log)
     {
-        // TODO: this needs to be optimized by a lot
-        // best would be storing the data inside the GameLog in a normalized way
-        // and only yielding the data differently, such that no normalization is required
+        int cardsPlayed = log.CardsPlayed;
+        int cardId = normLog.CardsPlayed;
 
-        var normCall = normalizeCall(log.Call);
-        var normHands = normalizeHands(log.InitialHands);
-        int normKommtRaus = normalizePlayerId(log.Turns[0].FirstDrawingPlayerId, Id);
+        if (cardsPlayed == cardId)
+            return normLog;
 
-        var normLog = new GameLog(normCall, normHands, normKommtRaus);
-        var normLogIter = normLog.GetEnumerator();
-
-        foreach (var turn in log.Turns)
+        var normTurns = normLog.Skip(normLog.TurnCount - 1);
+        foreach (var normTurn in normTurns)
         {
-            normLogIter.MoveNext();
+            int turnId = cardId / 4;
+            var turn = log.Turns[turnId];
             turn.CopyCards(turnCache);
             int kommtRaus = turn.FirstDrawingPlayerId;
 
-            // info: this yields the cards in the order they were played
-            for (int i = 0; i < 4; i++)
-                normLog.NextCard(turnCache[(Id + i) & 0x03]);
+            for (int i = normTurn.CardsCount; i < turn.CardsCount; i++)
+            {
+                int posOfTurn = (cardId + kommtRaus) % 4;
+                var card = turnCache[posOfTurn];
+                normLog.NextCard(card);
+                cardId++;
+            }
+
+            if (cardId == cardsPlayed)
+                break;
         }
 
         return normLog;
@@ -112,5 +106,25 @@ public class Player
         => (((id - offset) & 0x03) + 4) & 0x03;
         // TODO: optimize this because "mod 4" is the same as "& 0x03"
 
-    #endregion Normalization
+    #endregion Bookkeeping
+
+    public bool CallKontra(GameLog log)
+        => agent.CallKontra(normalizeLog(log));
+
+    public bool CallRe(GameLog log)
+        => agent.CallRe(normalizeLog(log));
+
+    public Card ChooseCard(GameLog log, ReadOnlySpan<Card> possibleCards)
+        => agent.ChooseCard(normalizeLog(log), possibleCards);
+
+    public bool IsKlopfer(int position, ReadOnlySpan<Card> firstFourCards)
+        => agent.IsKlopfer(position, firstFourCards);
+
+    public GameCall MakeCall(
+            ReadOnlySpan<GameCall> possibleCalls,
+            int position, Hand hand, int klopfer)
+        => agent.MakeCall(possibleCalls, position, hand, klopfer);
+
+    public void OnGameFinished(GameLog final)
+        => agent.OnGameFinished(normalizeLog(final));
 }

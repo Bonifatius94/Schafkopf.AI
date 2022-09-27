@@ -27,8 +27,7 @@ public class GameSession
         if (call.Mode == GameMode.Weiter)
         {
             table.Shift();
-            return new GameLog(
-                call, initialHands, table.FirstDrawingPlayerId);
+            return new GameLog(call, initialHands, table.FirstDrawingPlayerId);
         }
 
         deck.InitialHands(call, initialHands);
@@ -36,7 +35,7 @@ public class GameSession
         var history = new GameLog(call, initialHands, kommtRaus);
 
         foreach (var player in table.PlayersInDrawingOrder())
-            player.NewGame(initialHands[player.Id]);
+            player.NewGame(history);
         history = playGameUntilEnd(history);
 
         table.Shift();

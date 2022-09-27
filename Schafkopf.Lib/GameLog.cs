@@ -25,15 +25,22 @@ public class GameLog : IEnumerable<Turn>
     private Turn[] turns;
     private Hand[] initialHands;
 
+    public int CardsPlayed => (TurnCount - 1) * 4 + CurrentTurn.CardsCount;
     public Turn CurrentTurn => turns[TurnCount - 1];
     public IReadOnlyList<Turn> Turns => turns[0..TurnCount];
     public IReadOnlyList<Hand> InitialHands => initialHands;
 
     public IEnumerator<Turn> GetEnumerator()
     {
-        yield return turns[0];
-        for (int i = 0; i < 7; i++)
+        // replay already enumerated turns
+        for (int i = 0; i < TurnCount; i++)
+            yield return turns[i];
+
+        // yield new turns for player interaction
+        for (int i = TurnCount; i < 8; i++)
             yield return nextTurn();
+
+        // cache the final augen scores for eval
         updateScore(CurrentTurn.WinnerId, CurrentTurn.Augen);
     }
 
@@ -91,6 +98,8 @@ public class GameLog : IEnumerable<Turn>
     #endregion Klopfer/Kontra/Re
 
     #region Caller/Opponent
+
+    // TODO: move caller / opponent ids into the game call
 
     public IEnumerable<int> CallerIds => callerIds();
     public IEnumerable<int> OpponentIds => opponentIds();
