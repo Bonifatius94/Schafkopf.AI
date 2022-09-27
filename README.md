@@ -39,7 +39,7 @@ Just run the tests
 dotnet test
 ```
 
-Test with code coverage
+Test with code coverage (only works for .NET 6)
 
 ```sh
 dotnet test /p:CollectCoverage=true \
