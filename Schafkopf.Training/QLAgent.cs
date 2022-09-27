@@ -1,7 +1,7 @@
-using Keras.Models;
-using Keras.Layers;
-using Keras;
-using Numpy;
+using System.Diagnostics;
+using Microsoft.ML;
+using Microsoft.ML.Data;
+using Microsoft.ML.Transforms;
 
 namespace Schafkopf.Training;
 
@@ -54,11 +54,11 @@ public class GameState
         for (int i = 0; i < 4; i++)
             stateArr[p++] = log.Scores[0];
 
-        EncodedState = new NDarray<float>(stateArr);
+        EncodedState = stateArr;
         Reward = reward(log, 0);
     }
 
-    public NDarray<float> EncodedState { get; private set; }
+    public float[] EncodedState { get; private set; }
     public float Reward { get; private set; }
 
     private float encode(GameMode mode) => (float)mode / 4;
@@ -98,12 +98,12 @@ public class SARSCardExperience
     public bool IsTerminal { get; init; }
 }
 
-public class QLTrainingHparams
-{
-    public double LearningRate { get; init; }
-    public double ExplorationRate { get; init; }
-    public double RewardDiscount { get; init; }
-}
+// public class QLTrainingHparams
+// {
+//     public double LearningRate { get; init; }
+//     public double ExplorationRate { get; init; }
+//     public double RewardDiscount { get; init; }
+// }
 
 public class QLAgent : ISchafkopfAIAgent
 {
@@ -113,6 +113,7 @@ public class QLAgent : ISchafkopfAIAgent
     private int cardsPlayed = 0;
     private GameState[] statesOfGame = new GameState[33];
     private int[] actions = new int[32];
+    private List<SARSCardExperience> trainData = new List<SARSCardExperience>();
 
     public Card ChooseCard(GameLog log, ReadOnlySpan<Card> possibleCards)
     {
@@ -162,43 +163,49 @@ public class QLAgent : ISchafkopfAIAgent
             var s1 = statesOfGame[i+1];
             int action = actions[i];
             float reward = s0.Reward;
-            bool isTerminal = i == 31;
+            bool isTerminal = i == 32;
+
+            trainData.Add(new SARSCardExperience() {
+                StateBefore = statesOfGame[i],
+                StateAfter = statesOfGame[i+1],
+                Action = actions[i],
+                Reward = s0.Reward,
+                IsTerminal = i == 32
+            });
         }
 
         // reset game cache
-
+        cardsPlayed = 0;
     }
 }
 
 public class QLCardPicker
 {
-    public QLCardPicker(QLTrainingHparams? hparams = null)
+    const string modelPath = "models/card_picker_model.pb";
+
+    public QLCardPicker(double explorationRate = 0.1)
     {
-        this.hparams = hparams ?? new QLTrainingHparams() {
-            LearningRate = 0.01,
-            ExplorationRate = 0.1,
-            RewardDiscount = 0.99
-        };
-        model = createModel();
+        this.explorationRate = explorationRate;
+        createInitialModel(modelPath);
+        model = loadModel(modelPath);
     }
 
-    private QLTrainingHparams hparams;
+    private double explorationRate;
     private static readonly Random rng = new Random();
-    private Sequential model;
+    private PredictionEngine<ModelInput, ModelOutput> model;
 
     public int Predict(GameState state, int numPossibleCards)
     {
         if (numPossibleCards == 1)
             return 0;
 
-        bool explore = rng.NextDouble() <= hparams.ExplorationRate;
+        bool explore = rng.NextDouble() <= explorationRate;
         if (explore)
             return rng.Next(numPossibleCards);
 
-        var input = state.EncodedState.reshape((1, 90));
+        var input = new ModelInput() { Features = state.EncodedState };
         var pred = model.Predict(input);
-        var bestAction = (int)np.argmax(pred, axis: 1)[0];
-        // TODO: check out if this transformation actually works
+        var bestAction = pred.ArgMax();
 
         // info: prediction always yields reward estimations for all 8 cards;
         //       if there are less card this might produce index overflows,
@@ -207,19 +214,73 @@ public class QLCardPicker
             : rng.Next(numPossibleCards);
     }
 
-    public void TrainModel(SARSCardExperience exp)
+    public void TrainModel(IReadOnlyList<SARSCardExperience> exps)
     {
-        // TODO: implement the training loop here ...
+        // TODO: pass down the training data (e.g. as CSV)
+        //       alternatively, think of implementing training with ML.NET
+        //       because it supports supervised gradient descent
+        Process.Start(new ProcessStartInfo() {
+                FileName = "python3",
+                Arguments = $"main.py train -o ../{modelPath}",
+                WorkingDirectory = "python"
+            })?.WaitForExit();
     }
 
-    private Sequential createModel()
+    class ModelInput
     {
-        return new Sequential(new BaseLayer[] {
-            new Dense(256, activation: "relu", input_shape: new Shape(90)),
-            new Dense(256, activation: "relu"),
-            new Dense(256, activation: "relu"),
-            new Dense(8, activation: "sigmoid")
-        });
+        [VectorType(90)]
+        public float[] Features { get; set; }
+    }
+
+    class ModelOutput
+    {
+        [VectorType(8)]
+        public float[] Predictions { get; set; }
+
+        public int ArgMax()
+        {
+            // TODO: think about SIMD optimizations
+            int maxId = 0;
+            for (int i = 1; i < 8; i++)
+                if (Predictions[i] > Predictions[maxId])
+                    maxId = i;
+            return maxId;
+        }
+    }
+
+    private void createInitialModel(string modelPath)
+    {
+        // on first use, create the tensorflow model
+        if (!File.Exists(modelPath))
+            Process.Start(new ProcessStartInfo() {
+                    FileName = "python3",
+                    Arguments = $"main.py new_model -o ../{modelPath}",
+                    WorkingDirectory = "python"
+                })?.WaitForExit();
+
+        // make sure the model was created
+        if (!File.Exists(modelPath))
+            throw new FileLoadException("Could not load model from TensorFlow!");
+    }
+
+    private PredictionEngine<ModelInput, ModelOutput> loadModel(string modelPath)
+    {
+        var mlContext = new MLContext();
+
+        // embed the TensorFlow model into a ML.NET prediction pipeline
+        var tfModel = mlContext.Model.LoadTensorFlowModel(modelPath);
+        var pipeline = mlContext.Transforms.CopyColumns("features", nameof(ModelInput.Features))
+            // TODO: figure out the TensorFlow model's input / output layer name and put it here ...
+            .Append(tfModel.ScoreTensorFlowModel("input", "features", true))
+            .Append(mlContext.Transforms.CopyColumns("prediction", "output"));
+
+        // info: perform a fake training with an empty dataset -> preserve model
+        var emptyDataset = mlContext.Data.LoadFromEnumerable(new ModelInput[0]);
+        var model = pipeline.Fit(emptyDataset);
+
+        var predModel = mlContext.Model
+            .CreatePredictionEngine<ModelInput, ModelOutput>(model);
+        return predModel;
     }
 }
 

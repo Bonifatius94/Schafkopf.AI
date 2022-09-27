@@ -6,3 +6,5 @@ lcov.info
 coverage.json
 BenchmarkDotNet.Artifacts
 perfcollect
+__pycache__
+*.pb
