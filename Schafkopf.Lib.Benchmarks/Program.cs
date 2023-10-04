@@ -6,3 +6,4 @@ BenchmarkRunner.Run<HandAttributesBenchmark>();
 BenchmarkRunner.Run<TurnAttributesBenchmark>();
 BenchmarkRunner.Run<CardsComparerBenchmark>();
 BenchmarkRunner.Run<GameSessionBenchmark>();
+BenchmarkRunner.Run<GameCallBenchmark>();
