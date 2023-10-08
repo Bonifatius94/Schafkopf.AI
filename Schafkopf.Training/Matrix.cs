@@ -55,6 +55,8 @@ public class Matrix2D
 
         rowCache.NumRows = 1;
         colCache.NumRows = 1;
+        var rowData = rowCache.Data;
+        var colData = colCache.Data;
 
         int r = 0, p = 0, c;
         for (int i = 0; i < l; i++)
@@ -62,8 +64,8 @@ public class Matrix2D
             c = 0;
             for (int j = 0; j < n; j++)
             {
-                rowCache.Data = a.Cache[r..(r+m)];
-                colCache.Data = b.Cache[c..(c+m)];
+                rowCache.Data = rowData[r..(r+m)];
+                colCache.Data = colData[c..(c+m)];
                 res.Data[p++] = DotProd(rowCache, colCache);
                 c += m;
             }
