@@ -165,7 +165,7 @@ public interface IOptimizer
 
 public class NaiveSGDOpt : IOptimizer
 {
-    public NaiveSGDOpt(float learnRate = 0.001f)
+    public NaiveSGDOpt(float learnRate)
     {
         this.learnRate = learnRate;
     }
@@ -188,7 +188,7 @@ public class NaiveSGDOpt : IOptimizer
 public class AdamOpt : IOptimizer
 {
     public AdamOpt(
-        float learnRate = 0.001f, float beta1 = 0.9f,
+        float learnRate, float beta1 = 0.9f,
         float beta2 = 0.999f, float epsilon = 1e-8f)
     {
         this.learnRate = learnRate;
@@ -300,6 +300,8 @@ public class DenseLayer : ILayer
     public int OutputDims { get; private set; }
     public Matrix2D Weights;
     public Matrix2D Biases;
+    public Matrix2D WeightGrads { get; private set; }
+    public Matrix2D BiasGrads { get; private set; }
 
     public void Compile(int inputDims)
     {
@@ -318,6 +320,14 @@ public class DenseLayer : ILayer
             DeltasOut = deltasOut,
             Gradients = new Matrix2D(1, (InputDims + 1) * OutputDims)
         };
+
+        int bound = InputDims * OutputDims;
+        var weightGradsArr = new ArraySegment<float>(
+            Cache.Gradients.Data, 0, bound);
+        var biasGradsArr = new ArraySegment<float>(
+            Cache.Gradients.Data, bound, Cache.Gradients.Data.Length - bound);
+        WeightGrads = new Matrix2D(InputDims, OutputDims, weightGradsArr.Array);
+        BiasGrads = new Matrix2D(1, OutputDims, biasGradsArr.Array);
     }
 
     public void Forward()
@@ -328,23 +338,28 @@ public class DenseLayer : ILayer
 
     public void Backward()
     {
-        int bound = InputDims * OutputDims;
-        var weightGrads = new Matrix2D(InputDims, OutputDims, Cache.Gradients.Data[..bound]);
-        var biasGrads = new Matrix2D(1, OutputDims, Cache.Gradients.Data[bound..]);
-
-        Matrix2D.Matmul(Cache.Input, Cache.DeltasIn, weightGrads, MatmulFlags.TN);
-        Matrix2D.ColMean(Cache.DeltasIn, biasGrads);
+        Matrix2D.Matmul(Cache.Input, Cache.DeltasIn, WeightGrads, MatmulFlags.TN);
+        Matrix2D.ColMean(Cache.DeltasIn, BiasGrads);
         Matrix2D.Matmul(Cache.DeltasIn, Weights, Cache.DeltasOut, MatmulFlags.NT);
     }
 
     public void ApplyGrads()
     {
-        int bound = InputDims * OutputDims;
-        var weightGrads = new Matrix2D(InputDims, OutputDims, Cache.Gradients.Data[..bound]);
-        var biasGrads = new Matrix2D(1, OutputDims, Cache.Gradients.Data[bound..]);
+        Matrix2D.ElemSub(Weights, WeightGrads, Weights);
+        Matrix2D.ElemSub(Biases, BiasGrads, Biases);
+    }
 
-        Matrix2D.ElemSub(Weights, weightGrads, Weights);
-        Matrix2D.ElemSub(Biases, biasGrads, Biases);
+    public void Load(IList<Matrix2D> trainParams)
+    {
+        var newWeights = trainParams[0];
+        var newBiases = trainParams[1];
+
+        if (Weights.NumRows != newWeights.NumRows ||
+                Biases.NumCols != newBiases.NumCols)
+            throw new ArgumentException("Invalid matrix shapes!");
+
+        Weights.Data = (float[])newWeights.Data.Clone();
+        Biases.Data = (float[])newBiases.Data.Clone();
     }
 }
 
