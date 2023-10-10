@@ -7,13 +7,13 @@ This project is about teaching an AI to play Schafkopf.
 It covers topics such as:
 - low-level programming in C#
   - usage of memory-efficient structs
-  - parallel / branchless processing with SIMD
+  - parallel / branchless techniques and SIMD
   - usage of unsafe pointer arithmetics
 - DDD / TDD techniques
   - concepts are properly modeled for low coupling
   - tests allow to gradually enhance the game logic
     with better performing structures / algorithms
-- ML.NET AI training
+- AI training
   - still under construction, wip
 
 ## Quickstart
@@ -21,7 +21,7 @@ It covers topics such as:
 ### Install .NET Tools
 
 ```sh
-sudo apt-get update && sudo apt-get install -y dotnet6
+sudo apt-get update && sudo apt-get install -y dotnet-sdk-7.0
 ```
 
 ### Download the Source Code
@@ -33,31 +33,29 @@ cd Schafkopf.AI
 
 ### Build + Run Tests
 
-Just run the tests
-
 ```sh
-dotnet test
+dotnet test --configuration Release
 ```
-
-Test with code coverage (only works for .NET 6)
-
-```sh
-dotnet test /p:CollectCoverage=true \
-    /p:CoverletOutputFormat=lcov \
-    /p:CoverletOutput=./lcov.info
-```
-
----
-
-***Note:** This workflow requires 'Coverlet' and 'Coverage Gutters'
-VSCode extensions to be installed. Moreover, the 'coverlet.msbuild'
-NuGet package needs to be installed to the unit test projects
-to collect coverage logs from.*
 
 ### Run Benchmarks
 
 ```sh
-dotnet run --project Schafkopf.Lib.Benchmarks/Schafkopf.Lib.Benchmarks.csproj --configuration Release
+dotnet run  --configuration Release \
+    --project Schafkopf.Lib.Benchmarks/Schafkopf.Lib.Benchmarks.csproj
+```
+
+### Run AI Training
+
+```sh
+dotnet run  --configuration Release \
+    --project Schafkopf.Training/Schafkopf.Training.csproj
+```
+
+### Install Docker (Optional)
+
+```sh
+sudo apt-get update && sudo apt-get install -y docker.io docker-compose
+sudo usermod -aG docker $USER && reboot
 ```
 
 ### Run AI Training (Docker)
@@ -67,4 +65,5 @@ docker build . -f TrainEnv.Dockerfile -t schafkopf-trainenv
 docker run schafkopf-trainenv
 ```
 
-This is still wip, game logic needs to be finished first
+DISCLAIMER: The training is currently under construction
+and won't deliver any results yet.

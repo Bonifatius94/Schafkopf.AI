@@ -1,16 +1,27 @@
 
-# use the official gpu-empowered TensorFlow image
-FROM tensorflow/tensorflow:2.9.1-gpu
+# set up build environment with cached dependencies
+FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build-env
+WORKDIR /app/src
+ADD ./Schafkopf.AI.sln ./Schafkopf.AI.sln
+ADD ./Schafkopf.Lib/Schafkopf.Lib.csproj ./Schafkopf.Lib/Schafkopf.Lib.csproj
+ADD ./Schafkopf.Lib.Tests/Schafkopf.Lib.Tests.csproj ./Schafkopf.Lib.Tests/Schafkopf.Lib.Tests.csproj
+ADD ./Schafkopf.Lib.Benchmarks/Schafkopf.Lib.Benchmarks.csproj ./Schafkopf.Lib.Benchmarks/Schafkopf.Lib.Benchmarks.csproj
+ADD ./Schafkopf.Training/Schafkopf.Training.csproj ./Schafkopf.Training/Schafkopf.Training.csproj
+ADD ./Schafkopf.Training.Tests/Schafkopf.Training.Tests.csproj ./Schafkopf.Training.Tests/Schafkopf.Training.Tests.csproj
+RUN dotnet restore --runtime linux-x64
 
-# install dotnet 7.0 to run the schafkopf training (C#)
-ARG DOTNET_TAR_FILE=dotnet-sdk-7.0.100-rc.1.22431.12-linux-x64.tar.gz
-ARG DOTNET_PROD_BIN=bf594dbb-5ec8-486b-8395-95058e719e1c/42e8bc351654ed4c3ccaed58ea9180a1
-ARG DOTNET_URL=https://download.visualstudio.microsoft.com/download/pr/$DOTNET_PROD_BIN/$DOTNET_TAR_FILE
-ARG DOTNET_INSTALL_DIR=/opt/dotnet
-ADD $DOTNET_URL .
-RUN mkdir $DOTNET_INSTALL_DIR && tar xzf $DOTNET_TAR_FILE -C $DOTNET_INSTALL_DIR
-ENV PATH=$DOTNET_INSTALL_DIR:$PATH
+# build code and run automated tests
+ADD . .
+RUN dotnet test --runtime linux-x64 --configuration Release --no-restore
 
-ENTRYPOINT ["dotnet", "run", \
-    "--project", "Schafkopf.Training/Schafkopf.Training.csproj", \
-    "--configuration", "Release"]
+# release pre-built binaries
+RUN dotnet publish --runtime linux-x64 --configuration Release \
+                   --output /app/bin/ --no-restore
+
+# set up minimalistic runtime
+FROM mcr.microsoft.com/dotnet/runtime:7.0 AS runtime
+WORKDIR /app/bin
+COPY --from=build-env /app/bin /app/bin
+
+# launch training
+ENTRYPOINT ["dotnet", "Schafkopf.Training.dll"]

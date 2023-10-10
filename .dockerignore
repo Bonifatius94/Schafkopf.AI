@@ -1,0 +1,10 @@
+*/bin
+*/obj
+.vscode
+.dockerignore
+.gitignore
+BenchmarkDotNet.Artifacts
+BENCHMARK.md
+README.md
+train-compose.yml
+TrainEnv.Dockerfile
