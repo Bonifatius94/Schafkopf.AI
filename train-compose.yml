@@ -2,7 +2,10 @@ version: "2.3"
 services:
   schafkopf-training:
     image: schafkopf-trainenv
+    build:
+      context: .
+      dockerfile: TrainEnv.Dockerfile
     volumes:
-      - "./:/app"
-    working_dir: /app
-    entrypoint: dotnet run --project Schafkopf.Training/Schafkopf.Training.csproj
+      - "./model:/app/model"
+      - "./logs:/app/logs"
+    entrypoint: dotnet Schafkopf.Training.dll

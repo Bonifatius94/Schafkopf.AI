@@ -4,6 +4,8 @@
 .dockerignore
 .gitignore
 BenchmarkDotNet.Artifacts
+logs
+model
 BENCHMARK.md
 README.md
 train-compose.yml

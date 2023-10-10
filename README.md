@@ -51,6 +51,9 @@ dotnet run  --configuration Release \
     --project Schafkopf.Training/Schafkopf.Training.csproj
 ```
 
+DISCLAIMER: The training is currently under construction
+and won't deliver any results yet.
+
 ### Install Docker (Optional)
 
 ```sh
@@ -61,8 +64,8 @@ sudo usermod -aG docker $USER && reboot
 ### Run AI Training (Docker)
 
 ```sh
-docker build . -f TrainEnv.Dockerfile -t schafkopf-trainenv
-docker run schafkopf-trainenv
+docker-compose -f train-compose.yml build
+docker-compose -f train-compose.yml up
 ```
 
 DISCLAIMER: The training is currently under construction
