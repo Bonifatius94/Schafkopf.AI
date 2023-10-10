@@ -15,10 +15,10 @@ public class RegressionTrainingTest
         var trainData = sample(trainSize, trueFunc);
         var testData = sample(testSize, trueFunc);
 
-        var trainX = new Matrix2D(trainSize, 1, trainData.Select(x => x.Item1).ToArray());
-        var trainY = new Matrix2D(trainSize, 1, trainData.Select(x => x.Item2).ToArray());
-        var testX = new Matrix2D(testSize, 1, testData.Select(x => x.Item1).ToArray());
-        var testY = new Matrix2D(testSize, 1, testData.Select(x => x.Item2).ToArray());
+        var trainX = Matrix2D.FromData(trainSize, 1, trainData.Select(x => x.Item1).ToArray());
+        var trainY = Matrix2D.FromData(trainSize, 1, trainData.Select(x => x.Item2).ToArray());
+        var testX = Matrix2D.FromData(testSize, 1, testData.Select(x => x.Item1).ToArray());
+        var testY = Matrix2D.FromData(testSize, 1, testData.Select(x => x.Item2).ToArray());
 
         return new FlatFeatureDataset() {
             TrainX = trainX, TrainY = trainY,

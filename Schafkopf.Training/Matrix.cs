@@ -1,29 +1,40 @@
 namespace Schafkopf.Training;
 
-public class Matrix2D
+public unsafe class Matrix2D : IEquatable<Matrix2D>
 {
-    public static Matrix2D Zeros(int numRows, int numCols)
-        => new Matrix2D(numRows, numCols);
+    public static Matrix2D Zeros(int numRows, int numCols, bool hasCache = true)
+        => FromData(numRows, numCols, new float[numRows * numCols], hasCache);
 
     public static Matrix2D RandNorm(int numRows, int numCols, float mu, float sig)
-        => new Matrix2D(numRows, numCols,
+        => FromData(numRows, numCols,
             Enumerable.Range(0, numRows * numCols)
                 .Select(i => (float)RandNormal.Next(mu, sig)).ToArray());
 
-    public Matrix2D(
+    public static Matrix2D FromData(int numRows, int numCols, float[] data, bool hasCache = true)
+    {
+        var cache = hasCache ? new float[numRows * numCols] : new float[1];
+        fixed (float* d = &data[0])
+        fixed (float* c = &cache[0])
+            return new Matrix2D(numRows, numCols, d, c);
+    }
+
+    public static Matrix2D FromRawPointers(int numRows, int numCols, float* data, float* cache)
+        => new Matrix2D(numRows, numCols, data, cache);
+
+    private Matrix2D(
         int numRows, int numCols,
-        float[]? data = null, float[]? cache = null)
+        float* data, float* cache)
     {
         NumRows = numRows;
         NumCols = numCols;
-        Data = data ?? new float[NumRows * NumCols];
-        Cache = cache ?? new float[NumRows * NumCols];
+        Data = data;
+        Cache = cache;
     }
 
     public int NumRows;
     public int NumCols;
-    public float[] Data;
-    public float [] Cache;
+    public float* Data;
+    public float* Cache;
 
     public static void Matmul(
         Matrix2D a, Matrix2D b, Matrix2D res,
@@ -40,8 +51,8 @@ public class Matrix2D
         if (res.NumRows != l || res.NumCols != n || m != m2)
             throw new ArgumentException("Invalid matrix shapes!");
 
-        var rowCache = new Matrix2D(l, m, a.Cache, Array.Empty<float>());
-        var colCache = new Matrix2D(n, m, b.Cache, Array.Empty<float>());
+        var rowCache = new Matrix2D(l, m, a.Cache, null);
+        var colCache = new Matrix2D(n, m, b.Cache, null);
 
         if (!a_normal)
             Transpose(a, rowCache);
@@ -64,8 +75,8 @@ public class Matrix2D
             c = 0;
             for (int j = 0; j < n; j++)
             {
-                rowCache.Data = rowData[r..(r+m)];
-                colCache.Data = colData[c..(c+m)];
+                rowCache.Data = rowData + r;
+                colCache.Data = colData + c;
                 res.Data[p++] = DotProd(rowCache, colCache);
                 c += m;
             }
@@ -222,6 +233,21 @@ public class Matrix2D
     {
         // TODO: implement logic
         throw new NotImplementedException();
+    }
+
+    public bool Equals(Matrix2D? other)
+    {
+        if(other == null)
+            return false;
+
+        if (NumRows != other.NumRows || NumCols != other.NumCols)
+            return false;
+
+        for (int i = 0; i < NumRows * NumCols; i++)
+            if (other.Data[i] != Data[i])
+                return false;
+
+        return true;
     }
 }
 
