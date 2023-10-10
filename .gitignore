@@ -8,3 +8,5 @@ BenchmarkDotNet.Artifacts
 perfcollect
 __pycache__
 *.pb
+model
+logs
