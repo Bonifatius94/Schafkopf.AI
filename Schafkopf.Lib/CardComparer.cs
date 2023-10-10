@@ -2,6 +2,48 @@ namespace Schafkopf.Lib;
 
 public class CardComparer : IComparer<Card>
 {
+    public CardComparer(GameMode mode, CardColor trumpf = CardColor.Herz)
+    {
+        this.mode = mode;
+        this.trumpf = trumpf;
+    }
+
+    private readonly GameMode mode;
+    private readonly CardColor trumpf;
+
+    #region Simple
+
+    public int Compare(Card x, Card y)
+    {
+        bool isXTrumpf = x.IsTrumpf;
+        bool isYTrumpf = y.IsTrumpf;
+
+        if (isXTrumpf && !isYTrumpf)
+            return 1;
+        if (!isXTrumpf && isYTrumpf)
+            return -1;
+
+        if (!isXTrumpf && !isYTrumpf)
+            return x.Type - y.Type;
+
+        if (mode == GameMode.Wenz)
+            return x.Color - y.Color;
+
+        // case: both Trumpf in Solo or Sauspiel
+        int scoreX = trumpfScore(x);
+        int scoreY = trumpfScore(y);
+        return scoreX - scoreY;
+    }
+
+    private int trumpfScore(Card x)
+        => x.Type == CardType.Ober || x.Type == CardType.Unter
+            ? (int)x.Type * 4 + (int)x.Color + 8
+            : (int)x.Type;
+
+    #endregion Simple
+
+    #region SIMD
+
     #region Masks
 
     private const byte SIEBEN = (byte)((byte)CardType.Sieben << 2);
@@ -65,15 +107,6 @@ public class CardComparer : IComparer<Card>
 
     #endregion Masks
 
-    public CardComparer(GameMode mode, CardColor trumpf = CardColor.Herz)
-    {
-        this.mode = mode;
-        this.trumpf = trumpf;
-    }
-
-    private readonly GameMode mode;
-    private readonly CardColor trumpf;
-
     [Obsolete("Simple version is faster!")]
     public int CompareSimd(Card x, Card y)
         => cardScore(x) - cardScore(y);
@@ -99,34 +132,5 @@ public class CardComparer : IComparer<Card>
         return (int)((upperTrumpfRank | lowerTrumpfRank) + 8);
     }
 
-    #region Simple
-
-    public int Compare(Card x, Card y)
-    {
-        bool isXTrumpf = x.IsTrumpf;
-        bool isYTrumpf = y.IsTrumpf;
-
-        if (isXTrumpf && !isYTrumpf)
-            return 1;
-        if (!isXTrumpf && isYTrumpf)
-            return -1;
-
-        if (!isXTrumpf && !isYTrumpf)
-            return x.Type - y.Type;
-
-        if (mode == GameMode.Wenz)
-            return x.Color - y.Color;
-
-        // case: both Trumpf in Solo or Sauspiel
-        int scoreX = trumpfScore(x);
-        int scoreY = trumpfScore(y);
-        return scoreX - scoreY;
-    }
-
-    private int trumpfScore(Card x)
-        => x.Type == CardType.Ober || x.Type == CardType.Unter
-            ? (int)x.Type * 4 + (int)x.Color + 8
-            : (int)x.Type;
-
-    #endregion Simple
+    #endregion SIMD
 }

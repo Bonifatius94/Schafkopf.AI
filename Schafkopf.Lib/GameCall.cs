@@ -30,10 +30,11 @@ public readonly struct GameCall
         );
     }
 
-    public static GameCall Weiter()
-        => new GameCall(
-            GameMode.Weiter, 0, 0,
-            CardColor.Schell, CardColor.Schell, false);
+    private static readonly GameCall WEITER = new GameCall(
+        GameMode.Weiter, 0, 0,
+        CardColor.Schell, CardColor.Schell, false);
+
+    public static GameCall Weiter() => WEITER;
 
     public static GameCall Sauspiel(
             int callingPlayerId,
