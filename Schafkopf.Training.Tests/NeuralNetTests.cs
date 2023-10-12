@@ -6,12 +6,12 @@ public class MeanSquaredErrorTest
     public void Test_CanComputeLoss()
     {
         var lossFunc = new MeanSquaredError();
-        var pred = Matrix2D.FromData(2, 3, new float[] { 0, 1, 2, 3, 4, 5 });
-        var truthSame = Matrix2D.FromData(2, 3, new float[] { 0, 1, 2, 3, 4, 5 });
-        var truth1Dist = Matrix2D.FromData(2, 3, new float[] { 1, 2, 3, 4, 5, 6 });
+        var pred = Matrix2D.FromData(2, 3, new double[] { 0, 1, 2, 3, 4, 5 });
+        var truthSame = Matrix2D.FromData(2, 3, new double[] { 0, 1, 2, 3, 4, 5 });
+        var truth1Dist = Matrix2D.FromData(2, 3, new double[] { 1, 2, 3, 4, 5, 6 });
 
-        float lossSameData = lossFunc.Loss(pred, truthSame);
-        float lossDistData = lossFunc.Loss(pred, truth1Dist);
+        double lossSameData = lossFunc.Loss(pred, truthSame);
+        double lossDistData = lossFunc.Loss(pred, truth1Dist);
 
         Assert.Equal(0, lossSameData);
         Assert.Equal(3, lossDistData);
@@ -21,14 +21,14 @@ public class MeanSquaredErrorTest
     public void Test_CanComputeDeltas()
     {
         var lossFunc = new MeanSquaredError();
-        var pred = Matrix2D.FromData(2, 3, new float[] { 0, 1, 2, 3, 4, 5 });
-        var truth = Matrix2D.FromData(2, 3, new float[] { 1, 2, 3, 4, 5, 6 });
+        var pred = Matrix2D.FromData(2, 3, new double[] { 0, 1, 2, 3, 4, 5 });
+        var truth = Matrix2D.FromData(2, 3, new double[] { 1, 2, 3, 4, 5, 6 });
 
         var deltas = Matrix2D.Zeros(2, 3);
         lossFunc.LossDeltas(pred, truth, deltas);
 
         var exp = Matrix2D.FromData(2, 3,
-            new float[] { -0.5f, -0.5f, -0.5f, -0.5f, -0.5f, -0.5f });
+            new double[] { -0.5, -0.5, -0.5, -0.5, -0.5, -0.5 });
         Assert.Equal(exp, deltas);
     }
 }
@@ -41,7 +41,7 @@ public class DenseLayerTests
         const int batchSize = 2;
         const int inputDims = 3;
         const int outputDims = 1;
-        var input = Matrix2D.FromData(batchSize, inputDims, new float[] { 0, 1, 2, 3, 4, 5 });
+        var input = Matrix2D.FromData(batchSize, inputDims, new double[] { 0, 1, 2, 3, 4, 5 });
         var deltasOut = Matrix2D.Zeros(batchSize, inputDims);
 
         var dense = new DenseLayer(outputDims);
@@ -60,7 +60,7 @@ public class DenseLayerTests
         const int batchSize = 2;
         const int inputDims = 3;
         const int outputDims = 1;
-        var input = Matrix2D.FromData(batchSize, inputDims, new float[] { 0, 1, 2, 3, 4, 5 });
+        var input = Matrix2D.FromData(batchSize, inputDims, new double[] { 0, 1, 2, 3, 4, 5 });
         var deltasOut = Matrix2D.Zeros(batchSize, inputDims);
 
         var dense = new DenseLayer(outputDims);
@@ -82,9 +82,9 @@ public class DenseLayerTests
     [Fact]
     public void Test_CanProcessForwardPass()
     {
-        var input = Matrix2D.FromData(2, 3, new float[] { 0, 1, 2, 3, 4, 5 });
-        var weights = Matrix2D.FromData(3, 1, new float[] { 0, 1, 2 });
-        var biases = Matrix2D.FromData(1, 1, new float[] { 1 });
+        var input = Matrix2D.FromData(2, 3, new double[] { 0, 1, 2, 3, 4, 5 });
+        var weights = Matrix2D.FromData(3, 1, new double[] { 0, 1, 2 });
+        var biases = Matrix2D.FromData(1, 1, new double[] { 1 });
         var deltasOut = Matrix2D.Zeros(2, 3);
         var dense = new DenseLayer(1);
         dense.Compile(3);
@@ -94,17 +94,17 @@ public class DenseLayerTests
         dense.Forward();
         var pred = dense.Cache.Output;
 
-        var exp = Matrix2D.FromData(2, 1, new float[] { 5 + 1, 14 + 1 });
+        var exp = Matrix2D.FromData(2, 1, new double[] { 5 + 1, 14 + 1 });
         Assert.Equal(exp, pred);
     }
 
     [Fact]
     public void Test_CanProcessBackwardPass()
     {
-        var input = Matrix2D.FromData(2, 3, new float[] { 0, 1, 2, 3, 4, 5 });
-        var yTrue = Matrix2D.FromData(2, 1, new float[] { 7, 14 });
-        var weights = Matrix2D.FromData(3, 1, new float[] { 0, 1, 2 });
-        var biases = Matrix2D.FromData(1, 1, new float[] { 1 });
+        var input = Matrix2D.FromData(2, 3, new double[] { 0, 1, 2, 3, 4, 5 });
+        var yTrue = Matrix2D.FromData(2, 1, new double[] { 7, 14 });
+        var weights = Matrix2D.FromData(3, 1, new double[] { 0, 1, 2 });
+        var biases = Matrix2D.FromData(1, 1, new double[] { 1 });
         var deltasOut = Matrix2D.Zeros(2, 3);
         var dense = new DenseLayer(1);
         dense.Compile(3);
@@ -123,28 +123,28 @@ public class DenseLayerTests
         // deltas:  [[-0.5],
         //           [ 0.5]]
 
-        var expWeightGrads = Matrix2D.FromData(3, 1, new float[] { 1.5f, 1.5f, 1.5f });
+        var expWeightGrads = Matrix2D.FromData(3, 1, new double[] { 1.5, 1.5, 1.5 });
         Assert.Equal(expWeightGrads, dense.WeightGrads);
-        var expBiasGrads = Matrix2D.FromData(1, 1, new float[] { 0 });
+        var expBiasGrads = Matrix2D.FromData(1, 1, new double[] { 0 });
         Assert.Equal(expBiasGrads, dense.BiasGrads);
-        var expDeltasOut = Matrix2D.FromData(2, 3, new float[] { 0, -0.5f, -1, 0, 0.5f, 1 });
+        var expDeltasOut = Matrix2D.FromData(2, 3, new double[] { 0, -0.5, -1, 0, 0.5, 1 });
         Assert.Equal(expDeltasOut, dense.Cache.DeltasOut);
     }
 
     [Fact]
     public void Test_CanOptimizePrediction()
     {
-        var input = Matrix2D.FromData(2, 3, new float[] { 0, 1, 2, 3, 4, 5 });
-        var yTrue = Matrix2D.FromData(2, 1, new float[] { 7, 14 });
-        var weights = Matrix2D.FromData(3, 1, new float[] { 0, 1, 2 });
-        var biases = Matrix2D.FromData(1, 1, new float[] { 1 });
+        var input = Matrix2D.FromData(2, 3, new double[] { 0, 1, 2, 3, 4, 5 });
+        var yTrue = Matrix2D.FromData(2, 1, new double[] { 7, 14 });
+        var weights = Matrix2D.FromData(3, 1, new double[] { 0, 1, 2 });
+        var biases = Matrix2D.FromData(1, 1, new double[] { 1 });
         var deltasOut = Matrix2D.Zeros(2, 3);
         var dense = new DenseLayer(1);
         dense.Compile(3);
         dense.CompileCache(input, deltasOut);
         dense.Load(new Matrix2D[] { weights, biases });
         var lossFunc = new MeanSquaredError();
-        var opt = new AdamOpt(0.01f);
+        var opt = new AdamOpt(0.01);
         var modelGrads = new Matrix2D[] { dense.Cache.Gradients };
         opt.Compile(modelGrads);
 
@@ -157,7 +157,7 @@ public class DenseLayerTests
             dense.ApplyGrads();
         }
 
-        float loss = lossFunc.Loss(dense.Cache.Output, yTrue);
+        double loss = lossFunc.Loss(dense.Cache.Output, yTrue);
         Assert.True(loss < 0.01);
     }
 }

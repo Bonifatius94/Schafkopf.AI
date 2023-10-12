@@ -1,26 +1,51 @@
 ﻿
-// var qlAgent = new QLAgent();
-// var players = new Player[] {
-//     new Player(0, qlAgent),
-//     new Player(1, qlAgent),
-//     new Player(2, qlAgent),
-//     new Player(3, qlAgent)
-// };
+public class Program
+{
+    private static FlatFeatureDataset createDataset(int trainSize, int testSize)
+    {
+        var rng = new Random();
+        Func<int, Func<double, double>, (double, double)[]> sample =
+            (size, func) => Enumerable.Range(0, size)
+                .Select(i => (double)rng.NextDouble() * 20 - 10)
+                .Select(x => ((double)x, (double)func(x)))
+                .ToArray();
 
-// var table = new Table(players[0], players[1], players[2], players[3]);
-// var deck = new CardsDeck();
-// var session = new GameSession(table, deck);
+        var trueFunc = (double x) => (double)Math.Sin(x);
+        var trainData = sample(trainSize, trueFunc);
+        var testData = sample(testSize, trueFunc);
 
-Console.WriteLine("Launching QL Training");
+        var trainX = Matrix2D.FromData(trainSize, 1, trainData.Select(x => x.Item1).ToArray(), false);
+        var trainY = Matrix2D.FromData(trainSize, 1, trainData.Select(x => x.Item2).ToArray(), false);
+        var testX = Matrix2D.FromData(testSize, 1, testData.Select(x => x.Item1).ToArray(), false);
+        var testY = Matrix2D.FromData(testSize, 1, testData.Select(x => x.Item2).ToArray(), false);
 
-// foreach (int i in Enumerable.Range(0, 1000000))
-// {
-//     if ((i+1) % 10000 == 0)
-//         Console.WriteLine($"episode {(i+1)}");
+        return new FlatFeatureDataset() {
+            TrainX = trainX, TrainY = trainY,
+            TestX = testX, TestY = testY
+        };
+    }
 
-//     var log = session.ProcessGame();
-//     players[0].OnGameFinished(log);
-//     // info: only train for the first player as all players use the same model;
-//     //       all game states are normalized to the first player's view
-//     //       -> AI doesn't train 4 model, instead fuses all 4 player's experiences
-// }
+    private static FFModel createModel()
+        => new FFModel(new ILayer[] {
+            new DenseLayer(64),
+            new ReLULayer(),
+            new DenseLayer(64),
+            new ReLULayer(),
+            new DenseLayer(1),
+        });
+
+    public static void Main(string[] args)
+    {
+        int batchSize = 64;
+        var model = createModel();
+        var dataset = createDataset(trainSize: 10_000, testSize: 1_000);
+        var optimizer = new AdamOpt(learnRate: 0.01);
+        var lossFunc = new MeanSquaredError();
+
+        var session = new SupervisedTrainingSession();
+        session.Compile(model, optimizer, lossFunc, dataset, batchSize);
+        Console.WriteLine($"loss before: {session.Eval()}");
+        session.Train(10, false, (ep, l) => Console.WriteLine($"loss ep. {ep}: {l}"));
+        Console.WriteLine();
+    }
+}

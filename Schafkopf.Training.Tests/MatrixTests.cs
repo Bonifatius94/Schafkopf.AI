@@ -5,7 +5,7 @@ public class MatrixTests
     [Fact]
     public void Test_CanInitFromData()
     {
-        var data = new float[] {
+        var data = new double[] {
             0, 1, 2,
             3, 4, 5
         };
@@ -13,7 +13,7 @@ public class MatrixTests
 
         unsafe
         {
-            fixed (float* p = &data[0])
+            fixed (double* p = &data[0])
                 for (int i = 0; i < 6; i++)
                     Assert.Equal(a.Data[i], p[i]);
         }
@@ -22,12 +22,12 @@ public class MatrixTests
     [Fact]
     public void Test_CanMatmul()
     {
-        var a = Matrix2D.FromData(2, 3, new float[] {
+        var a = Matrix2D.FromData(2, 3, new double[] {
                 0, 1, 2,
                 3, 4, 5
             },
             true);
-        var b = Matrix2D.FromData(3, 4, new float[] {
+        var b = Matrix2D.FromData(3, 4, new double[] {
             0,  1,  2,  3,
             4,  5,  6,  7,
             8,  9, 10, 11,
@@ -36,7 +36,7 @@ public class MatrixTests
 
         Matrix2D.Matmul(a, b, res);
 
-        var exp = Matrix2D.FromData(2, 4, new float[] {
+        var exp = Matrix2D.FromData(2, 4, new double[] {
             20, 23, 26, 29,
             56, 68, 80, 92
         });
@@ -46,18 +46,18 @@ public class MatrixTests
     [Fact]
     public void Test_CanRowAdd()
     {
-        var a = Matrix2D.FromData(2, 3, new float[] {
+        var a = Matrix2D.FromData(2, 3, new double[] {
             0, 1, 2,
             3, 4, 5
         });
-        var b = Matrix2D.FromData(1, 3, new float[] {
+        var b = Matrix2D.FromData(1, 3, new double[] {
             0, 1, 2
         });
         var res = Matrix2D.Zeros(2, 3);
 
         Matrix2D.RowAdd(a, b, res);
 
-        var exp = Matrix2D.FromData(2, 3, new float[] {
+        var exp = Matrix2D.FromData(2, 3, new double[] {
             0, 2, 4,
             3, 5, 7
         });
@@ -67,7 +67,7 @@ public class MatrixTests
     [Fact]
     public void Test_CanColMean()
     {
-        var a = Matrix2D.FromData(2, 3, new float[] {
+        var a = Matrix2D.FromData(2, 3, new double[] {
             0, 1, 2,
             4, 3, 2
         });
@@ -75,7 +75,7 @@ public class MatrixTests
 
         Matrix2D.ColMean(a, res);
 
-        var exp = Matrix2D.FromData(1, 3, new float[] {
+        var exp = Matrix2D.FromData(1, 3, new double[] {
             2, 2, 2
         });
         Assert.Equal(exp, res);
@@ -86,11 +86,11 @@ public class MatrixTests
     [Fact]
     public void Test_CanElemAdd()
     {
-        var a = Matrix2D.FromData(2, 3, new float[] {
+        var a = Matrix2D.FromData(2, 3, new double[] {
             0, 1, 2,
             3, 4, 5
         });
-        var b = Matrix2D.FromData(2, 3, new float[] {
+        var b = Matrix2D.FromData(2, 3, new double[] {
             1, 2, 3,
             4, 5, 6
         });
@@ -98,7 +98,7 @@ public class MatrixTests
 
         Matrix2D.ElemAdd(a, b, res);
 
-        var exp = Matrix2D.FromData(2, 3, new float[] {
+        var exp = Matrix2D.FromData(2, 3, new double[] {
             1, 3, 5,
             7, 9, 11
         });
@@ -108,11 +108,11 @@ public class MatrixTests
     [Fact]
     public void Test_CanElemSub()
     {
-        var a = Matrix2D.FromData(2, 3, new float[] {
+        var a = Matrix2D.FromData(2, 3, new double[] {
             0, 1, 2,
             3, 4, 5
         });
-        var b = Matrix2D.FromData(2, 3, new float[] {
+        var b = Matrix2D.FromData(2, 3, new double[] {
             1, 2, 3,
             4, 5, 6
         });
@@ -120,7 +120,7 @@ public class MatrixTests
 
         Matrix2D.ElemSub(a, b, res);
 
-        var exp = Matrix2D.FromData(2, 3, new float[] {
+        var exp = Matrix2D.FromData(2, 3, new double[] {
             -1, -1, -1,
             -1, -1, -1
         });
@@ -130,11 +130,11 @@ public class MatrixTests
     [Fact]
     public void Test_CanElemMul()
     {
-        var a = Matrix2D.FromData(2, 3, new float[] {
+        var a = Matrix2D.FromData(2, 3, new double[] {
             0, 1, 2,
             3, 4, 5
         });
-        var b = Matrix2D.FromData(2, 3, new float[] {
+        var b = Matrix2D.FromData(2, 3, new double[] {
             1, 2, 3,
             4, 5, 6
         });
@@ -142,7 +142,7 @@ public class MatrixTests
 
         Matrix2D.ElemMul(a, b, res);
 
-        var exp = Matrix2D.FromData(2, 3, new float[] {
+        var exp = Matrix2D.FromData(2, 3, new double[] {
              0,  2,  6,
             12, 20, 30
         });
@@ -152,11 +152,11 @@ public class MatrixTests
     [Fact]
     public void Test_CanElemDiv()
     {
-        var a = Matrix2D.FromData(2, 3, new float[] {
+        var a = Matrix2D.FromData(2, 3, new double[] {
             0, 2, 4,
             6, 8, 10
         });
-        var b = Matrix2D.FromData(2, 3, new float[] {
+        var b = Matrix2D.FromData(2, 3, new double[] {
             2, 2, 2,
             2, 2, 2
         });
@@ -164,7 +164,7 @@ public class MatrixTests
 
         Matrix2D.ElemDiv(a, b, res);
 
-        var exp = Matrix2D.FromData(2, 3, new float[] {
+        var exp = Matrix2D.FromData(2, 3, new double[] {
             0, 1, 2,
             3, 4, 5
         });
@@ -174,7 +174,7 @@ public class MatrixTests
     [Fact]
     public void Test_CanElemMax()
     {
-        var a = Matrix2D.FromData(2, 3, new float[] {
+        var a = Matrix2D.FromData(2, 3, new double[] {
             0, 1, 2,
             3, 4, 5
         });
@@ -182,7 +182,7 @@ public class MatrixTests
 
         Matrix2D.ElemMax(a, 2, res);
 
-        var exp = Matrix2D.FromData(2, 3, new float[] {
+        var exp = Matrix2D.FromData(2, 3, new double[] {
             2, 2, 2,
             3, 4, 5
         });
@@ -192,7 +192,7 @@ public class MatrixTests
     [Fact]
     public void Test_CanElemGeq()
     {
-        var a = Matrix2D.FromData(2, 3, new float[] {
+        var a = Matrix2D.FromData(2, 3, new double[] {
             0, 1, 2,
             3, 4, 5
         });
@@ -200,7 +200,7 @@ public class MatrixTests
 
         Matrix2D.ElemGeq(a, 2, res);
 
-        var exp = Matrix2D.FromData(2, 3, new float[] {
+        var exp = Matrix2D.FromData(2, 3, new double[] {
             0, 0, 1,
             1, 1, 1
         });
@@ -210,7 +210,7 @@ public class MatrixTests
     [Fact]
     public void Test_CanElemSqrt()
     {
-        var a = Matrix2D.FromData(2, 3, new float[] {
+        var a = Matrix2D.FromData(2, 3, new double[] {
             0, 1, 4,
             9, 16, 25
         });
@@ -218,7 +218,7 @@ public class MatrixTests
 
         Matrix2D.ElemSqrt(a, res);
 
-        var exp = Matrix2D.FromData(2, 3, new float[] {
+        var exp = Matrix2D.FromData(2, 3, new double[] {
             0, 1, 2,
             3, 4, 5
         });
@@ -232,7 +232,7 @@ public class MatrixTests
     [Fact]
     public void Test_CanBatchAdd()
     {
-        var a = Matrix2D.FromData(2, 3, new float[] {
+        var a = Matrix2D.FromData(2, 3, new double[] {
             0, 1, 2,
             3, 4, 5
         });
@@ -240,7 +240,7 @@ public class MatrixTests
 
         Matrix2D.BatchAdd(a, 1, res);
 
-        var exp = Matrix2D.FromData(2, 3, new float[] {
+        var exp = Matrix2D.FromData(2, 3, new double[] {
             1, 2, 3,
             4, 5, 6
         });
@@ -250,7 +250,7 @@ public class MatrixTests
     [Fact]
     public void Test_CanBatchSub()
     {
-        var a = Matrix2D.FromData(2, 3, new float[] {
+        var a = Matrix2D.FromData(2, 3, new double[] {
             1, 2, 3,
             4, 5, 6
         });
@@ -258,7 +258,7 @@ public class MatrixTests
 
         Matrix2D.BatchSub(a, 1, res);
 
-        var exp = Matrix2D.FromData(2, 3, new float[] {
+        var exp = Matrix2D.FromData(2, 3, new double[] {
             0, 1, 2,
             3, 4, 5
         });
@@ -268,7 +268,7 @@ public class MatrixTests
     [Fact]
     public void Test_CanBatchMul()
     {
-        var a = Matrix2D.FromData(2, 3, new float[] {
+        var a = Matrix2D.FromData(2, 3, new double[] {
             0, 1, 2,
             3, 4, 5
         });
@@ -276,7 +276,7 @@ public class MatrixTests
 
         Matrix2D.BatchMul(a, 2, res);
 
-        var exp = Matrix2D.FromData(2, 3, new float[] {
+        var exp = Matrix2D.FromData(2, 3, new double[] {
             0, 2, 4,
             6, 8, 10
         });
@@ -286,7 +286,7 @@ public class MatrixTests
     [Fact]
     public void Test_CanBatchDiv()
     {
-        var a = Matrix2D.FromData(2, 3, new float[] {
+        var a = Matrix2D.FromData(2, 3, new double[] {
             0, 2, 4,
             6, 8, 10
         });
@@ -294,7 +294,7 @@ public class MatrixTests
 
         Matrix2D.BatchDiv(a, 2, res);
 
-        var exp = Matrix2D.FromData(2, 3, new float[] {
+        var exp = Matrix2D.FromData(2, 3, new double[] {
             0, 1, 2,
             3, 4, 5
         });
@@ -302,4 +302,27 @@ public class MatrixTests
     }
 
     #endregion Batched
+}
+
+public class RandNormalTest
+{
+    [Fact]
+    public void Test_CanGenerateNormalDistribution()
+    {
+        const int sampleSize = 100_000;
+        const double expMu = 1.0, expSigma = 0.1;
+        Func<double> next = () => RandNormal.Next(expMu, expSigma);
+
+        for (int i = 0; i < 100; i++)
+        {
+            double p = 1.0 / sampleSize;
+            var data = Enumerable.Range(0, sampleSize).Select(i => next()).ToArray();
+            double mu = data.Select(x => x * p).Sum();
+            double variance = data.Select(x => mu - x).Select(x => x * x * p).Sum();
+            double sigma = Math.Sqrt(variance);
+
+            Assert.True(Math.Abs(expMu - mu) < 1e-3);
+            Assert.True(Math.Abs(expSigma - sigma) < 1e-3);
+        }
+    }
 }

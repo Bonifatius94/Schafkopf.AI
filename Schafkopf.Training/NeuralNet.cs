@@ -9,12 +9,12 @@ public class SupervisedTrainingSession
     private int batchSize;
 
     public void Compile(
-        FFModel model, IOptimizer optimizer, ILoss loss,
+        FFModel model, IOptimizer optimizer, ILoss lossFunc,
         FlatFeatureDataset dataset, int batchSize = 64)
     {
         this.model = model;
         this.optimizer = optimizer;
-        this.lossFunc = loss;
+        this.lossFunc = lossFunc;
         this.dataset = dataset;
         this.batchSize = batchSize;
 
@@ -25,11 +25,11 @@ public class SupervisedTrainingSession
 
     public void Train(
         int epochs, bool shuffle = true,
-        Action<float>? lossLogger = null)
+        Action<int, double>? lossLogger = null)
     {
-        int numTrainExamples = dataset.TrainX.NumRows;
-        int numTrainBatches = numTrainExamples / batchSize;
-        var perm = Perm.Identity(numTrainExamples);
+        int numExamples = dataset.TrainX.NumRows;
+        int numBatches = numExamples / batchSize;
+        var perm = Perm.Identity(numExamples);
         var x = Matrix2D.Zeros(batchSize, dataset.TrainX.NumCols);
         var y = Matrix2D.Zeros(batchSize, dataset.TrainY.NumCols);
 
@@ -48,7 +48,7 @@ public class SupervisedTrainingSession
                 y.Data = dataset.TrainY.Data;
             }
 
-            for (int i = 0; i < numTrainBatches; i++)
+            for (int i = 0; i < numBatches; i++)
             {
                 unsafe
                 {
@@ -56,10 +56,40 @@ public class SupervisedTrainingSession
                     y.Data += batchSize * y.NumCols;
                 }
 
-                float loss = model.TrainStep(x, y, lossFunc, optimizer);
-                lossLogger?.Invoke(loss);
+                model.TrainStep(x, y, lossFunc, optimizer);
             }
+
+            lossLogger?.Invoke(ep + 1, Eval());
         }
+    }
+
+    public double Eval()
+    {
+        int numExamples = dataset.TestX.NumRows;
+        int numBatches = numExamples / batchSize;
+        var x = Matrix2D.Zeros(batchSize, dataset.TestX.NumCols);
+        var y = Matrix2D.Zeros(batchSize, dataset.TestY.NumCols);
+        double lossSum = 0.0;
+
+        unsafe
+        {
+            x.Data = dataset.TestX.Data;
+            y.Data = dataset.TestY.Data;
+        }
+
+        for (int i = 0; i < numBatches; i++)
+        {
+            unsafe
+            {
+                x.Data += batchSize * x.NumCols;
+                y.Data += batchSize * y.NumCols;
+            }
+
+            var pred = model.Predict(x);
+            lossSum += lossFunc.Loss(pred, y);
+        }
+
+        return lossSum / numBatches;
     }
 }
 
@@ -108,17 +138,22 @@ public class FFModel
         //       is greater than the batch size of layer caches
 
         var firstLayerCache = Layers.First().Cache;
-        var origInput = firstLayerCache.Input;
-        firstLayerCache.Input = input;
 
-        foreach (var layer in Layers)
-            layer.Forward();
+        unsafe
+        {
+            double* origData = firstLayerCache.Input.Data;
+            firstLayerCache.Input.Data = input.Data;
 
-        firstLayerCache.Input = origInput;
+            foreach (var layer in Layers)
+                layer.Forward();
+
+            firstLayerCache.Input.Data = origData;
+        }
+
         return Layers.Last().Cache.Output;
     }
 
-    public float TrainStep(Matrix2D x, Matrix2D y, ILoss lossFunc, IOptimizer opt)
+    public void TrainStep(Matrix2D x, Matrix2D y, ILoss lossFunc, IOptimizer opt)
     {
         var firstLayerCache = Layers.First().Cache;
         var lastLayerCache = Layers.Last().Cache;
@@ -129,7 +164,6 @@ public class FFModel
             layer.Forward();
 
         lossFunc.LossDeltas(lastLayerCache.Output, y, lastLayerCache.DeltasIn);
-        var loss = lossFunc.Loss(lastLayerCache.Output, y);
 
         foreach (var layer in Layers.Reverse())
             layer.Backward();
@@ -139,26 +173,25 @@ public class FFModel
             layer.ApplyGrads();
 
         firstLayerCache.Input = origInput;
-        return loss;
     }
 }
 
 public interface ILoss
 {
-    float Loss(Matrix2D pred, Matrix2D target);
+    double Loss(Matrix2D pred, Matrix2D target);
     void LossDeltas(Matrix2D pred, Matrix2D target, Matrix2D deltas);
 }
 
 public class MeanSquaredError : ILoss
 {
-    public float Loss(Matrix2D pred, Matrix2D target)
+    public double Loss(Matrix2D pred, Matrix2D target)
     {
-        float sum = 0f;
+        double sum = 0;
         unsafe
         {
             for (int i = 0; i < pred.NumRows * pred.NumCols; i++)
             {
-                float diff = pred.Data[i] - target.Data[i];
+                double diff = pred.Data[i] - target.Data[i];
                 sum += diff * diff;
             }
         }
@@ -180,12 +213,12 @@ public interface IOptimizer
 
 public class NaiveSGDOpt : IOptimizer
 {
-    public NaiveSGDOpt(float learnRate)
+    public NaiveSGDOpt(double learnRate)
     {
         this.learnRate = learnRate;
     }
 
-    private float learnRate;
+    private double learnRate;
 
     public void AdjustGrads(IList<Matrix2D> grads)
     {
@@ -203,8 +236,8 @@ public class NaiveSGDOpt : IOptimizer
 public class AdamOpt : IOptimizer
 {
     public AdamOpt(
-        float learnRate, float beta1 = 0.9f,
-        float beta2 = 0.999f, float epsilon = 1e-8f)
+        double learnRate, double beta1 = 0.9,
+        double beta2 = 0.999, double epsilon = 1e-8)
     {
         this.learnRate = learnRate;
         this.beta1 = beta1;
@@ -212,13 +245,13 @@ public class AdamOpt : IOptimizer
         this.epsilon = epsilon;
     }
 
-    private float learnRate = 0.001f;
-    private float beta1 = 0.9f;
-    private float beta2 = 0.999f;
-    private float epsilon = 1e-8f;
+    private double learnRate = 0.001;
+    private double beta1 = 0.9;
+    private double beta2 = 0.999;
+    private double epsilon = 1e-8;
 
-    private float beta1t = 1.0f;
-    private float beta2t = 1.0f;
+    private double beta1t = 1.0;
+    private double beta2t = 1.0;
     private IList<Matrix2D> ms;
     private IList<Matrix2D> vs;
     private IList<Matrix2D> mTemps;
@@ -226,8 +259,8 @@ public class AdamOpt : IOptimizer
 
     public void Compile(IList<Matrix2D> allGrads)
     {
-        beta1t = 1.0f;
-        beta2t = 1.0f;
+        beta1t = 1.0;
+        beta2t = 1.0;
         ms = new List<Matrix2D>();
         vs = new List<Matrix2D>();
         mTemps = new List<Matrix2D>();
@@ -321,7 +354,7 @@ public class DenseLayer : ILayer
     public void Compile(int inputDims)
     {
         InputDims = inputDims;
-        Weights = Matrix2D.RandNorm(InputDims, OutputDims, 0.0f, 0.1f);
+        Weights = Matrix2D.RandNorm(InputDims, OutputDims, 0.0, 0.01);
         Biases = Matrix2D.Zeros(1, OutputDims);
     }
 

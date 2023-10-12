@@ -3,27 +3,27 @@ namespace Schafkopf.Training;
 public unsafe class Matrix2D : IEquatable<Matrix2D>
 {
     public static Matrix2D Zeros(int numRows, int numCols, bool hasCache = true)
-        => FromData(numRows, numCols, new float[numRows * numCols], hasCache);
+        => FromData(numRows, numCols, new double[numRows * numCols], hasCache);
 
-    public static Matrix2D RandNorm(int numRows, int numCols, float mu, float sig)
-        => FromData(numRows, numCols,
-            Enumerable.Range(0, numRows * numCols)
-                .Select(i => (float)RandNormal.Next(mu, sig)).ToArray());
+    public static Matrix2D RandNorm(int numRows, int numCols, double mu, double sig, bool hasCache = true)
+        => FromData(numRows, numCols, hasCache: hasCache,
+                data: Enumerable.Range(0, numRows * numCols)
+                    .Select(i => RandNormal.Next(mu, sig)).ToArray());
 
-    public static Matrix2D FromData(int numRows, int numCols, float[] data, bool hasCache = true)
+    public static Matrix2D FromData(int numRows, int numCols, double[] data, bool hasCache = true)
     {
-        var cache = hasCache ? new float[numRows * numCols] : new float[1];
-        fixed (float* d = &data[0])
-        fixed (float* c = &cache[0])
+        var cache = hasCache ? new double[numRows * numCols] : new double[1];
+        fixed (double* d = &data[0])
+        fixed (double* c = &cache[0])
             return new Matrix2D(numRows, numCols, d, c);
     }
 
-    public static Matrix2D FromRawPointers(int numRows, int numCols, float* data, float* cache)
+    public static Matrix2D FromRawPointers(int numRows, int numCols, double* data, double* cache)
         => new Matrix2D(numRows, numCols, data, cache);
 
     private Matrix2D(
         int numRows, int numCols,
-        float* data, float* cache)
+        double* data, double* cache)
     {
         NumRows = numRows;
         NumCols = numCols;
@@ -33,8 +33,8 @@ public unsafe class Matrix2D : IEquatable<Matrix2D>
 
     public int NumRows;
     public int NumCols;
-    public float* Data;
-    public float* Cache;
+    public double* Data;
+    public double* Cache;
 
     public static void Matmul(
         Matrix2D a, Matrix2D b, Matrix2D res,
@@ -84,12 +84,12 @@ public unsafe class Matrix2D : IEquatable<Matrix2D>
         }
     }
 
-    public static float DotProd(Matrix2D v1, Matrix2D v2)
+    public static double DotProd(Matrix2D v1, Matrix2D v2)
     {
         if (v1.NumRows != 1 || v2.NumRows != 1 || v1.NumCols != v2.NumCols)
             throw new ArgumentException("Invalid matrix shapes!");
 
-        float sum = 0f;
+        double sum = 0;
         for (int i = 0; i < v1.NumCols; i++)
             sum += v1.Data[i] * v2.Data[i];
         return sum;
@@ -127,7 +127,7 @@ public unsafe class Matrix2D : IEquatable<Matrix2D>
 
         for (int c = 0; c < a.NumCols; c++)
         {
-            float sum = 0;
+            double sum = 0;
             for (int r = 0; r < a.NumRows; r++)
                 sum += a.Data[r * a.NumCols + c];
             res.Data[c] = sum / a.NumRows;
@@ -174,7 +174,7 @@ public unsafe class Matrix2D : IEquatable<Matrix2D>
             res.Data[i] = a.Data[i] / b.Data[i];
     }
 
-    public static void ElemMax(Matrix2D a, float comp, Matrix2D res)
+    public static void ElemMax(Matrix2D a, double comp, Matrix2D res)
     {
         if (a.NumRows != res.NumRows || a.NumCols != res.NumCols)
             throw new ArgumentException("Invalid matrix shapes!");
@@ -183,7 +183,7 @@ public unsafe class Matrix2D : IEquatable<Matrix2D>
             res.Data[i] = a.Data[i] >= comp ? a.Data[i] : comp;
     }
 
-    public static void ElemGeq(Matrix2D a, float comp, Matrix2D res)
+    public static void ElemGeq(Matrix2D a, double comp, Matrix2D res)
     {
         if (a.NumRows != res.NumRows || a.NumCols != res.NumCols)
             throw new ArgumentException("Invalid matrix shapes!");
@@ -198,10 +198,10 @@ public unsafe class Matrix2D : IEquatable<Matrix2D>
             throw new ArgumentException("Invalid matrix shapes!");
 
         for (int i = 0; i < a.NumRows * a.NumCols; i++)
-            res.Data[i] = (float)Math.Sqrt(a.Data[i]);
+            res.Data[i] = (double)Math.Sqrt(a.Data[i]);
     }
 
-    public static void BatchAdd(Matrix2D a, float b, Matrix2D res)
+    public static void BatchAdd(Matrix2D a, double b, Matrix2D res)
     {
         if (a.NumRows != res.NumRows || a.NumCols != res.NumCols)
             throw new ArgumentException("Invalid matrix shapes!");
@@ -210,12 +210,12 @@ public unsafe class Matrix2D : IEquatable<Matrix2D>
             res.Data[i] = a.Data[i] + b;
     }
 
-    public static void BatchSub(Matrix2D a, float b, Matrix2D res)
+    public static void BatchSub(Matrix2D a, double b, Matrix2D res)
     {
         BatchAdd(a, -b, res);
     }
 
-    public static void BatchMul(Matrix2D a, float b, Matrix2D res)
+    public static void BatchMul(Matrix2D a, double b, Matrix2D res)
     {
         if (a.NumRows != res.NumRows || a.NumCols != res.NumCols)
             throw new ArgumentException("Invalid matrix shapes!");
@@ -224,7 +224,7 @@ public unsafe class Matrix2D : IEquatable<Matrix2D>
             res.Data[i] = a.Data[i] * b;
     }
 
-    public static void BatchDiv(Matrix2D a, float b, Matrix2D res)
+    public static void BatchDiv(Matrix2D a, double b, Matrix2D res)
     {
         BatchMul(a, 1 / b, res);
     }
@@ -277,17 +277,16 @@ public static class RandNormal
 {
     private static readonly Random rng = new Random();
 
-    public static double Next(double center, double std_dev)
+    public static double Next(double center, double std_dev, double eps = 1.19e-07)
     {
-        const double EPSILON = 1.19e-07;
-        const double TWO_PI = 2.0 * Math.PI;
+        const double TWO_PI = 2 * Math.PI;
 
         double u1, u2;
         do { u1 = rng.NextDouble(); }
-        while (u1 <= EPSILON);
+        while (u1 <= eps);
         u2 = rng.NextDouble();
 
-        double mag = std_dev * Math.Sqrt(-2.0 * Math.Log(u1));
+        double mag = std_dev * Math.Sqrt(-2 * Math.Min(Math.Log(u1 + 1e-8), 0));
         if (rng.NextDouble() > 0.5)
             return mag * Math.Cos(TWO_PI * u2) + center;
         else

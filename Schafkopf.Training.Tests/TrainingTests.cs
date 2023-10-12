@@ -5,13 +5,13 @@ public class RegressionTrainingTest
     private FlatFeatureDataset createDataset(int trainSize, int testSize)
     {
         var rng = new Random();
-        Func<int, Func<float, float>, (float, float)[]> sample =
+        Func<int, Func<double, double>, (double, double)[]> sample =
             (size, func) => Enumerable.Range(0, size)
-                .Select(i => (float)rng.NextDouble() * 20 - 10)
-                .Select(x => ((float)x, (float)func(x)))
+                .Select(i => (double)rng.NextDouble() * 20 - 10)
+                .Select(x => ((double)x, (double)func(x)))
                 .ToArray();
 
-        var trueFunc = (float x) => (float)Math.Sin(x);
+        var trueFunc = (double x) => (double)Math.Sin(x);
         var trainData = sample(trainSize, trueFunc);
         var testData = sample(testSize, trueFunc);
 
@@ -41,15 +41,15 @@ public class RegressionTrainingTest
         int batchSize = 64;
         var model = createModel();
         var dataset = createDataset(trainSize: 10_000, testSize: batchSize);
-        var optimizer = new AdamOpt(learnRate: 0.01f);
+        var optimizer = new AdamOpt(learnRate: 0.01);
         var lossFunc = new MeanSquaredError();
-        var losses = new List<float>();
+        var losses = new List<double>();
 
         var session = new SupervisedTrainingSession();
         session.Compile(model, optimizer, lossFunc, dataset, batchSize);
-        session.Train(10, false, losses.Add);
+        session.Train(10, false, (ep, l) => losses.Add(l));
         var testPred = model.Predict(dataset.TestX);
-        float testLoss = lossFunc.Loss(testPred, dataset.TestY);
+        double testLoss = lossFunc.Loss(testPred, dataset.TestY);
 
         Assert.True(losses.Any(l => l < 0.001));
         Assert.True(testLoss < 0.001);
