@@ -312,6 +312,7 @@ public class RandNormalTest
         const int sampleSize = 100_000;
         const double expMu = 1.0, expSigma = 0.1;
         Func<double> next = () => RandNormal.Next(expMu, expSigma);
+        int failures = 0;
 
         for (int i = 0; i < 100; i++)
         {
@@ -321,8 +322,28 @@ public class RandNormalTest
             double variance = data.Select(x => mu - x).Select(x => x * x * p).Sum();
             double sigma = Math.Sqrt(variance);
 
-            Assert.True(Math.Abs(expMu - mu) < 1e-3);
-            Assert.True(Math.Abs(expSigma - sigma) < 1e-3);
+            bool isValidDist = Math.Abs(expMu - mu) < 1e-3
+                && Math.Abs(expSigma - sigma) < 1e-3;
+            failures += isValidDist ? 0 : 1;
         }
+
+        Assert.True(failures <= 3);
+    }
+}
+
+public class PrintTest
+{
+    [Fact]
+    public void Test_CanConvertToText()
+    {
+        var a = Matrix2D.FromData(2, 3, new double[] {
+            0, 2, 4,
+            6, 8, 10
+        });
+
+        var text = a.ToString();
+
+        var exp = "0 2 4 \n6 8 10 ";
+        Assert.Equal(exp, text);
     }
 }

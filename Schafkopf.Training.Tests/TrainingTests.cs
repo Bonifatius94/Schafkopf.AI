@@ -19,11 +19,7 @@ public class RegressionTrainingTest
         var trainY = Matrix2D.FromData(trainSize, 1, trainData.Select(x => x.Item2).ToArray());
         var testX = Matrix2D.FromData(testSize, 1, testData.Select(x => x.Item1).ToArray());
         var testY = Matrix2D.FromData(testSize, 1, testData.Select(x => x.Item2).ToArray());
-
-        return new FlatFeatureDataset() {
-            TrainX = trainX, TrainY = trainY,
-            TestX = testX, TestY = testY
-        };
+        return new FlatFeatureDataset(trainX, trainY, testX, testY);
     }
 
     private FFModel createModel()
@@ -36,6 +32,7 @@ public class RegressionTrainingTest
         });
 
     [Fact(Skip="code is not ready")]
+    // [Fact]
     public void Test_CanPredictSinus()
     {
         int batchSize = 64;
@@ -45,10 +42,10 @@ public class RegressionTrainingTest
         var lossFunc = new MeanSquaredError();
         var losses = new List<double>();
 
-        var session = new SupervisedTrainingSession();
-        session.Compile(model, optimizer, lossFunc, dataset, batchSize);
+        var session = new SupervisedTrainingSession(
+            model, optimizer, lossFunc, dataset, batchSize);
         session.Train(10, false, (ep, l) => losses.Add(l));
-        var testPred = model.Predict(dataset.TestX);
+        var testPred = model.PredictBatch(dataset.TestX);
         double testLoss = lossFunc.Loss(testPred, dataset.TestY);
 
         Assert.True(losses.Any(l => l < 0.001));

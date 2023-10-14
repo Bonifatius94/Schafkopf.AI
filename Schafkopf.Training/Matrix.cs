@@ -1,6 +1,8 @@
+using System.Text;
+
 namespace Schafkopf.Training;
 
-public unsafe class Matrix2D : IEquatable<Matrix2D>
+public unsafe struct Matrix2D : IEquatable<Matrix2D>
 {
     public static Matrix2D Zeros(int numRows, int numCols, bool hasCache = true)
         => FromData(numRows, numCols, new double[numRows * numCols], hasCache);
@@ -20,6 +22,9 @@ public unsafe class Matrix2D : IEquatable<Matrix2D>
 
     public static Matrix2D FromRawPointers(int numRows, int numCols, double* data, double* cache)
         => new Matrix2D(numRows, numCols, data, cache);
+
+    private static readonly Matrix2D NULL = new Matrix2D(0, 0, null, null);
+    public static Matrix2D Null() => NULL;
 
     private Matrix2D(
         int numRows, int numCols,
@@ -235,12 +240,21 @@ public unsafe class Matrix2D : IEquatable<Matrix2D>
         throw new NotImplementedException();
     }
 
-    public bool Equals(Matrix2D? other)
+    public bool IsNull => Data == null;
+
+    public bool Equals(Matrix2D other)
     {
-        if(other == null)
+        if (IsNull && other.IsNull)
+            return true;
+
+        if (IsNull ^ other.IsNull)
             return false;
 
         if (NumRows != other.NumRows || NumCols != other.NumCols)
+            return false;
+
+        if (NumRows <= 0 || NumCols <= 0 ||
+                other.NumRows <= 0 || other.NumCols <= 0)
             return false;
 
         for (int i = 0; i < NumRows * NumCols; i++)
@@ -248,6 +262,23 @@ public unsafe class Matrix2D : IEquatable<Matrix2D>
                 return false;
 
         return true;
+    }
+
+    public override string ToString()
+    {
+        var builder = new StringBuilder();
+
+        int p = 0;
+        for (int row = 0; row < NumRows; row++)
+        {
+            for (int col = 0; col < NumCols; col++)
+                builder.Append($"{ Data[p++] } ");
+
+            if (row < NumRows - 1)
+                builder.Append("\n");
+        }
+
+        return builder.ToString();
     }
 }
 

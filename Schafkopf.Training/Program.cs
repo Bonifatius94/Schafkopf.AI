@@ -1,4 +1,5 @@
-﻿
+﻿namespace Schafkopf.Training;
+
 public class Program
 {
     private static FlatFeatureDataset createDataset(int trainSize, int testSize)
@@ -18,11 +19,7 @@ public class Program
         var trainY = Matrix2D.FromData(trainSize, 1, trainData.Select(x => x.Item2).ToArray(), false);
         var testX = Matrix2D.FromData(testSize, 1, testData.Select(x => x.Item1).ToArray(), false);
         var testY = Matrix2D.FromData(testSize, 1, testData.Select(x => x.Item2).ToArray(), false);
-
-        return new FlatFeatureDataset() {
-            TrainX = trainX, TrainY = trainY,
-            TestX = testX, TestY = testY
-        };
+        return new FlatFeatureDataset(trainX, trainY, testX, testY);
     }
 
     private static FFModel createModel()
@@ -42,10 +39,10 @@ public class Program
         var optimizer = new AdamOpt(learnRate: 0.01);
         var lossFunc = new MeanSquaredError();
 
-        var session = new SupervisedTrainingSession();
-        session.Compile(model, optimizer, lossFunc, dataset, batchSize);
+        var session = new SupervisedTrainingSession(
+            model, optimizer, lossFunc, dataset, batchSize);
         Console.WriteLine($"loss before: {session.Eval()}");
-        session.Train(10, false, (ep, l) => Console.WriteLine($"loss ep. {ep}: {l}"));
+        session.Train(100, false, (ep, l) => Console.WriteLine($"loss ep. {ep}: {l}"));
         Console.WriteLine();
     }
 }
