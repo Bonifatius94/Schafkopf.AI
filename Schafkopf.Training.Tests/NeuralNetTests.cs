@@ -161,3 +161,61 @@ public class DenseLayerTests
         Assert.True(loss < 0.01);
     }
 }
+
+public class ReLULayerTests
+{
+    [Fact]
+    public void Test_CanInitLayerCache()
+    {
+        const int batchSize = 2; const int dims = 3;
+        var input = Matrix2D.FromData(batchSize, dims, new double[] { 0, 1, 2, 3, 4, 5 });
+        var deltasOut = Matrix2D.Zeros(batchSize, dims);
+
+        var relu = new ReLULayer();
+        relu.Compile(3);
+        relu.CompileCache(input, deltasOut);
+
+        Assert.Equal(batchSize, relu.Cache.Input.NumRows);
+        Assert.Equal(dims, relu.Cache.Input.NumCols);
+        Assert.Equal(batchSize, relu.Cache.Output.NumRows);
+        Assert.Equal(dims, relu.Cache.Output.NumCols);
+        Assert.Equal(batchSize, relu.Cache.DeltasIn.NumRows);
+        Assert.Equal(dims, relu.Cache.DeltasIn.NumCols);
+        Assert.Equal(batchSize, relu.Cache.DeltasOut.NumRows);
+        Assert.Equal(dims, relu.Cache.DeltasOut.NumCols);
+        Assert.Equal(Matrix2D.Null(), relu.Cache.Gradients);
+    }
+
+    [Fact]
+    public void Test_CanProcessForwardPass()
+    {
+        var input = Matrix2D.FromData(2, 3, new double[] { -2, -1, 0, 1, 2, 3 });
+        var deltasOut = Matrix2D.Zeros(2, 3);
+        var relu = new ReLULayer();
+        relu.Compile(3);
+        relu.CompileCache(input, deltasOut);
+
+        relu.Forward();
+
+        var expOutput = Matrix2D.FromData(2, 3, new double[] { 0, 0, 0, 1, 2, 3 });
+        Assert.Equal(expOutput, relu.Cache.Output);
+    }
+
+    [Fact]
+    public void Test_CanProcessBackwardPass()
+    {
+        var input = Matrix2D.FromData(2, 3, new double[] { -2, -1, 0, 1, 2, 3 });
+        var deltasIn = Matrix2D.FromData(2, 3, new double[] { 1, 1, 1, 1, 1, 1 });
+        var deltasOut = Matrix2D.Zeros(2, 3);
+        var relu = new ReLULayer();
+        relu.Compile(3);
+        relu.CompileCache(input, deltasOut);
+
+        relu.Forward();
+        relu.Cache.DeltasIn = deltasIn;
+        relu.Backward();
+
+        var expDeltasOut = Matrix2D.FromData(2, 3, new double[] { 0, 0, 1, 1, 1, 1 });
+        Assert.Equal(expDeltasOut, relu.Cache.DeltasOut);
+    }
+}
