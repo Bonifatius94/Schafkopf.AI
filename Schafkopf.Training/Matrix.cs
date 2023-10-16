@@ -20,7 +20,8 @@ public unsafe struct Matrix2D : IEquatable<Matrix2D>
             return new Matrix2D(numRows, numCols, d, c);
     }
 
-    public static Matrix2D FromRawPointers(int numRows, int numCols, double* data, double* cache)
+    public static Matrix2D FromRawPointers(
+            int numRows, int numCols, double* data, double* cache)
         => new Matrix2D(numRows, numCols, data, cache);
 
     private static readonly Matrix2D NULL = new Matrix2D(0, 0, null, null);
@@ -56,8 +57,8 @@ public unsafe struct Matrix2D : IEquatable<Matrix2D>
         if (res.NumRows != l || res.NumCols != n || m != m2)
             throw new ArgumentException("Invalid matrix shapes!");
 
-        var rowCache = new Matrix2D(l, m, a.Cache, null);
-        var colCache = new Matrix2D(n, m, b.Cache, null);
+        var rowCache = Matrix2D.FromRawPointers(l, m, a.Cache, null);
+        var colCache = Matrix2D.FromRawPointers(n, m, b.Cache, null);
 
         if (!a_normal)
             Transpose(a, rowCache);

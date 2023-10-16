@@ -46,13 +46,13 @@ public class SupervisedTrainingSession
 
             for (int i = 0; i < numBatches; i++)
             {
+                model.TrainBatch(x, y, lossFunc, optimizer);
+
                 unsafe
                 {
                     x.Data += batchSize * x.NumCols;
                     y.Data += batchSize * y.NumCols;
                 }
-
-                model.TrainBatch(x, y, lossFunc, optimizer);
             }
 
             lossLogger?.Invoke(ep + 1, Eval());
@@ -75,14 +75,14 @@ public class SupervisedTrainingSession
 
         for (int i = 0; i < numBatches; i++)
         {
+            var pred = model.PredictBatch(x);
+            lossSum += lossFunc.Loss(pred, y);
+
             unsafe
             {
                 x.Data += batchSize * x.NumCols;
                 y.Data += batchSize * y.NumCols;
             }
-
-            var pred = model.PredictBatch(x);
-            lossSum += lossFunc.Loss(pred, y);
         }
 
         return lossSum / numBatches;
