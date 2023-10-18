@@ -59,34 +59,27 @@ public unsafe struct Matrix2D : IEquatable<Matrix2D>
 
         var rowCache = Matrix2D.FromRawPointers(l, m, a.Cache, null);
         var colCache = Matrix2D.FromRawPointers(n, m, b.Cache, null);
-
         if (!a_normal)
             Transpose(a, rowCache);
-        else
-            rowCache.Data = a.Data;
-
         if (b_normal)
             Transpose(b, colCache);
-        else
-            colCache.Data = b.Data;
 
         rowCache.NumRows = 1;
         colCache.NumRows = 1;
-        var rowData = rowCache.Data;
-        var colData = colCache.Data;
+        var rowData = !a_normal ? a.Cache : a.Data;
+        var colData = b_normal ? b.Cache : b.Data;
 
-        int r = 0, p = 0, c;
+        int p = 0;
+        rowCache.Data = rowData;
         for (int i = 0; i < l; i++)
         {
-            c = 0;
+            colCache.Data = colData;
             for (int j = 0; j < n; j++)
             {
-                rowCache.Data = rowData + r;
-                colCache.Data = colData + c;
                 res.Data[p++] = DotProd(rowCache, colCache);
-                c += m;
+                colCache.Data += m;
             }
-            r += m;
+            rowCache.Data += m;
         }
     }
 
@@ -95,6 +88,7 @@ public unsafe struct Matrix2D : IEquatable<Matrix2D>
         if (v1.NumRows != 1 || v2.NumRows != 1 || v1.NumCols != v2.NumCols)
             throw new ArgumentException("Invalid matrix shapes!");
 
+        // TODO: optimize with SIMD
         double sum = 0;
         for (int i = 0; i < v1.NumCols; i++)
             sum += v1.Data[i] * v2.Data[i];

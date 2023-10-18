@@ -20,13 +20,12 @@ public class MatrixTests
     }
 
     [Fact]
-    public void Test_CanMatmul()
+    public void Test_CanMatmulNN()
     {
         var a = Matrix2D.FromData(2, 3, new double[] {
-                0, 1, 2,
-                3, 4, 5
-            },
-            true);
+            0, 1, 2,
+            3, 4, 5
+        });
         var b = Matrix2D.FromData(3, 4, new double[] {
             0,  1,  2,  3,
             4,  5,  6,  7,
@@ -41,6 +40,113 @@ public class MatrixTests
             56, 68, 80, 92
         });
         Assert.Equal(exp, res);
+    }
+
+    [Fact]
+    public void Test_CanMatmulNT()
+    {
+        var a = Matrix2D.FromData(2, 3, new double[] {
+            0, 1, 2,
+            3, 4, 5
+        });
+        var b = Matrix2D.FromData(4, 3, new double[] {
+            0,  4,  8,
+            1,  5,  9,
+            2,  6, 10,
+            3,  7, 11
+        });
+        var res = Matrix2D.Zeros(2, 4);
+
+        Matrix2D.Matmul(a, b, res, MatmulFlags.NT);
+
+        var exp = Matrix2D.FromData(2, 4, new double[] {
+            20, 23, 26, 29,
+            56, 68, 80, 92
+        });
+        Assert.Equal(exp, res);
+    }
+
+    [Fact]
+    public void Test_CanMatmulTN()
+    {
+        var a = Matrix2D.FromData(3, 2, new double[] {
+            0, 3,
+            1, 4,
+            2, 5
+        });
+        var b = Matrix2D.FromData(3, 4, new double[] {
+            0,  1,  2,  3,
+            4,  5,  6,  7,
+            8,  9, 10, 11,
+        });
+        var res = Matrix2D.Zeros(2, 4);
+
+        Matrix2D.Matmul(a, b, res, MatmulFlags.TN);
+
+        var exp = Matrix2D.FromData(2, 4, new double[] {
+            20, 23, 26, 29,
+            56, 68, 80, 92
+        });
+        Assert.Equal(exp, res);
+    }
+
+    [Fact]
+    public void Test_CanMatmulTT()
+    {
+        var a = Matrix2D.FromData(3, 2, new double[] {
+            0, 3,
+            1, 4,
+            2, 5
+        });
+        var b = Matrix2D.FromData(4, 3, new double[] {
+            0,  4,  8,
+            1,  5,  9,
+            2,  6, 10,
+            3,  7, 11
+        });
+        var res = Matrix2D.Zeros(2, 4);
+
+        Matrix2D.Matmul(a, b, res, MatmulFlags.TT);
+
+        var exp = Matrix2D.FromData(2, 4, new double[] {
+            20, 23, 26, 29,
+            56, 68, 80, 92
+        });
+        Assert.Equal(exp, res);
+    }
+
+    [Fact]
+    public void Test_CanMatmulWithoutModifyingInputs()
+    {
+        var a = Matrix2D.FromData(2, 3, new double[] {
+            0, 1, 2,
+            3, 4, 5
+        });
+        var b = Matrix2D.FromData(3, 4, new double[] {
+            0,  1,  2,  3,
+            4,  5,  6,  7,
+            8,  9, 10, 11,
+        });
+        var res = Matrix2D.Zeros(2, 4);
+
+        unsafe
+        {
+            var a_orig = a.Data;
+            var b_orig = b.Data;
+            var res_orig = res.Data;
+            var a_orig_cache = a.Cache;
+            var b_orig_cache = b.Cache;
+            var res_orig_cache = res.Cache;
+
+            Matrix2D.Matmul(a, b, res);
+
+            Assert.True(a_orig == a.Data);
+            Assert.True(b_orig == b.Data);
+            Assert.True(res_orig == res.Data);
+            Assert.True(a_orig_cache == a.Cache);
+            Assert.True(b_orig_cache == b.Cache);
+            Assert.True(res_orig_cache == res.Cache);
+        }
     }
 
     [Fact]

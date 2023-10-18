@@ -35,14 +35,14 @@ public class SupervisedTrainingSession
 
         for (int ep = 0; ep < epochs; ep++)
         {
-            if (shuffle)
-                dataset.Shuffle(perm);
-
             unsafe
             {
                 x.Data = dataset.TrainX.Data;
                 y.Data = dataset.TrainY.Data;
             }
+
+            if (shuffle)
+                dataset.Shuffle(perm);
 
             for (int i = 0; i < numBatches; i++)
             {
@@ -149,7 +149,7 @@ public class FFModel
 
     public Matrix2D PredictBatch(Matrix2D input)
     {
-        unsafe { Layers.First().Cache.Input.Data = input.Data; }
+        Layers.First().Cache.ApplyInput(input);
         foreach (var layer in Layers)
             layer.Forward();
         return Layers.Last().Cache.Output;
@@ -158,7 +158,7 @@ public class FFModel
     public void TrainBatch(Matrix2D x, Matrix2D y, ILoss lossFunc, IOptimizer opt)
     {
         var firstLayerCache = Layers.First().Cache;
-        unsafe { firstLayerCache.Input.Data = x.Data; }
+        firstLayerCache.ApplyInput(x);
         foreach (var layer in Layers)
             layer.Forward();
 
@@ -317,6 +317,16 @@ public class LayerCache
     public Matrix2D DeltasIn; // info: incoming backwards
     public Matrix2D DeltasOut;
     public Matrix2D Gradients;
+
+    public void ApplyInput(Matrix2D input)
+    {
+        if (input.NumCols != Input.NumCols)
+            throw new ArgumentException("Dimensions don't match!");
+        if (input.NumRows > Input.NumRows)
+            throw new ArgumentException("Cache size is insufficient!");
+
+        unsafe { Input.Data = input.Data; }
+    }
 }
 
 public interface ILayer
