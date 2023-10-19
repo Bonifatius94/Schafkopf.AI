@@ -219,3 +219,48 @@ public class ReLULayerTests
         Assert.Equal(expDeltasOut, relu.Cache.DeltasOut);
     }
 }
+
+public class MultiLayerNetTests
+{
+    [Fact]
+    public void Test_CanCompileNet()
+    {
+        const int batchSize = 32; const int inputDims = 10; const int outputDims = 1;
+        var layers = new ILayer[] {
+            new DenseLayer(64),
+            new ReLULayer(),
+            new DenseLayer(outputDims)
+        };
+        var model = new FFModel(layers);
+
+        model.Compile(batchSize, inputDims);
+
+        Assert.Equal(batchSize, layers[0].Cache.Input.NumRows);
+        Assert.Equal(inputDims, layers[0].Cache.Input.NumCols);
+        Assert.Equal(batchSize, layers[2].Cache.Output.NumRows);
+        Assert.Equal(outputDims, layers[2].Cache.Output.NumCols);
+    }
+
+    [Fact]
+    public void Test_CanComputeForwardPass()
+    {
+        var inputs = Matrix2D.RandNorm(4, 4, 0, 0.1);
+        var weights = Matrix2D.FromData(4, 4, new double[] {
+            1, 0, 0, 0,
+            0, 1, 0, 0,
+            0, 0, 1, 0,
+            0, 0, 0, 1
+        });
+        var biases = Matrix2D.Zeros(1, 4);
+        var dense1 = new DenseLayer(4);
+        var dense2 = new DenseLayer(4);
+        var model = new FFModel(new ILayer[] { dense1, dense2 });
+        model.Compile(4, 4);
+        dense1.Load(new Matrix2D[] { weights, biases });
+        dense2.Load(new Matrix2D[] { weights, biases });
+
+        var pred = model.PredictBatch(inputs);
+
+        Assert.Equal(inputs, pred);
+    }
+}

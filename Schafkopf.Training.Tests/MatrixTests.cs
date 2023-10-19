@@ -116,40 +116,6 @@ public class MatrixTests
     }
 
     [Fact]
-    public void Test_CanMatmulWithoutModifyingInputs()
-    {
-        var a = Matrix2D.FromData(2, 3, new double[] {
-            0, 1, 2,
-            3, 4, 5
-        });
-        var b = Matrix2D.FromData(3, 4, new double[] {
-            0,  1,  2,  3,
-            4,  5,  6,  7,
-            8,  9, 10, 11,
-        });
-        var res = Matrix2D.Zeros(2, 4);
-
-        unsafe
-        {
-            var a_orig = a.Data;
-            var b_orig = b.Data;
-            var res_orig = res.Data;
-            var a_orig_cache = a.Cache;
-            var b_orig_cache = b.Cache;
-            var res_orig_cache = res.Cache;
-
-            Matrix2D.Matmul(a, b, res);
-
-            Assert.True(a_orig == a.Data);
-            Assert.True(b_orig == b.Data);
-            Assert.True(res_orig == res.Data);
-            Assert.True(a_orig_cache == a.Cache);
-            Assert.True(b_orig_cache == b.Cache);
-            Assert.True(res_orig_cache == res.Cache);
-        }
-    }
-
-    [Fact]
     public void Test_CanRowAdd()
     {
         var a = Matrix2D.FromData(2, 3, new double[] {
@@ -437,7 +403,7 @@ public class RandNormalTest
     }
 }
 
-public class PrintTest
+public class MatrixPrintTest
 {
     [Fact]
     public void Test_CanConvertToText()
@@ -451,5 +417,30 @@ public class PrintTest
 
         var exp = "0 2 4 \n6 8 10 ";
         Assert.Equal(exp, text);
+    }
+}
+
+public class MatrixPointerImmutabilityTests
+{
+    private unsafe IList<(long, long)> dumpPointers(IList<Matrix2D> origMatrices)
+        => origMatrices.Select(m => ((long)m.Data, (long)m.Cache)).ToArray();
+
+    private unsafe bool validatePointers(
+            IList<Matrix2D> matrices, IList<(long, long)> dumpedPointers)
+        => matrices.Zip(dumpedPointers)
+            .All(x => (long)x.First.Data == x.Second.Item1
+                && (long)x.First.Cache == x.Second.Item2);
+
+    [Fact]
+    public void Test_IsMatmulImmatable()
+    {
+        var a = Matrix2D.RandNorm(64, 10, 0, 0.1);
+        var b = Matrix2D.RandNorm(10, 64, 0, 0.1);
+        var res = Matrix2D.Zeros(64, 64);
+        var p = dumpPointers(new Matrix2D[] { a, b, res });
+
+        Matrix2D.Matmul(a, b, res);
+
+        Assert.True(validatePointers(new Matrix2D[] { a, b, res }, p));
     }
 }

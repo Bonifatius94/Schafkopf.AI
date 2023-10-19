@@ -1,8 +1,9 @@
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Schafkopf.Training;
 
-public unsafe struct Matrix2D : IEquatable<Matrix2D>
+public unsafe class Matrix2D : IEquatable<Matrix2D>
 {
     public static Matrix2D Zeros(int numRows, int numCols, bool hasCache = true)
         => FromData(numRows, numCols, new double[numRows * numCols], hasCache);
@@ -14,28 +15,61 @@ public unsafe struct Matrix2D : IEquatable<Matrix2D>
 
     public static Matrix2D FromData(int numRows, int numCols, double[] data, bool hasCache = true)
     {
-        var cache = hasCache ? new double[numRows * numCols] : new double[1];
-        fixed (double* d = &data[0])
-        fixed (double* c = &cache[0])
-            return new Matrix2D(numRows, numCols, d, c);
+        int size = sizeof(double) * numRows * numCols;
+        var newData = Marshal.AllocHGlobal(size);
+        var newCache = hasCache ? Marshal.AllocHGlobal(size) : (IntPtr)null;
+
+        var dataBuf = (double*)newData.ToPointer();
+        for (int i = 0; i < numRows * numCols; i++)
+            dataBuf[i] = data[i];
+
+        return new Matrix2D(numRows, numCols, newData, newCache, true);
     }
 
+    // info: memory needs to be from the unmanaged heap,
+    //       otherwise the .NET runtime will invalidate the pointers
     public static Matrix2D FromRawPointers(
             int numRows, int numCols, double* data, double* cache)
-        => new Matrix2D(numRows, numCols, data, cache);
+        => new Matrix2D(numRows, numCols, (IntPtr)data, (IntPtr)cache, false);
 
-    private static readonly Matrix2D NULL = new Matrix2D(0, 0, null, null);
+    private static readonly Matrix2D NULL = new Matrix2D(0, 0, (IntPtr)null, (IntPtr)null, false);
     public static Matrix2D Null() => NULL;
+
+    public static void CopyData(Matrix2D src, Matrix2D dest)
+    {
+        if (src.NumRows != dest.NumRows || src.NumCols != dest.NumCols)
+            throw new ArgumentException("Invalid matrix shapes!");
+
+        for (int i = 0; i < src.NumRows * src.NumCols; i++)
+            dest.Data[i] = src.Data[i];
+    }
 
     private Matrix2D(
         int numRows, int numCols,
-        double* data, double* cache)
+        IntPtr origData, IntPtr origCache, bool ownsData)
     {
         NumRows = numRows;
         NumCols = numCols;
-        Data = data;
-        Cache = cache;
+        Data = (double*)origData.ToPointer();
+        Cache = (double*)origCache.ToPointer();
+        this.origData = origData;
+        this.origCache = origCache;
+        this.ownsData = ownsData;
     }
+
+    ~Matrix2D()
+    {
+        if (!ownsData)
+            return;
+
+        Marshal.FreeHGlobal(origData);
+        if (origCache.ToPointer() != null)
+            Marshal.FreeHGlobal(origData);
+    }
+
+    private IntPtr origData;
+    private IntPtr origCache;
+    private bool ownsData;
 
     public int NumRows;
     public int NumCols;
@@ -126,12 +160,15 @@ public unsafe struct Matrix2D : IEquatable<Matrix2D>
             throw new ArgumentException("Invalid matrix shapes!");
 
         for (int c = 0; c < a.NumCols; c++)
-        {
-            double sum = 0;
-            for (int r = 0; r < a.NumRows; r++)
-                sum += a.Data[r * a.NumCols + c];
-            res.Data[c] = sum / a.NumRows;
-        }
+            res.Data[c] = 0;
+
+        int p = 0;
+        for (int r = 0; r < a.NumRows; r++)
+            for (int c = 0; c < a.NumCols; c++)
+                res.Data[c] += a.Data[p++];
+
+        for (int c = 0; c < a.NumCols; c++)
+            res.Data[c] /= a.NumRows;
     }
 
     public static void ElemAdd(Matrix2D a, Matrix2D b, Matrix2D res)
@@ -237,12 +274,11 @@ public unsafe struct Matrix2D : IEquatable<Matrix2D>
 
     public bool IsNull => Data == null;
 
-    public bool Equals(Matrix2D other)
+    public bool Equals(Matrix2D? other)
     {
-        if (IsNull && other.IsNull)
-            return true;
-
-        if (IsNull ^ other.IsNull)
+        if (other == null || other.IsNull)
+            return IsNull;
+        else if (IsNull)
             return false;
 
         if (NumRows != other.NumRows || NumCols != other.NumCols)

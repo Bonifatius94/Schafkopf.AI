@@ -2,7 +2,7 @@ namespace Schafkopf.Training.Tests;
 
 public class MemoryLeakTests
 {
-    [Fact(Skip="causes memory leak")]
+    [Fact]
     public void Test_CanTrainOnBatchWithoutLeaks()
     {
         var trainBatch = Matrix2D.RandNorm(64, 10, 0.0, 0.1);
@@ -38,11 +38,13 @@ public class MemoryLeakTests
     public void Test_CanTransposeWithoutLeaks()
     {
         var a = Matrix2D.RandNorm(64, 64, 0.0, 0.1);
-        Matrix2D res;
-        unsafe { res = Matrix2D.FromRawPointers(64, 64, a.Cache, null); }
 
-        for (int i = 0; i < 10_000; i++)
-            Matrix2D.Transpose(a, res);
+        unsafe
+        {
+            var res = Matrix2D.FromRawPointers(64, 64, a.Cache, null);
+            for (int i = 0; i < 10_000; i++)
+                Matrix2D.Transpose(a, res);
+        }
 
         Assert.True(true);
     }

@@ -149,7 +149,7 @@ public class FFModel
 
     public Matrix2D PredictBatch(Matrix2D input)
     {
-        Layers.First().Cache.ApplyInput(input);
+        Matrix2D.CopyData(input, Layers.First().Cache.Input);
         foreach (var layer in Layers)
             layer.Forward();
         return Layers.Last().Cache.Output;
@@ -157,8 +157,7 @@ public class FFModel
 
     public void TrainBatch(Matrix2D x, Matrix2D y, ILoss lossFunc, IOptimizer opt)
     {
-        var firstLayerCache = Layers.First().Cache;
-        firstLayerCache.ApplyInput(x);
+        Matrix2D.CopyData(x, Layers.First().Cache.Input);
         foreach (var layer in Layers)
             layer.Forward();
 
@@ -417,8 +416,8 @@ public class DenseLayer : ILayer
 
         unsafe
         {
-            Weights.Data = trainParams[0].Data;
-            Biases.Data = trainParams[1].Data;
+            Matrix2D.CopyData(trainParams[0], Weights);
+            Matrix2D.CopyData(trainParams[1], Biases);
         }
     }
 }
