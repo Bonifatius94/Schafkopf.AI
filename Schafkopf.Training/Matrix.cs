@@ -64,7 +64,7 @@ public unsafe class Matrix2D : IEquatable<Matrix2D>
 
         Marshal.FreeHGlobal(origData);
         if (origCache.ToPointer() != null)
-            Marshal.FreeHGlobal(origData);
+            Marshal.FreeHGlobal(origCache);
     }
 
     private IntPtr origData;
@@ -268,8 +268,12 @@ public unsafe class Matrix2D : IEquatable<Matrix2D>
 
     public static void ShuffleRows(Matrix2D a, int[] perm)
     {
-        // TODO: implement logic
-        throw new NotImplementedException();
+        for (int i = 0; i < a.NumRows * a.NumCols; i++)
+            a.Cache[i] = a.Data[i];
+
+        for (int i = 0; i < a.NumRows; i++)
+            for (int j = 0; j < a.NumCols; j++)
+                a.Data[i * a.NumCols + j] = a.Cache[perm[i] * a.NumCols + j];
     }
 
     public bool IsNull => Data == null;

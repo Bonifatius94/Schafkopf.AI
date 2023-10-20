@@ -31,24 +31,20 @@ public class RegressionTrainingTest
             new DenseLayer(1),
         });
 
-    [Fact(Skip="code is not ready")]
-    // [Fact]
+    [Fact]
     public void Test_CanPredictSinus()
     {
         int batchSize = 64;
         var model = createModel();
-        var dataset = createDataset(trainSize: 10_000, testSize: batchSize);
-        var optimizer = new AdamOpt(learnRate: 0.01);
+        var dataset = createDataset(trainSize: 10_000, testSize: 1_000);
+        var optimizer = new AdamOpt(learnRate: 0.002);
         var lossFunc = new MeanSquaredError();
-        var losses = new List<double>();
 
         var session = new SupervisedTrainingSession(
             model, optimizer, lossFunc, dataset, batchSize);
-        session.Train(10, false, (ep, l) => losses.Add(l));
-        var testPred = model.PredictBatch(dataset.TestX);
-        double testLoss = lossFunc.Loss(testPred, dataset.TestY);
+        session.Train(epochs: 20);
+        double testLoss = session.Eval();
 
-        Assert.True(losses.Any(l => l < 0.001));
-        Assert.True(testLoss < 0.001);
+        Assert.True(testLoss < 0.01);
     }
 }

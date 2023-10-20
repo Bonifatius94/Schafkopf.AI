@@ -30,8 +30,15 @@ public class SupervisedTrainingSession
         int numExamples = dataset.TrainX.NumRows;
         int numBatches = numExamples / batchSize;
         var perm = Perm.Identity(numExamples);
-        var x = Matrix2D.Zeros(batchSize, dataset.TrainX.NumCols);
-        var y = Matrix2D.Zeros(batchSize, dataset.TrainY.NumCols);
+
+        Matrix2D x, y;
+        unsafe
+        {
+            x = Matrix2D.FromRawPointers(
+                batchSize, dataset.TrainX.NumCols, dataset.TrainX.Data, null);
+            y = Matrix2D.FromRawPointers(
+                batchSize, dataset.TrainY.NumCols, dataset.TrainY.Data, null);
+        }
 
         for (int ep = 0; ep < epochs; ep++)
         {
@@ -63,14 +70,15 @@ public class SupervisedTrainingSession
     {
         int numExamples = dataset.TestX.NumRows;
         int numBatches = numExamples / batchSize;
-        var x = Matrix2D.Zeros(batchSize, dataset.TestX.NumCols);
-        var y = Matrix2D.Zeros(batchSize, dataset.TestY.NumCols);
         double lossSum = 0.0;
 
+        Matrix2D x, y;
         unsafe
         {
-            x.Data = dataset.TestX.Data;
-            y.Data = dataset.TestY.Data;
+            x = Matrix2D.FromRawPointers(
+                batchSize, dataset.TestX.NumCols, dataset.TestX.Data, null);
+            y = Matrix2D.FromRawPointers(
+                batchSize, dataset.TestY.NumCols, dataset.TestY.Data, null);
         }
 
         for (int i = 0; i < numBatches; i++)
@@ -361,7 +369,7 @@ public class DenseLayer : ILayer
     public void Compile(int inputDims)
     {
         InputDims = inputDims;
-        Weights = Matrix2D.RandNorm(InputDims, OutputDims, 0.0, 0.01);
+        Weights = Matrix2D.RandNorm(InputDims, OutputDims, 0.0, 0.1);
         Biases = Matrix2D.Zeros(1, OutputDims);
     }
 
