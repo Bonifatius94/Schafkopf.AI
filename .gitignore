@@ -10,3 +10,4 @@ __pycache__
 *.pb
 model
 logs
+mnist_data
