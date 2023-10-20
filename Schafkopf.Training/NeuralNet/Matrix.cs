@@ -44,6 +44,9 @@ public unsafe class Matrix2D : IEquatable<Matrix2D>
             dest.Data[i] = src.Data[i];
     }
 
+    public double At(int row, int col)
+        => Data[row * NumCols + col];
+
     private Matrix2D(
         int numRows, int numCols,
         IntPtr origData, IntPtr origCache, bool ownsData)
@@ -171,6 +174,38 @@ public unsafe class Matrix2D : IEquatable<Matrix2D>
             res.Data[c] /= a.NumRows;
     }
 
+    public static void RowSum(Matrix2D a, Matrix2D res)
+    {
+        if (a.NumRows != res.NumRows || res.NumCols != 1)
+            throw new ArgumentException("Invalid matrix shapes!");
+
+        int o = 0;
+        for (int r = 0; r < a.NumRows; r++)
+        {
+            res.Data[r] = 0;
+            for (int c = 0; c < a.NumCols; c++)
+                res.Data[r] += a.Data[o+c];
+            o += a.NumCols;
+        }
+    }
+
+    public static void RowDiv(Matrix2D a, Matrix2D col, Matrix2D res)
+    {
+        if (a.NumRows != res.NumRows || a.NumCols != res.NumCols ||
+                col.NumRows != a.NumRows || col.NumCols != 1)
+            throw new ArgumentException("Invalid matrix shapes!");
+
+        int p = 0;
+        for (int r = 0; r < a.NumRows; r++)
+        {
+            for (int c = 0; c < a.NumCols; c++)
+            {
+                res.Data[p] = a.Data[p] / col.Data[r];
+                p++;
+            }
+        }
+    }
+
     public static void ElemAdd(Matrix2D a, Matrix2D b, Matrix2D res)
     {
         if (a.NumRows != b.NumRows || a.NumCols != b.NumCols ||
@@ -220,6 +255,21 @@ public unsafe class Matrix2D : IEquatable<Matrix2D>
             res.Data[i] = a.Data[i] >= comp ? a.Data[i] : comp;
     }
 
+    public static void ElemMin(Matrix2D a, double comp, Matrix2D res)
+    {
+        if (a.NumRows != res.NumRows || a.NumCols != res.NumCols)
+            throw new ArgumentException("Invalid matrix shapes!");
+
+        for (int i = 0; i < a.NumRows * a.NumCols; i++)
+            res.Data[i] = a.Data[i] <= comp ? a.Data[i] : comp;
+    }
+
+    public static void ElemClip(Matrix2D a, double min, double max, Matrix2D res)
+    {
+        Matrix2D.ElemMax(a, min, res);
+        Matrix2D.ElemMin(res, max, a);
+    }
+
     public static void ElemGeq(Matrix2D a, double comp, Matrix2D res)
     {
         if (a.NumRows != res.NumRows || a.NumCols != res.NumCols)
@@ -236,6 +286,15 @@ public unsafe class Matrix2D : IEquatable<Matrix2D>
 
         for (int i = 0; i < a.NumRows * a.NumCols; i++)
             res.Data[i] = (double)Math.Sqrt(a.Data[i]);
+    }
+
+    public static void ElemExp(Matrix2D a, Matrix2D res)
+    {
+        if (a.NumRows != res.NumRows || a.NumCols != res.NumCols)
+            throw new ArgumentException("Invalid matrix shapes!");
+
+        for (int i = 0; i < a.NumRows * a.NumCols; i++)
+            res.Data[i] = (double)Math.Exp(a.Data[i]);
     }
 
     public static void BatchAdd(Matrix2D a, double b, Matrix2D res)

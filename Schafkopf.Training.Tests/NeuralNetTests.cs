@@ -220,6 +220,67 @@ public class ReLULayerTests
     }
 }
 
+public class SoftmaxLayerTests
+{
+    [Fact]
+    public void Test_CanInitLayerCache()
+    {
+        const int batchSize = 2; const int dims = 3;
+        var input = Matrix2D.FromData(batchSize, dims, new double[] { 0, 1, 2, 3, 4, 5 });
+        var deltasOut = Matrix2D.Zeros(batchSize, dims);
+
+        var softmax = new SoftmaxLayer();
+        softmax.Compile(3);
+        softmax.CompileCache(input, deltasOut);
+
+        Assert.Equal(batchSize, softmax.Cache.Input.NumRows);
+        Assert.Equal(dims, softmax.Cache.Input.NumCols);
+        Assert.Equal(batchSize, softmax.Cache.Output.NumRows);
+        Assert.Equal(dims, softmax.Cache.Output.NumCols);
+        Assert.Equal(batchSize, softmax.Cache.DeltasIn.NumRows);
+        Assert.Equal(dims, softmax.Cache.DeltasIn.NumCols);
+        Assert.Equal(batchSize, softmax.Cache.DeltasOut.NumRows);
+        Assert.Equal(dims, softmax.Cache.DeltasOut.NumCols);
+        Assert.Equal(Matrix2D.Null(), softmax.Cache.Gradients);
+    }
+
+    [Fact]
+    public void Test_CanProcessForwardPass()
+    {
+        var input = Matrix2D.FromData(2, 3, new double[] { -2, -1, 0, 1, 2, 3 });
+        var deltasOut = Matrix2D.Zeros(2, 3);
+        var softmax = new SoftmaxLayer();
+        softmax.Compile(3);
+        softmax.CompileCache(input, deltasOut);
+
+        softmax.Forward();
+
+        var sums = Matrix2D.Zeros(2, 1);
+        Matrix2D.RowSum(softmax.Cache.Output, sums);
+        Assert.True(Math.Abs(sums.At(0, 0) - 1) < 1e-4);
+        Assert.True(Math.Abs(sums.At(1, 0) - 1) < 1e-4);
+    }
+
+    [Fact]
+    public void Test_CanProcessBackwardPass()
+    {
+        var input = Matrix2D.FromData(2, 3, new double[] { 0, 1, 0, 1, 0, 0 });
+        var output = Matrix2D.FromData(2, 3, new double[] { 0, 1, 0, 1, 0, 0 });
+        var deltasIn = Matrix2D.FromData(2, 3, new double[] { 1, 0, 0, 1, 0, 0 });
+        var deltasOut = Matrix2D.Zeros(2, 3);
+        var softmax = new SoftmaxLayer();
+        softmax.Compile(3);
+        softmax.CompileCache(input, deltasOut);
+
+        softmax.Cache.DeltasIn = deltasIn;
+        softmax.Cache.Output = output;
+        softmax.Backward();
+
+        var expDeltasOut = Matrix2D.FromData(2, 3, new double[] { -1, 1, 0, 0, 0, 0 });
+        Assert.Equal(expDeltasOut, softmax.Cache.DeltasOut);
+    }
+}
+
 public class MultiLayerNetTests
 {
     [Fact]

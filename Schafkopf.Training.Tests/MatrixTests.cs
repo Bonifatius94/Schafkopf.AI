@@ -153,6 +153,40 @@ public class MatrixTests
         Assert.Equal(exp, res);
     }
 
+    [Fact]
+    public void Test_CanRowSum()
+    {
+        var a = Matrix2D.FromData(2, 3, new double[] {
+            0, 1, 2,
+            3, 4, 5
+        });
+        var res = Matrix2D.Zeros(2, 1);
+
+        Matrix2D.RowSum(a, res);
+
+        var exp = Matrix2D.FromData(2, 1, new double[] { 3, 12 });
+        Assert.Equal(exp, res);
+    }
+
+    [Fact]
+    public void Test_CanRowDiv()
+    {
+        var a = Matrix2D.FromData(2, 3, new double[] {
+            0, 2, 4,
+            6, 8, 10
+        });
+        var col = Matrix2D.FromData(2, 1, new double[] { 1, 2 });
+        var res = Matrix2D.Zeros(2, 3);
+
+        Matrix2D.RowDiv(a, col, res);
+
+        var exp = Matrix2D.FromData(2, 3, new double[] {
+            0, 2, 4,
+            3, 4, 5
+        });
+        Assert.Equal(exp, res);
+    }
+
     #region Elementwise
 
     [Fact]
@@ -262,6 +296,24 @@ public class MatrixTests
     }
 
     [Fact]
+    public void Test_CanElemMin()
+    {
+        var a = Matrix2D.FromData(2, 3, new double[] {
+            0, 1, 2,
+            3, 4, 5
+        });
+        var res = Matrix2D.Zeros(2, 3);
+
+        Matrix2D.ElemMin(a, 3, res);
+
+        var exp = Matrix2D.FromData(2, 3, new double[] {
+            0, 1, 2,
+            3, 3, 3
+        });
+        Assert.Equal(exp, res);
+    }
+
+    [Fact]
     public void Test_CanElemGeq()
     {
         var a = Matrix2D.FromData(2, 3, new double[] {
@@ -293,6 +345,24 @@ public class MatrixTests
         var exp = Matrix2D.FromData(2, 3, new double[] {
             0, 1, 2,
             3, 4, 5
+        });
+        Assert.Equal(exp, res);
+    }
+
+    [Fact]
+    public void Test_CanElemExp()
+    {
+        var a = Matrix2D.FromData(2, 3, new double[] {
+            0, 1, 0,
+            1, 0, 1
+        });
+        var res = Matrix2D.Zeros(2, 3);
+
+        Matrix2D.ElemExp(a, res);
+
+        var exp = Matrix2D.FromData(2, 3, new double[] {
+            1, Math.E, 1,
+            Math.E, 1, Math.E
         });
         Assert.Equal(exp, res);
     }
