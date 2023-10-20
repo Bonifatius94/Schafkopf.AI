@@ -187,6 +187,19 @@ public class MatrixTests
         Assert.Equal(exp, res);
     }
 
+    [Fact]
+    public void Test_CanReduceMean()
+    {
+        var a = Matrix2D.FromData(2, 3, new double[] {
+            0, 1, 2,
+            3, 4, 5
+        });
+
+        double mean = Matrix2D.ReduceMean(a);
+
+        Assert.Equal(2.5, mean);
+    }
+
     #region Elementwise
 
     [Fact]
@@ -363,6 +376,24 @@ public class MatrixTests
         var exp = Matrix2D.FromData(2, 3, new double[] {
             1, Math.E, 1,
             Math.E, 1, Math.E
+        });
+        Assert.Equal(exp, res);
+    }
+
+    [Fact]
+    public void Test_CanElemLog()
+    {
+        var a = Matrix2D.FromData(2, 3, new double[] {
+            1, Math.E, 1,
+            Math.E, 1, Math.E
+        });
+        var res = Matrix2D.Zeros(2, 3);
+
+        Matrix2D.ElemLog(a, res);
+
+        var exp = Matrix2D.FromData(2, 3, new double[] {
+            0, 1, 0,
+            1, 0, 1
         });
         Assert.Equal(exp, res);
     }

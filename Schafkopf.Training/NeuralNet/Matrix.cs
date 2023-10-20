@@ -206,6 +206,14 @@ public unsafe class Matrix2D : IEquatable<Matrix2D>
         }
     }
 
+    public static double ReduceMean(Matrix2D a)
+    {
+        double sum = 0;
+        for (int i = 0; i < a.NumRows * a.NumCols; i++)
+            sum += a.Data[i];
+        return sum / (a.NumRows * a.NumCols);
+    }
+
     public static void ElemAdd(Matrix2D a, Matrix2D b, Matrix2D res)
     {
         if (a.NumRows != b.NumRows || a.NumCols != b.NumCols ||
@@ -295,6 +303,15 @@ public unsafe class Matrix2D : IEquatable<Matrix2D>
 
         for (int i = 0; i < a.NumRows * a.NumCols; i++)
             res.Data[i] = (double)Math.Exp(a.Data[i]);
+    }
+
+    public static void ElemLog(Matrix2D a, Matrix2D res)
+    {
+        if (a.NumRows != res.NumRows || a.NumCols != res.NumCols)
+            throw new ArgumentException("Invalid matrix shapes!");
+
+        for (int i = 0; i < a.NumRows * a.NumCols; i++)
+            res.Data[i] = (double)Math.Log(a.Data[i]);
     }
 
     public static void BatchAdd(Matrix2D a, double b, Matrix2D res)

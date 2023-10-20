@@ -1,6 +1,6 @@
 namespace Schafkopf.Training.Tests;
 
-public class MeanSquaredErrorTest
+public class MeanSquaredErrorTests
 {
     [Fact]
     public void Test_CanComputeLoss()
@@ -30,6 +30,78 @@ public class MeanSquaredErrorTest
         var exp = Matrix2D.FromData(2, 3,
             new double[] { -0.5, -0.5, -0.5, -0.5, -0.5, -0.5 });
         Assert.Equal(exp, deltas);
+    }
+}
+
+public class CrossEntropyLossTests
+{
+    [Fact]
+    public void Test_CanComputeLoss()
+    {
+        var lossFunc = new CrossEntropyLoss();
+        var pred = Matrix2D.FromData(2, 3, new double[] { 0, 1, 0, 1, 0, 0 });
+        var truthSame = Matrix2D.FromData(2, 3, new double[] { 0, 1, 0, 1, 0, 0 });
+        var truthDist = Matrix2D.FromData(2, 3, new double[] { 1, 0, 0, 0, 1, 0 });
+
+        double lossSameData = lossFunc.Loss(pred, truthSame);
+        double lossDistData = lossFunc.Loss(pred, truthDist);
+
+        Assert.True(Math.Abs(lossSameData) < 1e-4);
+        Assert.True(Math.Abs(lossDistData) > 1);
+    }
+
+    [Fact]
+    public void Test_CanComputeDeltas()
+    {
+        var lossFunc = new CrossEntropyLoss();
+        var pred = Matrix2D.FromData(2, 3, new double[] { 0, 1, 0, 0, 0, 1 });
+        var truthSame = Matrix2D.FromData(2, 3, new double[] { 0, 1, 0, 0, 0, 1 });
+        var truthDist = Matrix2D.FromData(2, 3, new double[] { 1, 0, 0, 0, 0, 1 });
+
+        var deltasSame = Matrix2D.Zeros(2, 3);
+        var deltasDist = Matrix2D.Zeros(2, 3);
+        lossFunc.LossDeltas(pred, truthSame, deltasSame);
+        lossFunc.LossDeltas(pred, truthDist, deltasDist);
+
+        Assert.Equal(truthSame, deltasSame);
+        Assert.Equal(truthDist, deltasDist);
+    }
+}
+
+public class SparseCrossEntropyLossTests
+{
+    [Fact]
+    public void Test_CanComputeLoss()
+    {
+        var lossFunc = new SparseCrossEntropyLoss();
+        var pred = Matrix2D.FromData(2, 3, new double[] { 0, 1, 0, 1, 0, 0 });
+        var truthSame = Matrix2D.FromData(2, 1, new double[] { 1, 0 });
+        var truthDist = Matrix2D.FromData(2, 1, new double[] { 0, 1 });
+
+        double lossSameData = lossFunc.Loss(pred, truthSame);
+        double lossDistData = lossFunc.Loss(pred, truthDist);
+
+        Assert.True(Math.Abs(lossSameData) < 1e-4);
+        Assert.True(Math.Abs(lossDistData) > 1);
+    }
+
+    [Fact]
+    public void Test_CanComputeDeltas()
+    {
+        var lossFunc = new SparseCrossEntropyLoss();
+        var pred = Matrix2D.FromData(2, 3, new double[] { 0, 1, 0, 1, 0, 0 });
+        var truthSame = Matrix2D.FromData(2, 1, new double[] { 1, 0 });
+        var truthDist = Matrix2D.FromData(2, 1, new double[] { 2, 1 });
+
+        var deltasSame = Matrix2D.Zeros(2, 3);
+        var deltasDist = Matrix2D.Zeros(2, 3);
+        lossFunc.LossDeltas(pred, truthSame, deltasSame);
+        lossFunc.LossDeltas(pred, truthDist, deltasDist);
+
+        var expDeltasSame = Matrix2D.FromData(2, 3, new double[] { 0, 1, 0, 1, 0, 0 });
+        var expDeltasDist = Matrix2D.FromData(2, 3, new double[] { 0, 0, 1, 0, 1, 0 });
+        Assert.Equal(expDeltasSame, deltasSame);
+        Assert.Equal(expDeltasDist, deltasDist);
     }
 }
 
