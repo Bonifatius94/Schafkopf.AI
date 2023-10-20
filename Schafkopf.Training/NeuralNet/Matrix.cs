@@ -206,6 +206,29 @@ public unsafe class Matrix2D : IEquatable<Matrix2D>
         }
     }
 
+    public static void RowArgmax(Matrix2D a, Matrix2D res)
+    {
+        if (res.NumRows != a.NumRows || res.NumCols != 1)
+            throw new ArgumentException("Invalid matrix shapes!");
+
+        int p = 0;
+        for (int r = 0; r < a.NumRows; r++)
+        {
+            int argmax = 0;
+            double max = a.Data[p++];
+            for (int c = 1; c < a.NumCols; c++)
+            {
+                if (a.Data[p] > max)
+                {
+                    max = a.Data[p];
+                    argmax = c;
+                }
+                p++;
+            }
+            res.Data[r] = argmax;
+        }
+    }
+
     public static double ReduceMean(Matrix2D a)
     {
         double sum = 0;

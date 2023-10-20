@@ -8,11 +8,13 @@ public class FFModel
         GradsTape = new List<Matrix2D>();
     }
 
+    public int BatchSize { get; private set; }
     public IList<ILayer> Layers { get; private set; }
     public IList<Matrix2D> GradsTape { get; private set; }
 
     public void Compile(int batchSize, int inputDims)
     {
+        BatchSize = batchSize;
         GradsTape = new List<Matrix2D>();
         var input = Matrix2D.Zeros(batchSize, inputDims);
         var deltaOut = Matrix2D.Zeros(batchSize, inputDims);

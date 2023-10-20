@@ -122,3 +122,46 @@ public class FlatFeatureDataset
         Matrix2D.ShuffleRows(TrainY, perm);
     }
 }
+
+public class CategoricalAccuracy
+{
+    public double Eval(FFModel model, FlatFeatureDataset dataset, bool sparse = false)
+    {
+        int numExamples = dataset.TestX.NumRows;
+        int numBatches = numExamples / model.BatchSize;
+        int corrPreds = 0;
+
+        Matrix2D x, y;
+        unsafe
+        {
+            x = Matrix2D.FromRawPointers(
+                model.BatchSize, dataset.TestX.NumCols, dataset.TestX.Data, null);
+            y = Matrix2D.FromRawPointers(
+                model.BatchSize, dataset.TestY.NumCols, dataset.TestY.Data, null);
+        }
+        var predArgmax = Matrix2D.Zeros(model.BatchSize, 1);
+        var trueArgmax = Matrix2D.Zeros(model.BatchSize, 1);
+
+        for (int i = 0; i < numBatches; i++)
+        {
+            var pred = model.PredictBatch(x);
+            Matrix2D.RowArgmax(pred, predArgmax);
+
+            if (sparse)
+                Matrix2D.CopyData(y, trueArgmax);
+            else
+                Matrix2D.RowArgmax(y, trueArgmax);
+
+            unsafe
+            {
+                for (int r = 0; r < model.BatchSize; r++)
+                    corrPreds += predArgmax.Data[r] == trueArgmax.Data[r] ? 1 : 0;
+
+                x.Data += model.BatchSize * x.NumCols;
+                y.Data += model.BatchSize * y.NumCols;
+            }
+        }
+
+        return (double)corrPreds / (numBatches * model.BatchSize);
+    }
+}
