@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Schafkopf.Training;
 
 public struct GameHistory
@@ -28,6 +30,12 @@ public struct GameAction
     public static readonly GameAction NO_OP
         = new GameAction() { CardPlayed = new Card(0), PlayerId = 0xFF };
 
+    public override int GetHashCode()
+        => CardPlayed.Id | (PlayerId << 8);
+
+    public override bool Equals([NotNullWhen(true)] object? obj)
+        => obj?.GetType() == typeof(GameAction) && obj.GetHashCode() == this.GetHashCode();
+
     public static bool operator ==(GameAction a1, GameAction a2)
         => a1.CardPlayed == a2.CardPlayed && a1.PlayerId == a2.PlayerId;
 
@@ -39,7 +47,7 @@ public struct GameState
 {
     public GameState() { }
 
-    public float[] State = new float[90];
+    public double[] State = new double[90];
 }
 
 public class GameStateSerializer
@@ -57,17 +65,18 @@ public class GameStateSerializer
         for (int i = 0; i < 4; i++)
             hands[i] = completedGame.InitialHands[i];
 
-        var turnHistory = new float[64];
+        var turnHistory = new double[64];
         for (int i = 0; i < 64; i++)
             turnHistory[i] = NO_CARD;
 
         unsafe
         {
-            fixed (float* h = &turnHistory[0])
+            fixed (double* h = &turnHistory[0])
             {
                 int firstPlayer = completedGame.History[0].FirstDrawingPlayerId;
                 serializeState(states[0], call, hands[firstPlayer], action, 0, h, augen);
 
+                int t = 0;
                 for (int i = 0; i < 8; i++)
                 {
                     var turn = completedGame.History[i];
@@ -76,12 +85,12 @@ public class GameStateSerializer
 
                     for (int j = 0; j < 4; j++)
                     {
-                        int t = i * 4 + j;
                         action.PlayerId = (byte)playerId;
                         action.CardPlayed = cards[playerId];
                         serializeState(states[t+1], call, hands[playerId], action, t, h, augen);
                         hands[playerId].Discard(cards[playerId]);
                         playerId = ++playerId & 0x03;
+                        t++;
                     }
 
                     augen[turn.WinnerId] += turn.Augen;
@@ -92,7 +101,7 @@ public class GameStateSerializer
 
     private unsafe void serializeState(
         GameState state, GameCall call, Hand hand, GameAction action,
-        int t, float* turnHistory, int[] augen)
+        int t, double* turnHistory, int[] augen)
     {
         // memory layout:
         //  - game call (6 floats)
@@ -100,9 +109,10 @@ public class GameStateSerializer
         //  - turn history (64 floats)
         //  - augen (4 floats)
 
-        fixed (float* stateArr = &state.State[0])
+        fixed (double* stateArr = &state.State[0])
         {
             // TODO: normalize the state such that the acting player always has id=0
+            //       -> training should converge a lot faster
             serializeGameCall(stateArr, call);
             serializeHand(stateArr + 6, hand);
             if (action != GameAction.NO_OP)
@@ -111,18 +121,18 @@ public class GameStateSerializer
         }
     }
 
-    private unsafe void serializeGameCall(float* stateArr, GameCall call)
+    private unsafe void serializeGameCall(double* stateArr, GameCall call)
     {
         int p = 0;
         stateArr[p++] = encode(call.Mode);
         stateArr[p++] = encode(call.IsTout);
-        stateArr[p++] = call.CallingPlayerId;
-        stateArr[p++] = call.PartnerPlayerId;
+        stateArr[p++] = (double)call.CallingPlayerId / 4;
+        stateArr[p++] = (double)call.PartnerPlayerId / 4;
         stateArr[p++] = encode(call.Trumpf);
         stateArr[p++] = encode(call.GsuchteFarbe);
     }
 
-    private unsafe void serializeHand(float* stateArr, Hand hand)
+    private unsafe void serializeHand(double* stateArr, Hand hand)
     {
         int p = 0;
         for (int i = 0; i < hand.CardsCount; i++)
@@ -139,7 +149,7 @@ public class GameStateSerializer
     }
 
     private unsafe void serializeTurnHistory(
-        float* stateArr, float* cachedHistory, GameAction action, int t)
+        double* stateArr, double* cachedHistory, GameAction action, int t)
     {
         int p = t << 1;
         for (int i = 0; i < p; i++)
@@ -149,22 +159,22 @@ public class GameStateSerializer
         cachedHistory[p+1] = stateArr[p+1] = encode(action.CardPlayed.Type);
     }
 
-    public unsafe void serializeAugen(float* stateArr, int[] scores)
+    private unsafe void serializeAugen(double* stateArr, int[] scores)
     {
         int p = 0;
         for (int i = 0; i < 4; i++)
             stateArr[p++] = scores[i];
     }
 
-    private float encode(GameMode mode) => (float)mode / 4;
-    private float encode(CardColor color) => (float)color / 4;
-    private float encode(CardType type) => (float)type / 8;
-    private float encode (bool flag) => flag ? 1 : 0;
+    private double encode(GameMode mode) => (double)mode / 4;
+    private double encode(CardColor color) => (double)color / 4;
+    private double encode(CardType type) => (double)type / 8;
+    private double encode (bool flag) => flag ? 1 : 0;
 }
 
 public class GameReward
 {
-    public float Reward(GameLog log, int playerId)
+    public double Reward(GameLog log, int playerId)
     {
         // intention of this reward system:
         // - players receive reward 1 as soon as they are in a winning state
