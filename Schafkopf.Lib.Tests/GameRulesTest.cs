@@ -12,6 +12,17 @@ public class GameRulesTest
         return turn;
     }
 
+    private Hand handWithCards(GameCall call, IEnumerable<Card> cards)
+    {
+        var discardedCards = CardsDeck.AllCards
+            .Except(cards).RandomSubset(8 - cards.Count()).ToArray();
+        var initialHand = discardedCards.Union(cards).ToArray();
+        var hand = new Hand(initialHand).CacheTrumpf(call.IsTrumpf);
+        foreach (var c in discardedCards)
+            hand = hand.Discard(c);
+        return hand;
+    }
+
     #endregion Init
 
     private DrawValidator drawEval = new DrawValidator();
@@ -26,14 +37,13 @@ public class GameRulesTest
         int indexOfCardToPlay, bool canPlayCard)
     {
         var call = GameCall.Solo(0, CardColor.Schell);
-        var hand = new Hand(new Card[] {
+        var hand = handWithCards(call, new Card[] {
             new Card(CardType.Ober, CardColor.Schell),
             new Card(CardType.Sieben, CardColor.Schell),
             new Card(CardType.Acht, CardColor.Herz),
             new Card(CardType.Neun, CardColor.Eichel),
             new Card(CardType.Ober, CardColor.Gras),
         });
-        hand = hand.CacheTrumpf(call.IsTrumpf);
         var turn = Turn.InitFirstTurn(0, call);
 
         var cardToPlay = hand.ElementAt(indexOfCardToPlay);
@@ -51,14 +61,13 @@ public class GameRulesTest
         int indexOfCardToPlay, bool canPlayCard)
     {
         var call = GameCall.Wenz(0);
-        var hand = new Hand(new Card[] {
+        var hand = handWithCards(call, new Card[] {
             new Card(CardType.Unter, CardColor.Schell),
             new Card(CardType.Sieben, CardColor.Schell),
             new Card(CardType.Acht, CardColor.Herz),
             new Card(CardType.Neun, CardColor.Eichel),
             new Card(CardType.Ober, CardColor.Gras),
         });
-        hand = hand.CacheTrumpf(call.IsTrumpf);
         var turn = turnOfCards(call, new Card[] {
             new Card(CardType.Unter, CardColor.Eichel, true, true)
         });
@@ -78,14 +87,13 @@ public class GameRulesTest
         int indexOfCardToPlay, bool canPlayCard)
     {
         var call = GameCall.Sauspiel(0, 1, CardColor.Schell);
-        var hand = new Hand(new Card[] {
+        var hand = handWithCards(call, new Card[] {
             new Card(CardType.Unter, CardColor.Schell),
             new Card(CardType.Sieben, CardColor.Schell),
             new Card(CardType.Acht, CardColor.Herz),
             new Card(CardType.Neun, CardColor.Eichel),
             new Card(CardType.Sau, CardColor.Gras),
         });
-        hand = hand.CacheTrumpf(call.IsTrumpf);
         var turn = turnOfCards(call, new Card[] {
             new Card(CardType.Unter, CardColor.Eichel, true, true)
         });
@@ -105,14 +113,13 @@ public class GameRulesTest
         int indexOfCardToPlay, bool canPlayCard)
     {
         var call = GameCall.Sauspiel(0, 1, CardColor.Schell);
-        var hand = new Hand(new Card[] {
+        var hand = handWithCards(call, new Card[] {
             new Card(CardType.Unter, CardColor.Schell),
             new Card(CardType.Sieben, CardColor.Schell),
             new Card(CardType.Acht, CardColor.Herz),
             new Card(CardType.Neun, CardColor.Eichel),
             new Card(CardType.Sau, CardColor.Gras),
         });
-        hand = hand.CacheTrumpf(call.IsTrumpf);
         var turn = turnOfCards(call, new Card[] {
             new Card(CardType.Neun, CardColor.Eichel, true, false)
         });
@@ -132,14 +139,13 @@ public class GameRulesTest
         int indexOfCardToPlay, bool canPlayCard)
     {
         var call = GameCall.Wenz(0);
-        var hand = new Hand(new Card[] {
+        var hand = handWithCards(call, new Card[] {
             new Card(CardType.Ober, CardColor.Schell),
             new Card(CardType.Sieben, CardColor.Schell),
             new Card(CardType.Acht, CardColor.Herz),
             new Card(CardType.Neun, CardColor.Eichel),
             new Card(CardType.Ober, CardColor.Gras),
         });
-        hand = hand.CacheTrumpf(call.IsTrumpf);
         var turn = turnOfCards(call, new Card[] {
             new Card(CardType.Unter, CardColor.Eichel, true, true)
         });
@@ -160,14 +166,13 @@ public class GameRulesTest
     {
         // TODO: parameterize for testing all colors
         var call = GameCall.Wenz(0);
-        var hand = new Hand(new Card[] {
+        var hand = handWithCards(call, new Card[] {
             new Card(CardType.Neun, CardColor.Eichel),
             new Card(CardType.Unter, CardColor.Schell),
             new Card(CardType.Sieben, CardColor.Schell),
             new Card(CardType.Acht, CardColor.Herz),
             new Card(CardType.Ober, CardColor.Gras),
         });
-        hand = hand.CacheTrumpf(call.IsTrumpf);
         var turn = turnOfCards(call, new Card[] {
             new Card(CardType.Ober, CardColor.Eichel, true, false)
         });
@@ -188,14 +193,13 @@ public class GameRulesTest
     {
         // TODO: parameterize for testing all colors
         var call = GameCall.Wenz(0);
-        var hand = new Hand(new Card[] {
+        var hand = handWithCards(call, new Card[] {
             new Card(CardType.Unter, CardColor.Eichel),
             new Card(CardType.Unter, CardColor.Schell),
             new Card(CardType.Sieben, CardColor.Schell),
             new Card(CardType.Acht, CardColor.Herz),
             new Card(CardType.Ober, CardColor.Gras),
         });
-        hand = hand.CacheTrumpf(call.IsTrumpf);
         var turn = turnOfCards(call, new Card[] {
             new Card(CardType.Ober, CardColor.Eichel, true, false)
         });
@@ -216,14 +220,13 @@ public class GameRulesTest
     {
         // TODO: parameterize gsuchte sau for testing all colors
         var call = GameCall.Sauspiel(0, 1, CardColor.Schell);
-        var hand = new Hand(new Card[] {
+        var hand = handWithCards(call, new Card[] {
             new Card(CardType.Sau, CardColor.Schell),
             new Card(CardType.Unter, CardColor.Schell),
             new Card(CardType.Sieben, CardColor.Schell),
             new Card(CardType.Acht, CardColor.Eichel),
             new Card(CardType.Sau, CardColor.Gras),
         });
-        hand = hand.CacheTrumpf(call.IsTrumpf);
         var turn = turnOfCards(call, new Card[] {
             new Card(CardType.Sieben, CardColor.Schell, true, false)
         });
@@ -244,14 +247,13 @@ public class GameRulesTest
     {
         // TODO: parameterize gsuchte sau for testing all colors
         var call = GameCall.Sauspiel(0, 1, CardColor.Schell);
-        var hand = new Hand(new Card[] {
+        var hand = handWithCards(call, new Card[] {
             new Card(CardType.Sau, CardColor.Schell),
             new Card(CardType.Sieben, CardColor.Schell),
             new Card(CardType.Acht, CardColor.Schell),
             new Card(CardType.Neun, CardColor.Schell),
             new Card(CardType.Ober, CardColor.Gras),
         });
-        hand = hand.CacheTrumpf(call.IsTrumpf);
         var turn = turnOfCards(call, new Card[] {
             new Card(CardType.Koenig, CardColor.Schell, true, false)
         });
@@ -268,11 +270,16 @@ public class GameRulesTest
         int indexOfCardToPlay, bool canPlayCard)
     {
         var call = GameCall.Sauspiel(1, 0, CardColor.Schell);
-        var hand = new Hand(new Card[] {
+        var hand = handWithCards(call, new Card[] {
             new Card(CardType.Sau, CardColor.Schell),
             new Card(CardType.Sieben, CardColor.Schell),
+            new Card(CardType.Sieben, CardColor.Herz),
+            new Card(CardType.Koenig, CardColor.Herz),
+            new Card(CardType.Zehn, CardColor.Herz),
+            new Card(CardType.Ober, CardColor.Gras),
+            new Card(CardType.Sau, CardColor.Eichel),
+            new Card(CardType.Unter, CardColor.Schell),
         });
-        hand = hand.CacheTrumpf(call.IsTrumpf);
         var turn = Turn.InitFirstTurn(0, call);
 
         var cardToPlay = hand.ElementAt(indexOfCardToPlay);
@@ -289,13 +296,12 @@ public class GameRulesTest
         int indexOfCardToPlay, bool canPlayCard)
     {
         var call = GameCall.Sauspiel(1, 0, CardColor.Schell);
-        var hand = new Hand(new Card[] {
+        var hand = handWithCards(call, new Card[] {
             new Card(CardType.Sau, CardColor.Schell),
             new Card(CardType.Sieben, CardColor.Schell),
             new Card(CardType.Acht, CardColor.Schell),
             new Card(CardType.Neun, CardColor.Schell),
         });
-        hand = hand.CacheTrumpf(call.IsTrumpf);
         var turn = Turn.InitFirstTurn(0, call);
 
         var cardToPlay = hand.ElementAt(indexOfCardToPlay);
@@ -312,13 +318,12 @@ public class GameRulesTest
         int indexOfCardToPlay, bool canPlayCard)
     {
         var call = GameCall.Sauspiel(2, 1, CardColor.Schell);
-        var hand = new Hand(new Card[] {
+        var hand = handWithCards(call, new Card[] {
             new Card(CardType.Sau, CardColor.Schell),
             new Card(CardType.Sieben, CardColor.Schell),
             new Card(CardType.Acht, CardColor.Schell),
             new Card(CardType.Neun, CardColor.Schell),
         });
-        hand = hand.CacheTrumpf(call.IsTrumpf);
         var turn = turnOfCards(call, new Card[] {
                 new Card(CardType.Sieben, CardColor.Eichel, true, false),
             }, 0);
@@ -337,13 +342,12 @@ public class GameRulesTest
         int indexOfCardToPlay, bool canPlayCard)
     {
         var call = GameCall.Sauspiel(1, 0, CardColor.Schell);
-        var hand = new Hand(new Card[] {
+        var hand = handWithCards(call, new Card[] {
             new Card(CardType.Sau, CardColor.Schell),
             new Card(CardType.Sieben, CardColor.Schell),
             new Card(CardType.Acht, CardColor.Schell),
             new Card(CardType.Neun, CardColor.Schell),
         });
-        hand = hand.CacheTrumpf(call.IsTrumpf);
         var gsuchtTurn = turnOfCards(call, new Card[] {
             new Card(CardType.Koenig, CardColor.Schell, true, false),
             new Card(CardType.Zehn, CardColor.Schell, true, false),
@@ -361,6 +365,17 @@ public class GameRulesTest
 
 public class GameRules_RegressionTests
 {
+    private Hand handWithCards(GameCall call, IEnumerable<Card> cards)
+    {
+        var discardedCards = CardsDeck.AllCards
+            .Except(cards).RandomSubset(8 - cards.Count()).ToArray();
+        var initialHand = discardedCards.Union(cards).ToArray();
+        var hand = new Hand(initialHand).CacheTrumpf(call.IsTrumpf);
+        foreach (var c in discardedCards)
+            hand = hand.Discard(c);
+        return hand;
+    }
+
     [Fact]
     public void Test_MussFarbeZugeben()
     {
@@ -377,7 +392,7 @@ public class GameRules_RegressionTests
         // player 3 played Schell Neun
 
         var call = GameCall.Sauspiel(3, 1, CardColor.Gras);
-        var hand = new Hand(new Card[] {
+        var hand = handWithCards(call, new Card[] {
                 new Card(CardType.Ober, CardColor.Schell),
                 new Card(CardType.Acht, CardColor.Herz),
                 new Card(CardType.Sau, CardColor.Gras),
@@ -387,7 +402,6 @@ public class GameRules_RegressionTests
                 new Card(CardType.Zehn, CardColor.Schell),
                 new Card(CardType.Ober, CardColor.Eichel),
             });
-        hand = hand.CacheTrumpf(call.IsTrumpf);
 
         var turn = Turn.InitFirstTurn(0, call);
         turn = turn.NextCard(new Card(CardType.Sau, CardColor.Schell, true, false));

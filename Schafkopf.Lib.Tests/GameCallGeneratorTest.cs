@@ -70,8 +70,10 @@ public class TestCallGenerator_GenerateSauspielCalls_NoPreviousCalls
     public void Test_CannotCallSauspiel_WhenFreiAufFarbe(
         CardColor gsuchteFarbe)
     {
+        var rufbareFarben = new CardColor[] { CardColor.Schell, CardColor.Gras, CardColor.Eichel };
+        var sauFarbe = rufbareFarben.Except(new CardColor[] { gsuchteFarbe }).First();
         var cards = new Card[] {
-            new Card(CardType.Sau, (CardColor)(((int)gsuchteFarbe + 1) % 4)),
+            new Card(CardType.Sau, sauFarbe),
             new Card(CardType.Ober, CardColor.Eichel),
             new Card(CardType.Ober, CardColor.Gras),
             new Card(CardType.Sau, CardColor.Herz),
@@ -81,7 +83,7 @@ public class TestCallGenerator_GenerateSauspielCalls_NoPreviousCalls
             new Card(CardType.Unter, CardColor.Eichel),
         };
         var hand = new Hand(cards);
-        var otherHands = CardsDeck.AllCards.Except(hand).Chunk(8).Select(h => new Hand(h));
+        var otherHands = CardsDeck.AllCards.Except(cards).Chunk(8).Select(h => new Hand(h));
         var initialHands = new Hand[] { hand }.Concat(otherHands).ToArray();
 
         var callGen = new GameCallGenerator();

@@ -1,39 +1,49 @@
 namespace Schafkopf.Lib;
 
-public readonly struct Hand : IEnumerable<Card>
+// TODO: remove enumerator, use proper cache mechanism
+// TODO: reuse struct memory, immutability is slow
+public unsafe struct Hand : IEnumerable<Card>
 {
     #region Init
 
-    private const byte CARD_OFFSET = 8;
     private static readonly ulong EXISTING_BITMASK;
     private static readonly ulong TRUMPF_BITMASK;
     private static readonly Vector128<byte> ZERO = Vector128.Create((byte)0);
     private static readonly Vector128<ulong> ZERO_U64 = Vector128.Create(0ul);
 
+    private static readonly ulong[] EXISTING_SINGLE;
+    private static readonly ulong[] TRUMPF_SINGLE;
+
     static Hand()
     {
+        EXISTING_SINGLE = new ulong[8];
         ulong cardCountMask = 0;
         for (byte i = 0; i < 8; i++)
-            cardCountMask |= (ulong)Card.EXISTING_FLAG << (i * CARD_OFFSET);
+            EXISTING_SINGLE[i] = (ulong)Card.EXISTING_FLAG << (i * 8);
+        for (byte i = 0; i < 8; i++)
+            cardCountMask |= EXISTING_SINGLE[i];
         EXISTING_BITMASK = cardCountMask;
 
-        ulong trumofBitmask = 0;
+        TRUMPF_SINGLE = new ulong[8];
+        ulong trumpfBitmask = 0;
         for (byte i = 0; i < 8; i++)
-            trumofBitmask |= (ulong)Card.TRUMPF_FLAG << (i * CARD_OFFSET);
-        TRUMPF_BITMASK = trumofBitmask;
+            TRUMPF_SINGLE[i] = (ulong)Card.TRUMPF_FLAG << (i * 8);
+        for (byte i = 0; i < 8; i++)
+            trumpfBitmask |= TRUMPF_SINGLE[i];
+        TRUMPF_BITMASK = trumpfBitmask;
     }
 
     public Hand(ReadOnlySpan<Card> initialHandOfUniqueCards)
     {
-        ulong cards = 0;
+        if (initialHandOfUniqueCards.Length != 8)
+            throw new ArgumentException("invalid amount of cards on start hand");
 
-        for (byte i = 0; i < initialHandOfUniqueCards.Length; i++)
+        unsafe
         {
-            var card = initialHandOfUniqueCards[i];
-            cards |= ((ulong)card.Id | Card.EXISTING_FLAG) << (i * CARD_OFFSET);
+            fixed (Card* p = &initialHandOfUniqueCards[0])
+                this.cards = *((ulong*)p);
         }
-
-        this.cards = cards;
+        this.cards |= EXISTING_BITMASK;
     }
 
     public Hand(ulong cards, bool setExisting = false)
@@ -47,8 +57,8 @@ public readonly struct Hand : IEnumerable<Card>
         ulong newCards = cards;
         for (byte i = 0; i < 8; i++)
             if (hasCardAt(i) && isTrumpf(cardAt(i)))
-                newCards |= (ulong)Card.TRUMPF_FLAG << (i * CARD_OFFSET);
-        return new Hand(newCards);
+                newCards |= TRUMPF_SINGLE[i];
+        return new Hand(newCards); // TODO: remove allocation
     }
 
     #endregion Init
@@ -93,10 +103,6 @@ public readonly struct Hand : IEnumerable<Card>
         }
     }
 
-    // TODO: figure out why this logic fails
-    // private int indexOf(Card card)
-    //     => indexOf((byte)(Card.EXISTING_FLAG | card.Id), 0x3F);
-
     private int indexOf(Card card)
     {
         for (int i = 0; i < 8; i++)
@@ -105,14 +111,14 @@ public readonly struct Hand : IEnumerable<Card>
         return -1;
     }
 
-    private Card cardAt(int index)
-        => new Card((byte)((cards >> (index * CARD_OFFSET)) & Card.CARD_MASK_WITH_META));
+    private Card cardAt(int index) // TODO: remove allocation
+        => new Card((byte)((cards >> (index * 8)) & Card.CARD_MASK_WITH_META));
 
     private bool hasCardAt(int index)
-        => (cards & ((ulong)Card.EXISTING_FLAG << (index * CARD_OFFSET))) > 0;
+        => (cards & EXISTING_SINGLE[index]) > 0;
 
     private bool isTrumpfAt(int index)
-        => (cards & ((ulong)Card.TRUMPF_FLAG << (index * CARD_OFFSET))) > 0;
+        => (cards & TRUMPF_SINGLE[index]) > 0;
 
     #endregion Accessors
 
@@ -123,18 +129,27 @@ public readonly struct Hand : IEnumerable<Card>
     {
         int index = indexOf(card);
         if (index == -1)
-            throw new ArgumentException(
-                $"Player does not have {card} in hand!");
+            throw new ArgumentException($"Player does not have {card} in hand!");
 
-        ulong newCards = cards ^ ((ulong)Card.EXISTING_FLAG << (index * CARD_OFFSET));
-        return new Hand(newCards);
+        int offset = 8 - CardsCount;
+        ulong newCards = cards;
+
+        unsafe
+        {
+            ulong* p = &newCards;
+            byte* rawCards = (byte*)p;
+            rawCards[index] = rawCards[offset];
+            rawCards[offset] = (byte)(card.Id & ~Card.EXISTING_FLAG);
+        }
+
+        return new Hand(newCards); // TODO: remove allocation
     }
 
     public IEnumerator<Card> GetEnumerator()
     {
-        for (int i = 0; i < 8; i++)
-            if (hasCardAt(i))
-                yield return cardAt(i);
+        int offset = 8 - CardsCount;
+        for (int i = offset; i < 8; i++)
+            yield return cardAt(i);
     }
 
     IEnumerator IEnumerable.GetEnumerator()
