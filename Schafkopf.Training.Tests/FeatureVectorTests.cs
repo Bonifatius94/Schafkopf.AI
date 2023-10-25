@@ -104,7 +104,7 @@ public class FeatureVectorTests
         }
     }
 
-    [Fact(Skip="serialization still fails, wip")]
+    [Fact]
     public void Test_CanEncodeHands()
     {
         var serializer = new GameStateSerializer();

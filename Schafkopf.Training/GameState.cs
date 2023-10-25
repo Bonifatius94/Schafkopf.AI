@@ -165,14 +165,10 @@ public class GameStateSerializer
     private unsafe void serializeHand(double* stateArr, Hand hand)
     {
         int p = 0;
-        for (int i = 0; i < hand.CardsCount; i++)
+        foreach (var card in hand)
         {
-            var card = hand[i];
-            if (card.Exists)
-            {
-                stateArr[p++] = encode(card.Type);
-                stateArr[p++] = encode(card.Color);
-            }
+            stateArr[p++] = encode(card.Type);
+            stateArr[p++] = encode(card.Color);
         }
         while (p < 16)
             stateArr[p++] = NO_CARD;
