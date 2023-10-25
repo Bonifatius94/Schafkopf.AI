@@ -19,7 +19,49 @@ public struct GameHistory
     public Turn[] History = new Turn[8];
     public Hand[] InitialHands = new Hand[4];
 
-    public int PlayerId => History[0].FirstDrawingPlayerId;
+    public IEnumerable<GameAction> UnrollActions()
+    {
+        var turnCache = new Card[4];
+
+        foreach (var turn in History)
+        {
+            int p_id = turn.FirstDrawingPlayerId;
+            turn.CopyCards(turnCache);
+
+            for (int i = 0; i < 4; i++)
+            {
+                var card = turnCache[p_id];
+                var action = new GameAction() {
+                    PlayerId = (byte)p_id,
+                    CardPlayed = card
+                };
+                yield return action;
+                p_id = (p_id + 1) % 4;
+            }
+        }
+    }
+
+    public IEnumerable<Hand> UnrollHands()
+    {
+        var hands = InitialHands.ToArray();
+        foreach (var action in UnrollActions())
+        {
+            yield return hands[action.PlayerId];
+            hands[action.PlayerId] = hands[action.PlayerId].Discard(action.CardPlayed);
+        }
+        yield return hands[0];
+    }
+
+    public IEnumerable<int[]> UnrollAugen()
+    {
+        var augen = new int[4];
+        foreach (var turn in History)
+        {
+            yield return augen;
+            augen[turn.WinnerId] += turn.Augen;
+        }
+        yield return augen;
+    }
 }
 
 public struct GameAction
@@ -54,54 +96,43 @@ public class GameStateSerializer
 {
     private const int NO_CARD = -1;
 
+    public GameState[] NewBuffer()
+        => Enumerable.Range(0, 33).Select(x => new GameState()).ToArray();
+
     public void Serialize(GameHistory completedGame, GameState[] states)
     {
-        var augen = new int[4];
-        var call = completedGame.Call;
-        var action = GameAction.NO_OP;
-        var cards = new Card[4];
+        var hands = completedGame.UnrollHands().GetEnumerator();
+        var scores = completedGame.UnrollAugen().GetEnumerator();
+        var allActions = completedGame.UnrollActions().ToArray();
 
-        var hands = new Hand[4];
-        for (int i = 0; i < 4; i++)
-            hands[i] = completedGame.InitialHands[i];
-
-        var turnHistory = new double[64];
-        for (int i = 0; i < 64; i++)
-            turnHistory[i] = NO_CARD;
-
-        unsafe
+        int t = 0;
+        foreach (var turn in completedGame.History)
         {
-            fixed (double* h = &turnHistory[0])
+            scores.MoveNext();
+
+            for (int i = 0; i < 4; i++)
             {
-                int firstPlayer = completedGame.History[0].FirstDrawingPlayerId;
-                serializeState(states[0], call, hands[firstPlayer], action, 0, h, augen);
+                hands.MoveNext();
 
-                int t = 0;
-                for (int i = 0; i < 8; i++)
-                {
-                    var turn = completedGame.History[i];
-                    int playerId = turn.FirstDrawingPlayerId;
-                    turn.CopyCards(cards);
+                serializeState(
+                    states[t], completedGame.Call, hands.Current,
+                    t, allActions, scores.Current);
 
-                    for (int j = 0; j < 4; j++)
-                    {
-                        action.PlayerId = (byte)playerId;
-                        action.CardPlayed = cards[playerId];
-                        serializeState(states[t+1], call, hands[playerId], action, t, h, augen);
-                        hands[playerId].Discard(cards[playerId]);
-                        playerId = ++playerId & 0x03;
-                        t++;
-                    }
-
-                    augen[turn.WinnerId] += turn.Augen;
-                }
+                t++;
             }
         }
+
+        // TODO: think about 33rd state encoding, all hands are empty, just augen matter
+        hands.MoveNext();
+        scores.MoveNext();
+        serializeState(
+            states[t], completedGame.Call, hands.Current,
+            t, allActions, scores.Current);
     }
 
     private unsafe void serializeState(
-        GameState state, GameCall call, Hand hand, GameAction action,
-        int t, double* turnHistory, int[] augen)
+        GameState state, GameCall call, Hand hand, int t,
+        ReadOnlySpan<GameAction> turnHistory, int[] augen)
     {
         // memory layout:
         //  - game call (6 floats)
@@ -115,8 +146,7 @@ public class GameStateSerializer
             //       -> training should converge a lot faster
             serializeGameCall(stateArr, call);
             serializeHand(stateArr + 6, hand);
-            if (action != GameAction.NO_OP)
-                serializeTurnHistory(stateArr + 22, turnHistory, action, t);
+            serializeTurnHistory(stateArr + 22, turnHistory, t);
             serializeAugen(stateArr + 86, augen);
         }
     }
@@ -149,21 +179,24 @@ public class GameStateSerializer
     }
 
     private unsafe void serializeTurnHistory(
-        double* stateArr, double* cachedHistory, GameAction action, int t)
+        double* stateArr, ReadOnlySpan<GameAction> cachedHistory, int t)
     {
-        int p = t << 1;
-        for (int i = 0; i < p; i++)
-            stateArr[i] = cachedHistory[i];
-
-        cachedHistory[p] = stateArr[p] = encode(action.CardPlayed.Color);
-        cachedHistory[p+1] = stateArr[p+1] = encode(action.CardPlayed.Type);
+        int p = 0;
+        for (int i = 0; i < t; i++)
+        {
+            var action = cachedHistory[i];
+            stateArr[p++] = encode(action.CardPlayed.Color);
+            stateArr[p++] = encode(action.CardPlayed.Type);
+        }
+        while (p < 64)
+            stateArr[p++] = NO_CARD;
     }
 
     private unsafe void serializeAugen(double* stateArr, int[] scores)
     {
         int p = 0;
         for (int i = 0; i < 4; i++)
-            stateArr[p++] = scores[i];
+            stateArr[p++] = (double)scores[i] / 120;
     }
 
     private double encode(GameMode mode) => (double)mode / 4;

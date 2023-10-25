@@ -69,11 +69,13 @@ public class FeatureVectorTests
     [Fact]
     public void Test_CanEncodeSauspielCall()
     {
+        // TODO: transform this into a theory with multiple calls
+
         var serializer = new GameStateSerializer();
         var call = GameCall.Sauspiel(0, 1, CardColor.Schell);
         var history = generateHistoryWithCall(call);
 
-        var states = Enumerable.Range(0, 33).Select(x => new GameState()).ToArray();
+        var states = serializer.NewBuffer();
         serializer.Serialize(history, states);
 
         Assert.True(states.All(x => x.State[0] == 0.25));
@@ -82,5 +84,37 @@ public class FeatureVectorTests
         Assert.True(states.All(x => x.State[3] == 0.25));
         Assert.True(states.All(x => x.State[4] == 0.25));
         Assert.True(states.All(x => x.State[5] == 0));
+    }
+
+    private void assertValidHandEncoding(GameState state, Hand hand)
+    {
+        int p = 6;
+        var cards = hand.ToArray();
+
+        for (int i = 0; i < cards.Length; i++)
+        {
+            Assert.Equal((double)cards[i].Type / 8, state.State[p++]);
+            Assert.Equal((double)cards[i].Color / 4, state.State[p++]);
+        }
+
+        for (int i = cards.Length; i < 8; i++)
+        {
+            Assert.Equal(-1, state.State[p++]);
+            Assert.Equal(-1, state.State[p++]);
+        }
+    }
+
+    [Fact(Skip="serialization still fails, wip")]
+    public void Test_CanEncodeHands()
+    {
+        var serializer = new GameStateSerializer();
+        var call = GameCall.Sauspiel(0, 1, CardColor.Schell);
+        var history = generateHistoryWithCall(call);
+
+        var states = serializer.NewBuffer();
+        serializer.Serialize(history, states);
+
+        foreach ((var hand, var state) in history.UnrollHands().Zip(states))
+            assertValidHandEncoding(state, hand);
     }
 }
