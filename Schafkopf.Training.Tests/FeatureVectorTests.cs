@@ -151,4 +151,25 @@ public class FeatureVectorTests
         foreach ((int t, var state) in Enumerable.Range(0, 33).Zip(states))
             assertValidTurnHistory(state, allActions, t);
     }
+
+    private void assertValidAugen(GameState state, int[] augen)
+    {
+        for (int i = 0; i < 4; i++)
+            Assert.Equal((double)augen[i] / 120, state.State[i+86]);
+    }
+
+    [Fact]
+    public void Test_CanEncodeAugen()
+    {
+        var serializer = new GameStateSerializer();
+        var call = GameCall.Sauspiel(0, 1, CardColor.Schell);
+        var history = generateHistoryWithCall(call);
+        var allAugen = history.UnrollAugen().Select(x => x.ToArray()).ToArray();
+
+        var states = serializer.NewBuffer();
+        serializer.Serialize(history, states);
+
+        foreach ((int t, var state) in Enumerable.Range(0, 33).Zip(states))
+            assertValidAugen(state, allAugen[t / 4]);
+    }
 }
