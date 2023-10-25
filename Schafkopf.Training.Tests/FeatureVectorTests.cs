@@ -117,4 +117,38 @@ public class FeatureVectorTests
         foreach ((var hand, var state) in history.UnrollHands().Zip(states))
             assertValidHandEncoding(state, hand);
     }
+
+    private void assertValidTurnHistory(
+        GameState state, ReadOnlySpan<GameAction> history, int t)
+    {
+        int p = 22;
+
+        for (int i = 0; i < t; i++)
+        {
+            var cardPlayed = history[i].CardPlayed;
+            Assert.Equal((double)cardPlayed.Type / 8, state.State[p++]);
+            Assert.Equal((double)cardPlayed.Color / 4, state.State[p++]);
+        }
+
+        for (int i = t; i < 32; i++)
+        {
+            Assert.Equal(-1, state.State[p++]);
+            Assert.Equal(-1, state.State[p++]);
+        }
+    }
+
+    [Fact]
+    public void Test_CanEncodeTurnHistory()
+    {
+        var serializer = new GameStateSerializer();
+        var call = GameCall.Sauspiel(0, 1, CardColor.Schell);
+        var history = generateHistoryWithCall(call);
+        var allActions = history.UnrollActions().ToArray();
+
+        var states = serializer.NewBuffer();
+        serializer.Serialize(history, states);
+
+        foreach ((int t, var state) in Enumerable.Range(0, 33).Zip(states))
+            assertValidTurnHistory(state, allActions, t);
+    }
 }

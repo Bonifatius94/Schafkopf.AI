@@ -181,8 +181,8 @@ public class GameStateSerializer
         for (int i = 0; i < t; i++)
         {
             var action = cachedHistory[i];
-            stateArr[p++] = encode(action.CardPlayed.Color);
             stateArr[p++] = encode(action.CardPlayed.Type);
+            stateArr[p++] = encode(action.CardPlayed.Color);
         }
         while (p < 64)
             stateArr[p++] = NO_CARD;
