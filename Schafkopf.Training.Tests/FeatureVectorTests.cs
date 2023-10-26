@@ -26,8 +26,8 @@ public class FeatureVectorTests
                 p_id = (p_id + 1) % 4;
             }
             history[t_id] = turn;
-            turn = Turn.InitNextTurn(turn);
             p_id = turn.WinnerId;
+            turn = Turn.InitNextTurn(turn);
         }
 
         for (int i = 0; i < 4; i++)

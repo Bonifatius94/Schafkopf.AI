@@ -68,7 +68,10 @@ public readonly struct Turn
     }
 
     public static Turn InitNextTurn(Turn last)
-        => new Turn(last.Meta, EMPTY_CARDS);
+    {
+        var meta = new TurnMetaData(last.Meta.Call, last.WinnerId, last.AlreadyGsucht);
+        return new Turn(meta, EMPTY_CARDS);
+    }
 
     public Turn NextCard(Card card)
     {
