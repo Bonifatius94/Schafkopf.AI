@@ -4,12 +4,12 @@ public class Table
 {
     public Table(Player p1, Player p2, Player p3, Player p4)
     {
-        playersCache = new Player[] { p1, p2, p3, p4, p1, p2, p3 };
+        playersIdOffsetCache = new Player[] { p1, p2, p3, p4, p1, p2, p3 };
         Players = new Player[] { p1, p2, p3, p4 };
         FirstDrawingPlayerId = 0;
     }
 
-    private Player[] playersCache;
+    private Player[] playersIdOffsetCache;
     public Player[] Players;
     public int FirstDrawingPlayerId { get; private set; }
 
@@ -17,12 +17,14 @@ public class Table
         => PlayersInDrawingOrder(FirstDrawingPlayerId);
 
     public ReadOnlySpan<Player> PlayersInDrawingOrder(int kommtRaus)
-        => playersCache.AsSpan(kommtRaus, 4);
+        => playersIdOffsetCache.AsSpan(kommtRaus, 4);
 
-    public IEnumerable<Player> PlayersById(IEnumerable<int> ids)
+    private Player[] playersByIdCache = new Player[4];
+    public ReadOnlySpan<Player> PlayersById(ReadOnlySpan<int> ids)
     {
-        foreach (int id in ids)
-            yield return Players[id];
+        for (int i = 0; i < ids.Length; i++)
+            playersByIdCache[i] = Players[i];
+        return playersByIdCache.AsSpan(0, ids.Length);
     }
 
     public void Shift()
