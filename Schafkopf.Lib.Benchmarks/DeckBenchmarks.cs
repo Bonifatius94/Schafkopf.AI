@@ -31,7 +31,7 @@ public class DeckAttributesBenchmark
     }
 
     [Benchmark]
-    public void Baseline_InitialHands()
+    public void Simd_InitialHands()
     {
         var cache = new Hand[4];
         foreach (var deck in decks)
