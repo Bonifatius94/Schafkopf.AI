@@ -11,7 +11,7 @@ public class GameSession
     private CardsDeck deck;
     private Table table;
 
-    private static readonly DrawValidator cardRules = new DrawValidator();
+    private static readonly GameRules gameRules = new GameRules();
     private static readonly GameCallGenerator callGen = new GameCallGenerator();
 
     private Hand[] initialHandsCache = new Hand[4];
@@ -32,13 +32,6 @@ public class GameSession
 
         table.Shift();
         return history;
-    }
-
-    private GameLog playGame(GameCall call, Hand[] initialHands, int klopfer)
-    {
-        deck.InitialHands(call, initialHands);
-        int kommtRaus = table.FirstDrawingPlayerId;
-        return playGameUntilEnd(call, initialHands, kommtRaus, klopfer);
     }
 
     #region Call
@@ -91,9 +84,11 @@ public class GameSession
     private Hand[] handsWithMeta = new Hand[4];
     private Card[] possCardsCache = new Card[8];
 
-    private GameLog playGameUntilEnd(
-        GameCall call, Hand[] initialHands, int kommtRaus, int klopfer)
+    private GameLog playGame(GameCall call, Hand[] initialHands, int klopfer)
     {
+        deck.InitialHands(call, initialHands);
+        int kommtRaus = table.FirstDrawingPlayerId;
+
         for (int i = 0; i < 4; i++)
             handsWithMeta[i] = initialHands[i].CacheTrumpf(call.IsTrumpf);
 
@@ -109,7 +104,7 @@ public class GameSession
 
                 var player = table.Players[p_id];
                 var hand = handsWithMeta[p_id];
-                var possCards = cardRules.PossibleCards(call, turn, hand, possCardsCache);
+                var possCards = gameRules.PossibleCards(call, turn, hand, possCardsCache);
                 var cardToPlay = player.ChooseCard(log, possCards);
                 turn = turn.NextCard(cardToPlay);
                 handsWithMeta[p_id] = hand.Discard(cardToPlay);

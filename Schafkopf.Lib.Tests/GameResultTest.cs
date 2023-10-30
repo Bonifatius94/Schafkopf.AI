@@ -122,7 +122,7 @@ public class TestGameResult_Laufende
 
     private static GameLog playRandomValidGame(GameCall call, Hand[] hands)
     {
-        var possCardEval = new DrawValidator();
+        var possCardEval = new GameRules();
         int kommtRaus = Enumerable.Range(0, 4).PickRandom();
         var log = GameLog.NewLiveGame(call, hands, kommtRaus);
 

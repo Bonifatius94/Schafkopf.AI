@@ -1,6 +1,6 @@
 namespace Schafkopf.Lib;
 
-public class DrawValidator
+public class GameRules
 {
     public ReadOnlySpan<Card> PossibleCards(
         GameCall call, Turn currentTurn, Hand playerHand, Card[] cache)

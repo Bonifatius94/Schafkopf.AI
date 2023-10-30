@@ -25,7 +25,7 @@ public class GameRulesTest
 
     #endregion Init
 
-    private DrawValidator drawEval = new DrawValidator();
+    private GameRules drawEval = new GameRules();
 
     [Theory]
     [InlineData(0, true)]
@@ -406,7 +406,7 @@ public class GameRules_RegressionTests
         var turn = Turn.InitFirstTurn(0, call);
         turn = turn.NextCard(new Card(CardType.Sau, CardColor.Schell, true, false));
 
-        var drawEval = new DrawValidator();
+        var drawEval = new GameRules();
         drawEval.CanPlayCard(call, hand[0], turn, hand)
             .Should().BeFalse();
         drawEval.CanPlayCard(call, hand[6], turn, hand)

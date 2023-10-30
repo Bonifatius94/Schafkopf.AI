@@ -8,7 +8,7 @@ public class FeatureVectorTests
 
     private Turn[] playRandomGame(GameCall call, Hand[] initialHands)
     {
-        var cardRules = new DrawValidator();
+        var gameRules = new GameRules();
         var handsWithMeta = initialHands
             .Select(h => h.CacheTrumpf(call.IsTrumpf)).ToArray();
 
@@ -20,7 +20,7 @@ public class FeatureVectorTests
             for (int i = 0; i < 4; i++)
             {
                 var hand = handsWithMeta[p_id];
-                var card = hand.Where(c => cardRules.CanPlayCard(call, c, turn, hand)).First();
+                var card = hand.Where(c => gameRules.CanPlayCard(call, c, turn, hand)).First();
                 turn = turn.NextCard(card);
                 handsWithMeta[p_id] = hand.Discard(card);
                 p_id = (p_id + 1) % 4;
