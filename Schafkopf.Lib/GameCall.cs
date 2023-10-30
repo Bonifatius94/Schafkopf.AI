@@ -70,7 +70,14 @@ public readonly struct GameCall
     public CardColor Trumpf => (CardColor)((Id & 0x180) >> 7);
     public CardColor GsuchteFarbe => (CardColor)((Id & 0x600) >> 9);
 
-    public Card GsuchteSau => new Card(CardType.Sau, GsuchteFarbe);
+    private static readonly Card[] gsuchteSauByFarbe = new Card[] {
+        new Card(CardType.Sau, CardColor.Schell),
+        new Card(CardType.Sau, CardColor.Herz),
+        new Card(CardType.Sau, CardColor.Gras),
+        new Card(CardType.Sau, CardColor.Eichel)
+    };
+
+    public Card GsuchteSau => gsuchteSauByFarbe[(int)GsuchteFarbe];
 
     #region Trumpf
 
