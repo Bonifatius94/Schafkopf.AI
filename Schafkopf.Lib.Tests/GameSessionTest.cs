@@ -11,7 +11,7 @@ public class TestGameTable
             new Player(2, new RandomAgent()),
             new Player(3, new RandomAgent()));
 
-        var playerIter = table.PlayersInDrawingOrder();
+        var playerIter = table.PlayersInDrawingOrder().ToArray();
 
         playerIter.Select(x => x.Id).Should()
             .BeEquivalentTo(Enumerable.Range(0, 4));
@@ -31,7 +31,7 @@ public class TestGameTable
 
         for (int i = 0; i < shifts; i++)
             table.Shift();
-        var playerIter = table.PlayersInDrawingOrder();
+        var playerIter = table.PlayersInDrawingOrder().ToArray();
 
         var expOrder = Enumerable.Range(0, 4).Select(i => (i + shifts) % 4);
         playerIter.Select(x => x.Id).Should()
