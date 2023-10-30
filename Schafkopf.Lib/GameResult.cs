@@ -36,12 +36,12 @@ public class GameResult
             + (eval.Laufende >= 3 ? eval.Laufende * chargePerLaufendem : 0)
             + (eval.IsSchneider ? additionalChargeSchneider : 0)
             + (eval.IsSchwarz ? additionalChargeSchwarz : 0);
-        double gameCost = baseCharge * (1 << log.Multipliers);
+        double gameCost = baseCharge * (1 << log.Meta.Multipliers);
 
-        bool isPlayer = log.CallerIds.Contains(playerId);
+        bool isPlayer = log.Meta.CallerIds.Contains(playerId);
         int numMates = isPlayer
-            ? log.CallerIds.Count()
-            : log.OpponentIds.Count();
+            ? log.Meta.CallerIds.Count()
+            : log.Meta.OpponentIds.Count();
 
         bool isPlayerWinner =
             (isPlayer && eval.DidCallerWin) ||
@@ -56,8 +56,8 @@ public class GameScoreEvaluation
 {
     public GameScoreEvaluation(GameLog log)
     {
-        ScoreCaller = log.CallerIds
-            .Select(id => log.Scores[id]).Sum();
+        var augen = log.UnrollAugen().Last();
+        ScoreCaller = log.Meta.CallerIds.Select(id => augen[id]).Sum();
         ScoreOpponents = 120 - ScoreCaller;
 
         DidCallerWin = (ScoreCaller >= 61 && !log.Call.IsTout)
@@ -118,9 +118,9 @@ public class GameScoreEvaluation
         var comp = new CardComparer(log.Call.Mode, log.Call.Trumpf);
         var allTrumpfDesc = trumpfByMode[(log.Call.Mode, log.Call.Trumpf)];
 
-        bool callersHaveHighest = log.CallerIds
+        bool callersHaveHighest = log.Meta.CallerIds
             .Any(id => log.InitialHands[id].HasCard(allTrumpfDesc[0]));
-        var playerIds = callersHaveHighest ? log.CallerIds : log.OpponentIds;
+        var playerIds = callersHaveHighest ? log.Meta.CallerIds : log.Meta.OpponentIds;
 
         int laufende = 1;
         foreach (var laufender in allTrumpfDesc.Skip(1))

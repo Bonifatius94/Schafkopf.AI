@@ -1,105 +1,26 @@
 namespace Schafkopf.Lib;
 
-public class GameLog : IEnumerable<Turn>
+public struct GameSessionMeta
 {
-    public GameLog(
-        GameCall call,
-        Hand[] initialHands, // ordered by player id
-        int kommtRaus)
+    public GameSessionMeta() { }
+
+    public void NextGame(GameCall call, int klopfer)
     {
         Call = call;
-        this.initialHands = initialHands;
-        turns = new Turn[8];
-        turns[0] = Turn.InitFirstTurn((byte)kommtRaus, call);
-        TurnCount = 1;
-        this.KommtRaus = kommtRaus;
-        scores = new int[4];
+        IsKontraCalled = false;
+        IsReCalled = false;
+        Klopfer = (byte)klopfer;
     }
 
-    public GameCall Call { get; private set; }
-    public int KommtRaus { get; private set; }
+    public GameCall Call = GameCall.Weiter();
+    public bool IsKontraCalled = false;
+    public bool IsReCalled = false;
+    public byte Klopfer = 0;
 
-    #region Turns
+    public void Kontra() => IsKontraCalled = true;
+    public void Re() => IsReCalled = true;
 
-    public int TurnCount { get; private set; }
-    private Turn[] turns;
-    private Hand[] initialHands;
-
-    public int CardsPlayed => (TurnCount - 1) * 4 + CurrentTurn.CardsCount;
-    public Turn CurrentTurn => turns[TurnCount - 1];
-    public IReadOnlyList<Turn> Turns => turns[0..TurnCount];
-    public IReadOnlyList<Hand> InitialHands => initialHands;
-
-    public IEnumerator<Turn> GetEnumerator()
-    {
-        // replay already enumerated turns
-        for (int i = 0; i < TurnCount; i++)
-            yield return turns[i];
-
-        // yield new turns for player interaction
-        for (int i = TurnCount; i < 8; i++)
-            yield return nextTurn();
-
-        // cache the final augen scores for eval
-        updateScore(CurrentTurn.WinnerId, CurrentTurn.Augen);
-    }
-
-    private Turn nextTurn()
-    {
-        var lastTurn = CurrentTurn;
-        var winnerId = lastTurn.WinnerId;
-        updateScore(winnerId, lastTurn.Augen);
-        KommtRaus = winnerId;
-        var nextTurn = Turn.InitNextTurn(lastTurn);
-        turns[TurnCount++] = nextTurn;
-        return nextTurn;
-    }
-
-    private void updateScore(int winnerId, int augen)
-        => scores[winnerId] += augen;
-
-    IEnumerator IEnumerable.GetEnumerator()
-        => GetEnumerator();
-
-    public Turn NextCard(Card card)
-    {
-        var turnWithCardApplied = CurrentTurn.NextCard(card);
-        turns[TurnCount - 1] = turnWithCardApplied;
-        return turnWithCardApplied;
-    }
-
-    #endregion Turns
-
-    #region Scores
-
-    private int[] scores;
-    public ReadOnlySpan<int> Scores => scores;
-
-    #endregion Scores
-
-    #region Klopfer/Kontra/Re
-
-    public bool CanKontraRe
-        => TurnCount == 1 && CurrentTurn.CardsCount <= 1;
-
-    private int klopfer = 0;
-    public bool IsKontraCalled { get; private set; } = false;
-    public bool IsReCalled { get; private set; } = false;
-
-    public void CallKontra()
-        => IsKontraCalled = true;
-
-    public void CallRe()
-        => IsReCalled = true;
-
-    public int Multipliers => klopfer +
-        (IsKontraCalled ? 1 : 0) + (IsReCalled ? 1 : 0);
-
-    #endregion Klopfer/Kontra/Re
-
-    #region Caller/Opponent
-
-    // TODO: move caller / opponent ids into the game call
+    public int Multipliers => Klopfer + (IsKontraCalled ? 1 : 0) + (IsReCalled ? 1 : 0);
 
     public IEnumerable<int> CallerIds => callerIds();
     public IEnumerable<int> OpponentIds => opponentIds();
@@ -118,9 +39,124 @@ public class GameLog : IEnumerable<Turn>
                     (Call.Mode != GameMode.Sauspiel || id != Call.PartnerPlayerId))
                 yield return id;
     }
+}
 
-    #endregion Caller/Opponent
+public struct GameLog
+{
+    private static readonly Turn[] EMPTY_HISTORY = new Turn[8];
 
-    public GameResult ToPlayerResult(int playerId)
-        => new GameResult(this, playerId, new GameScoreEvaluation(this));
+    public static GameLog NewLiveGame(
+        GameCall call, ReadOnlySpan<Hand> initialHands, int firstPlayerId, int klopfer = 0)
+    {
+        var meta = new GameSessionMeta();
+        meta.NextGame(call, klopfer);
+        var log = new GameLog(call, initialHands, EMPTY_HISTORY, meta);
+        log.Turns[0] = Turn.InitFirstTurn(firstPlayerId, call);
+        return log;
+    }
+
+    public static GameLog FromCompletedGame(
+            GameCall call, ReadOnlySpan<Hand> initialHands,
+            ReadOnlySpan<Turn> history, GameSessionMeta? meta = null)
+        => new GameLog(call, initialHands, history, meta ?? new GameSessionMeta() { Call = call });
+
+    private GameLog(
+        GameCall call,
+        ReadOnlySpan<Hand> initialHands,
+        ReadOnlySpan<Turn> history,
+        GameSessionMeta meta)
+    {
+        Call = call;
+        Meta = meta;
+        InitialHands = new Hand[4];
+        Turns = new Turn[8];
+        for (int i = 0; i < 4; i++)
+            InitialHands[i] = initialHands[i];
+        for (int i = 0; i < 8; i++)
+            Turns[i] = history[i];
+    }
+
+    public GameCall Call;
+    public Turn[] Turns;
+    public Hand[] InitialHands;
+    public GameSessionMeta Meta;
+
+    public int TurnCount => (int)Math.Ceiling((double)CardCount / 4);
+
+    public int CardCount
+    {
+        get
+        {
+            int count = 0;
+            for (int i = 0; i < 8; i++)
+            {
+                int c = Turns[i].CardsCount;
+                if (c > 0)
+                    count += c;
+                else
+                    break;
+            }
+            return count;
+        }
+    }
+
+    public Turn NextCard(Card card)
+    {
+        int t_id = CardCount / 4;
+        Turns[t_id] = Turns[t_id].NextCard(card);
+        return Turns[t_id];
+    }
+
+    public IEnumerable<GameAction> UnrollActions()
+    {
+        var turnCache = new Card[4];
+
+        foreach (var turn in Turns)
+        {
+            int p_id = turn.FirstDrawingPlayerId;
+            turn.CopyCards(turnCache);
+
+            for (int i = 0; i < 4; i++)
+            {
+                var card = turnCache[p_id];
+                var action = new GameAction() {
+                    PlayerId = (byte)p_id,
+                    CardPlayed = card
+                };
+                yield return action;
+                p_id = (p_id + 1) % 4;
+            }
+        }
+    }
+
+    public IEnumerable<Hand> UnrollHands()
+    {
+        var hands = InitialHands.ToArray();
+        foreach (var action in UnrollActions())
+        {
+            yield return hands[action.PlayerId];
+            hands[action.PlayerId] = hands[action.PlayerId].Discard(action.CardPlayed);
+        }
+        yield return hands[0];
+    }
+
+    public IEnumerable<int[]> UnrollAugen()
+    {
+        var augen = new int[4];
+        foreach (var turn in Turns)
+        {
+            yield return augen;
+            augen[turn.WinnerId] += turn.Augen;
+        }
+        yield return augen;
+    }
+}
+
+public struct GameAction
+{
+    public Card CardPlayed { get; set; }
+    public byte PlayerId { get; set; }
+
+    public override string ToString()
+        => $"player {PlayerId} played {CardPlayed}";
 }

@@ -31,33 +31,3 @@ public class GameSessionBenchmark
             session.ProcessGame();
     }
 }
-
-public class RandomAgent : ISchafkopfAIAgent
-{
-    public RandomAgent() {}
-    public RandomAgent(GameCall callToMake)
-        => this.callToMake = callToMake;
-
-    private GameCall? callToMake = null;
-
-    private static readonly Random rng = new Random();
-
-    public void OnGameFinished(GameLog final) { }
-
-    public GameCall MakeCall(
-            ReadOnlySpan<GameCall> possibleCalls,
-            int position, Hand hand, int klopfer)
-        => callToMake ?? possibleCalls[rng.Next(possibleCalls.Length)];
-
-    public Card ChooseCard(GameLog history, ReadOnlySpan<Card> possibleCards)
-        => possibleCards[rng.Next(possibleCards.Length)];
-
-    public bool IsKlopfer(int position, ReadOnlySpan<Card> firstFourCards)
-        => false;
-
-    public bool CallKontra(GameLog history)
-        => false;
-
-    public bool CallRe(GameLog history)
-        => false;
-}

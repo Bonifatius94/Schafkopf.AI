@@ -3,7 +3,7 @@ namespace Schafkopf.Lib.Test;
 public class TestGameResult_Laufende
 {
     public static IEnumerable<object[]> CallersWithLaufende
-        => allCalls.SelectMany(call => 
+        => allCalls.SelectMany(call =>
             Enumerable.Range(1, maxLaufendePerGameMode[call.Mode])
                 .Select(laufende => new object[] {
                     call,
@@ -14,7 +14,7 @@ public class TestGameResult_Laufende
             );
 
     public static IEnumerable<object[]> OpponentsWithLaufende
-        => allCalls.SelectMany(call => 
+        => allCalls.SelectMany(call =>
             Enumerable.Range(1, maxLaufendePerGameMode[call.Mode])
                 .Select(laufende => new object[] {
                     call,
@@ -124,10 +124,11 @@ public class TestGameResult_Laufende
     {
         var possCardEval = new DrawValidator();
         int kommtRaus = Enumerable.Range(0, 4).PickRandom();
-        var log = new GameLog(call, hands, kommtRaus);
+        var log = GameLog.NewLiveGame(call, hands, kommtRaus);
 
-        foreach (var turn in log)
+        for (int i = 0; i < 8; i++)
         {
+            var turn = log.Turns[i];
             var playersInOrder = Enumerable.Range(0, 4)
                 .Select(i => (kommtRaus + i) % 4);
 
@@ -136,7 +137,7 @@ public class TestGameResult_Laufende
                 var possCards = hands[pid].Where(c =>
                     possCardEval.CanPlayCard(call, c, turn, hands[pid]));
                 possCards = log.TurnCount < 8 ? possCards : hands[pid];
-                log.NextCard(possCards.PickRandom());
+                turn = log.NextCard(possCards.PickRandom());
             }
         }
 

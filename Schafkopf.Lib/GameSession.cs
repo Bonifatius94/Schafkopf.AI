@@ -11,7 +11,7 @@ public class GameSession
     private CardsDeck deck;
     private Table table;
 
-    private static readonly DrawValidator validator = new DrawValidator();
+    private static readonly DrawValidator cardRules = new DrawValidator();
     private static readonly GameCallGenerator callGen = new GameCallGenerator();
 
     private Hand[] initialHandsCache = new Hand[4];
@@ -26,24 +26,19 @@ public class GameSession
 
         GameLog history;
         if (call.Mode == GameMode.Weiter)
-            history = new GameLog(call, initialHandsCache, table.FirstDrawingPlayerId);
+            history = GameLog.NewLiveGame(call, initialHandsCache, table.FirstDrawingPlayerId);
         else
-            history = playGame(call, initialHandsCache);
+            history = playGame(call, initialHandsCache, klopfer);
 
         table.Shift();
         return history;
     }
 
-    private GameLog playGame(GameCall call, Hand[] initialHands)
+    private GameLog playGame(GameCall call, Hand[] initialHands, int klopfer)
     {
         deck.InitialHands(call, initialHands);
         int kommtRaus = table.FirstDrawingPlayerId;
-        var history = new GameLog(call, initialHands, kommtRaus);
-
-        foreach (var player in table.PlayersInDrawingOrder())
-            player.NewGame(history);
-        history = playGameUntilEnd(history);
-        return history;
+        return playGameUntilEnd(call, initialHands, kommtRaus, klopfer);
     }
 
     #region Call
@@ -81,74 +76,58 @@ public class GameSession
         return klopfer;
     }
 
-    private void askForKontraRe(GameLog history)
+    private void askForKontraRe(GameLog log)
     {
-        if (!history.IsKontraCalled)
-        {
-            var opponents = table.PlayersById(history.OpponentIds);
-            bool kontraCalled = false;
-            foreach (var player in opponents)
-                if (player.CallKontra(history)) {
-                    kontraCalled = true;
-                    break;
-                }
-            if (kontraCalled)
-                history.CallKontra();
-        }
+        var meta = log.Meta;
+        if (!meta.IsKontraCalled && table.PlayersById(meta.OpponentIds).Any(o => o.CallKontra(log)))
+            meta.Kontra();
 
-        if (history.IsKontraCalled)
-        {
-            var callers = table.PlayersById(history.CallerIds);
-            bool reCalled = false;
-            foreach (var player in callers)
-                if (player.CallRe(history)) {
-                    reCalled = true;
-                    break;
-                }
-            if (reCalled)
-                history.CallRe();
-        }
+        if (meta.IsKontraCalled && table.PlayersById(meta.CallerIds).Any(c => c.CallRe(log)))
+            meta.Re();
     }
 
     #endregion Call
 
-    private Card[] possibleCards = new Card[8];
+    private Hand[] handsWithMeta = new Hand[4];
+    private Card[] possCardsCache = new Card[8];
 
-    private GameLog playGameUntilEnd(GameLog history)
+    private GameLog playGameUntilEnd(
+        GameCall call, Hand[] initialHands, int kommtRaus, int klopfer)
     {
-        foreach (var newTurn in history)
+        for (int i = 0; i < 4; i++)
+            handsWithMeta[i] = initialHands[i].CacheTrumpf(call.IsTrumpf);
+
+        int p_id = kommtRaus;
+        var log = GameLog.NewLiveGame(call, initialHands, p_id, klopfer);
+        var turn = log.Turns[0];
+        for (int t_id = 0; t_id < 7; t_id++)
         {
-            var turn = newTurn;
-
-            if (history.TurnCount == 8)
+            for (int i = 0; i < 4; i++)
             {
-                foreach (var player in
-                    table.PlayersInDrawingOrder(history.KommtRaus))
-                {
-                    var lastCard = player.Hand.First();
-                    turn = history.NextCard(lastCard);
-                }
-            }
-            else
-            {
-                foreach (var player in
-                    table.PlayersInDrawingOrder(history.KommtRaus))
-                {
-                    if (history.CanKontraRe)
-                        askForKontraRe(history);
+                if (t_id == 0 && i <= 1)
+                    askForKontraRe(log);
 
-                    int p = 0;
-                    foreach (var card in player.Hand)
-                        if (validator.CanPlayCard(history.Call, card, turn, player.Hand))
-                            possibleCards[p++] = card;
-
-                    var cardToPlay = player.ChooseCard(history, possibleCards[0..p]);
-                    player.Discard(cardToPlay);
-                    turn = history.NextCard(cardToPlay);
-                }
+                var player = table.Players[p_id];
+                var hand = handsWithMeta[p_id];
+                var possCards = cardRules.PossibleCards(call, turn, hand, possCardsCache);
+                var cardToPlay = player.ChooseCard(log, possCards);
+                turn = turn.NextCard(cardToPlay);
+                handsWithMeta[p_id] = hand.Discard(cardToPlay);
+                p_id = (p_id + 1) % 4;
             }
+            log.Turns[t_id] = turn;
+            p_id = turn.WinnerId;
+            turn = Turn.InitNextTurn(turn);
         }
 
-        return history;
+        for (int i = 0; i < 4; i++)
+        {
+            var card = handsWithMeta[p_id].First();
+            turn = turn.NextCard(card);
+            p_id = (p_id + 1) % 4;
+        }
+        log.Turns[7] = turn;
+
+        return log;
     }
 }

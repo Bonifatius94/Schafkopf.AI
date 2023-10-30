@@ -2,89 +2,6 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Schafkopf.Training;
 
-public struct GameHistory
-{
-    public GameHistory() { }
-
-    public void Load(GameLog completeGame)
-    {
-        Call = completeGame.Call;
-        for (int i = 0; i < 8; i++)
-            History[i] = completeGame.Turns[i];
-        for (int i = 0; i < 4; i++)
-            InitialHands[i] = completeGame.InitialHands[i];
-    }
-
-    public GameCall Call = GameCall.Weiter();
-    public Turn[] History = new Turn[8];
-    public Hand[] InitialHands = new Hand[4];
-
-    public IEnumerable<GameAction> UnrollActions()
-    {
-        var turnCache = new Card[4];
-
-        foreach (var turn in History)
-        {
-            int p_id = turn.FirstDrawingPlayerId;
-            turn.CopyCards(turnCache);
-
-            for (int i = 0; i < 4; i++)
-            {
-                var card = turnCache[p_id];
-                var action = new GameAction() {
-                    PlayerId = (byte)p_id,
-                    CardPlayed = card
-                };
-                yield return action;
-                p_id = (p_id + 1) % 4;
-            }
-        }
-    }
-
-    public IEnumerable<Hand> UnrollHands()
-    {
-        var hands = InitialHands.ToArray();
-        foreach (var action in UnrollActions())
-        {
-            yield return hands[action.PlayerId];
-            hands[action.PlayerId] = hands[action.PlayerId].Discard(action.CardPlayed);
-        }
-        yield return hands[0];
-    }
-
-    public IEnumerable<int[]> UnrollAugen()
-    {
-        var augen = new int[4];
-        foreach (var turn in History)
-        {
-            yield return augen;
-            augen[turn.WinnerId] += turn.Augen;
-        }
-        yield return augen;
-    }
-}
-
-public struct GameAction
-{
-    public Card CardPlayed { get; set; }
-    public byte PlayerId { get; set; }
-
-    public static readonly GameAction NO_OP
-        = new GameAction() { CardPlayed = new Card(0), PlayerId = 0xFF };
-
-    public override int GetHashCode()
-        => CardPlayed.Id | (PlayerId << 8);
-
-    public override bool Equals([NotNullWhen(true)] object? obj)
-        => obj?.GetType() == typeof(GameAction) && obj.GetHashCode() == this.GetHashCode();
-
-    public static bool operator ==(GameAction a1, GameAction a2)
-        => a1.CardPlayed == a2.CardPlayed && a1.PlayerId == a2.PlayerId;
-
-    public static bool operator !=(GameAction a1, GameAction a2)
-        => a1.CardPlayed != a2.CardPlayed || a1.PlayerId != a2.PlayerId;
-}
-
 public struct GameState
 {
     public GameState() { }
@@ -99,14 +16,14 @@ public class GameStateSerializer
     public GameState[] NewBuffer()
         => Enumerable.Range(0, 33).Select(x => new GameState()).ToArray();
 
-    public void Serialize(GameHistory completedGame, GameState[] states)
+    public void Serialize(GameLog completedGame, GameState[] states)
     {
         var hands = completedGame.UnrollHands().GetEnumerator();
         var scores = completedGame.UnrollAugen().GetEnumerator();
         var allActions = completedGame.UnrollActions().ToArray();
 
         int t = 0;
-        foreach (var turn in completedGame.History)
+        foreach (var turn in completedGame.Turns)
         {
             scores.MoveNext();
 
@@ -211,12 +128,14 @@ public class GameReward
 
         // info: players don't know yet who the sauspiel partner is
         //       -> no reward, even if it's already won
-        if (log.Call.Mode == GameMode.Sauspiel && !log.CurrentTurn.AlreadyGsucht)
+        var currentTurn = log.Turns[log.CardCount / 4];
+        if (log.Call.Mode == GameMode.Sauspiel && !currentTurn.AlreadyGsucht)
             return 0;
 
-        bool isCaller = log.CallerIds.Contains(playerId);
-        double callerScore = log.CallerIds
-            .Select(i => log.Scores[i]).Sum();
+        bool isCaller = log.Meta.CallerIds.Contains(playerId);
+        var augen = log.UnrollAugen().Last();
+        double callerScore = log.Meta.CallerIds
+            .Select(i => augen[i]).Sum();
 
         if (log.Call.Mode != GameMode.Sauspiel && log.Call.IsTout)
             return isCaller && callerScore == 120 ? 1 : 0;

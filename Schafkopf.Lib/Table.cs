@@ -8,11 +8,11 @@ public class Table
         Player p3,
         Player p4)
     {
-        players = new Player[] { p1, p2, p3, p4 };
+        Players = new Player[] { p1, p2, p3, p4 };
         FirstDrawingPlayerId = 0;
     }
 
-    private Player[] players;
+    public Player[] Players;
     public int FirstDrawingPlayerId { get; private set; }
 
     public IEnumerable<Player> PlayersInDrawingOrder()
@@ -21,19 +21,19 @@ public class Table
     public IEnumerable<Player> PlayersInDrawingOrder(int kommtRaus)
     {
         int id = kommtRaus;
-        yield return players[id];
+        yield return Players[id];
         id = ++id & 0x03;
-        yield return players[id];
+        yield return Players[id];
         id = ++id & 0x03;
-        yield return players[id];
+        yield return Players[id];
         id = ++id & 0x03;
-        yield return players[id];
+        yield return Players[id];
     }
 
     public IEnumerable<Player> PlayersById(IEnumerable<int> ids)
     {
         foreach (int id in ids)
-            yield return players[id];
+            yield return Players[id];
     }
 
     public void Shift()

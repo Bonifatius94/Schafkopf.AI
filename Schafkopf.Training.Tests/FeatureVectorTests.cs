@@ -41,7 +41,7 @@ public class FeatureVectorTests
         return history;
     }
 
-    private GameHistory generateHistoryWithCall(GameCall expCall)
+    private GameLog generateHistoryWithCall(GameCall expCall)
     {
         var deck = new CardsDeck();
         var callGen = new GameCallGenerator();
@@ -57,10 +57,10 @@ public class FeatureVectorTests
 
         var history = playRandomGame(expCall, initialHands);
 
-        return new GameHistory() {
+        return new GameLog() {
             Call = expCall,
             InitialHands = initialHands,
-            History = history
+            Turns = history
         };
     }
 
