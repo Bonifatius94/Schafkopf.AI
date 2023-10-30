@@ -72,10 +72,10 @@ public class GameSession
     private void askForKontraRe(GameLog log)
     {
         var meta = log.Meta;
-        if (!meta.IsKontraCalled && table.PlayersById(meta.OpponentIds).Any(o => o.CallKontra(log)))
+        if (!meta.IsKontraCalled && table.PlayersById(meta.OpponentIds).ToArray().Any(o => o.CallKontra(log)))
             meta.Kontra();
 
-        if (meta.IsKontraCalled && table.PlayersById(meta.CallerIds).Any(c => c.CallRe(log)))
+        if (meta.IsKontraCalled && table.PlayersById(meta.CallerIds).ToArray().Any(c => c.CallRe(log)))
             meta.Re();
     }
 
