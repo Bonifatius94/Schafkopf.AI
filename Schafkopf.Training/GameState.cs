@@ -2,11 +2,26 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Schafkopf.Training;
 
-public struct GameState
+public struct GameState : IEquatable<GameState>
 {
+    private const int NUM_FEATURES = 90;
+
     public GameState() { }
 
-    public double[] State = new double[90];
+    public double[] State = new double[NUM_FEATURES];
+
+    public void LoadFeatures(double[] other)
+        => Array.Copy(other, State, NUM_FEATURES);
+
+    public bool Equals(GameState other)
+    {
+        for (int i = 0; i < NUM_FEATURES; i++)
+            if (State[i] != other.State[i])
+                return false;
+        return true;
+    }
+
+    public override int GetHashCode() => 0;
 }
 
 public class GameStateSerializer
@@ -39,7 +54,6 @@ public class GameStateSerializer
             }
         }
 
-        // TODO: think about 33rd state encoding, all hands are empty, just augen matter
         hands.MoveNext();
         scores.MoveNext();
         serializeState(
@@ -134,7 +148,7 @@ public class GameReward
 
         bool isCaller = log.Meta.CallerIds.Contains(playerId);
         var augen = log.UnrollAugen().Last();
-        double callerScore = log.Meta.CallerIds
+        double callerScore = log.Meta.CallerIds.ToArray()
             .Select(i => augen[i]).Sum();
 
         if (log.Call.Mode != GameMode.Sauspiel && log.Call.IsTout)

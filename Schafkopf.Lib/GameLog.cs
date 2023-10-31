@@ -176,10 +176,16 @@ public struct GameLog
     }
 }
 
-public struct GameAction
+public struct GameAction : IEquatable<GameAction>
 {
     public Card CardPlayed { get; set; }
     public byte PlayerId { get; set; }
+
+    public bool Equals(GameAction other)
+        => CardPlayed == other.CardPlayed && PlayerId == other.PlayerId;
+
+    public override int GetHashCode()
+        => CardPlayed.Id << 8 | PlayerId;
 
     public override string ToString()
         => $"player {PlayerId} played {CardPlayed}";

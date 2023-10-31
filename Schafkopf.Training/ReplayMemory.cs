@@ -1,6 +1,6 @@
 namespace Schafkopf.Training;
 
-public struct SarsExp
+public struct SarsExp : IEquatable<SarsExp>
 {
     public SarsExp() { }
 
@@ -9,6 +9,15 @@ public struct SarsExp
     public GameAction Action = new GameAction();
     public double Reward = 0.0;
     public bool IsTerminal = false;
+
+    public bool Equals(SarsExp other)
+        => StateBefore.Equals(other.StateBefore)
+            && StateAfter.Equals(other.StateAfter)
+            && Action.Equals(other.Action)
+            && Reward == other.Reward
+            && IsTerminal == other.IsTerminal;
+
+    public override int GetHashCode() => 0;
 }
 
 public class ReplayMemory
@@ -19,6 +28,8 @@ public class ReplayMemory
     {
         totalSize = size;
         memory = new SarsExp[totalSize];
+        for (int i = 0; i < size; i++)
+            memory[i] = new SarsExp();
     }
 
     private int totalSize;
@@ -31,7 +42,11 @@ public class ReplayMemory
 
     public void Append(SarsExp exp)
     {
-        memory[insertPos++] = exp;
+        var origExp = memory[insertPos];
+        origExp.StateBefore.LoadFeatures(exp.StateBefore.State);
+        origExp.StateAfter.LoadFeatures(exp.StateAfter.State);
+        memory[insertPos++] = origExp;
+
         overflow = insertPos == totalSize;
         isFilled = isFilled || overflow;
         insertPos %= totalSize;
