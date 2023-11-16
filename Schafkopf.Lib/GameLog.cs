@@ -124,6 +124,14 @@ public struct GameLog
         }
     }
 
+    public ReadOnlySpan<int> CallerIds => Meta.CallerIds;
+    public ReadOnlySpan<int> OpponentIds => Meta.OpponentIds;
+    public bool IsKontraCalled => Meta.IsKontraCalled;
+    public int Multipliers => Meta.Multipliers;
+
+    public void Kontra() => Meta.Kontra();
+    public void Re() => Meta.Re();
+
     public Turn NextCard(Card card)
     {
         int t_id = CardCount / 4;

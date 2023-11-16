@@ -146,9 +146,9 @@ public class GameReward
         if (log.Call.Mode == GameMode.Sauspiel && !currentTurn.AlreadyGsucht)
             return 0;
 
-        bool isCaller = log.Meta.CallerIds.Contains(playerId);
+        bool isCaller = log.CallerIds.Contains(playerId);
         var augen = log.UnrollAugen().Last();
-        double callerScore = log.Meta.CallerIds.ToArray()
+        double callerScore = log.CallerIds.ToArray()
             .Select(i => augen[i]).Sum();
 
         if (log.Call.Mode != GameMode.Sauspiel && log.Call.IsTout)

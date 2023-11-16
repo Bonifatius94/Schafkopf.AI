@@ -21,7 +21,7 @@ public class RandomPlayBenchmark
         {
             var log = session.ProcessGame();
             var eval = new GameScoreEvaluation(log);
-            bool isCaller = log.Meta.CallerIds.Contains(0);
+            bool isCaller = log.CallerIds.Contains(0);
             bool isWin = !eval.DidCallerWin ^ isCaller;
             wins += isWin ? 1 : 0;
         }

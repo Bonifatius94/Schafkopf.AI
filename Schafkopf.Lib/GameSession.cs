@@ -71,12 +71,11 @@ public class GameSession
 
     private void askForKontraRe(GameLog log)
     {
-        var meta = log.Meta;
-        if (!meta.IsKontraCalled && table.PlayersById(meta.OpponentIds).ToArray().Any(o => o.CallKontra(log)))
-            meta.Kontra();
+        if (!log.IsKontraCalled && table.PlayersById(log.OpponentIds).ToArray().Any(o => o.CallKontra(log)))
+            log.Kontra();
 
-        if (meta.IsKontraCalled && table.PlayersById(meta.CallerIds).ToArray().Any(c => c.CallRe(log)))
-            meta.Re();
+        if (log.IsKontraCalled && table.PlayersById(log.CallerIds).ToArray().Any(c => c.CallRe(log)))
+            log.Re();
     }
 
     #endregion Call
