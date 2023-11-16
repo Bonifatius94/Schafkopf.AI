@@ -14,7 +14,8 @@ It covers topics such as:
   - tests allow to gradually enhance the game logic
     with better performing structures / algorithms
 - AI training
-  - still under construction, wip
+  - custom neural network framework
+  - several approaches to train agents (wip)
 
 ## Quickstart
 
@@ -64,8 +65,8 @@ sudo usermod -aG docker $USER && reboot
 ### Run AI Training (Docker)
 
 ```sh
-docker-compose -f train-compose.yml build
-docker-compose -f train-compose.yml up
+docker-compose -f train-compose.yml build && \
+    docker-compose -f train-compose.yml up
 ```
 
 DISCLAIMER: The training is currently under construction
