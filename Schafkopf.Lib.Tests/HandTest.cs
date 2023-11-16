@@ -3,6 +3,13 @@ namespace Schafkopf.Lib.Test;
 public class HandPropertiesTest
 {
     [Fact]
+    public void Test_EmptyHandIsEmpty()
+    {
+        var hand = Hand.EMPTY;
+        hand.Should().HaveCount(0);
+    }
+
+    [Fact]
     public void Test_CanRetrieveCardOfAnyTypeAndColor()
     {
         var cards = new Card[] {

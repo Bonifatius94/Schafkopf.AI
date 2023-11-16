@@ -14,6 +14,8 @@ public unsafe struct Hand : IEnumerable<Card>
     private static readonly ulong[] EXISTING_SINGLE;
     private static readonly ulong[] TRUMPF_SINGLE;
 
+    public static readonly Hand EMPTY = new Hand(0);
+
     static Hand()
     {
         EXISTING_SINGLE = new ulong[8];
