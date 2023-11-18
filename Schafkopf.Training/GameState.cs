@@ -26,43 +26,45 @@ public class GameStateSerializer
 {
     private const int NO_CARD = -1;
 
-    public GameState[] NewBuffer()
+    public static GameState[] NewBuffer()
         => Enumerable.Range(0, 36).Select(x => new GameState()).ToArray();
 
-    private GameState[] stateBuffer = Enumerable.Range(0, 36)
-        .Select(x => new GameState()).ToArray();
+    private GameState[] stateBuffer = NewBuffer();
     public void SerializeSarsExps(
-        GameLog completedGame, SarsExp[] exps, Func<GameState, double> reward)
+        GameLog completedGame, SarsExp[] exps,
+        Func<GameLog, int, double> reward)
     {
-        Serialize(completedGame, stateBuffer);
-        var actions = completedGame.UnrollActions().ToArray();
-        var p_ids = completedGame.UnrollActions()
-            .Select(x => x.PlayerId).ToArray();
+        serializeHistory(completedGame, stateBuffer);
 
-        var order_idx = new byte[4, 8];
-        foreach ((byte p_id, int t) in p_ids.Zip(Enumerable.Range(0, 32)))
-            order_idx[p_id, t / 4] = (byte)(t % 4);
-
-        for (int t = 0; t < 32; t++)
+        var actions = completedGame.UnrollActions().GetEnumerator();
+        for (int t0 = 0; t0 < 32; t0++)
         {
-            int p_id = p_ids[t];
-            int t_id = t / 4;
-            bool isTerminal = t > 28;
-            int p0 = t_id * 4 + order_idx[p_id, t_id];
-            int p1 = (t_id + 1) * 4 + order_idx[p_id, t_id + 1];
-            p1 = isTerminal ? 32 + p_id : p1;
+            actions.MoveNext();
+            var card = actions.Current.CardPlayed;
+            int p_id = actions.Current.PlayerId;
+            int t_id = t0 / 4;
+            bool isTerminal = t0 >= 28;
+            int t1 = playerPosOfTurn(completedGame, t_id+1, p_id);
 
-            exps[t].Action.PlayerId = 0;
-            exps[t].Action.CardPlayed = actions[t].CardPlayed;
-            exps[t].StateBefore.LoadFeatures(stateBuffer[p0].State);
-            exps[t].StateAfter.LoadFeatures(stateBuffer[p1].State);
-            exps[t].IsTerminal = isTerminal;
-            exps[t].Reward = reward(stateBuffer[p1]);
+            exps[t0].Action.PlayerId = 0;
+            exps[t0].Action.CardPlayed = card;
+            exps[t0].StateBefore.LoadFeatures(stateBuffer[t0].State);
+            exps[t0].StateAfter.LoadFeatures(stateBuffer[t1].State);
+            exps[t0].IsTerminal = isTerminal;
+            exps[t0].Reward = reward(completedGame, t1);
         }
     }
 
-    public void Serialize(GameLog completedGame, GameState[] states)
+    private int playerPosOfTurn(GameLog log, int t_id, int p_id)
+        => t_id == 8 ? p_id : normPlayerId(p_id, log.Turns[t_id].FirstDrawingPlayerId);
+
+    private void serializeHistory(GameLog completedGame, GameState[] statesCache)
     {
+        if (completedGame.TurnCount != 32)
+            throw new ArgumentException("Can only process finished games!");
+        if (statesCache.Length < 36)
+            throw new ArgumentException("");
+
         var origCall = completedGame.Call;
         var hands = completedGame.UnrollHands().GetEnumerator();
         var scores = completedGame.UnrollAugen().GetEnumerator();
@@ -83,7 +85,7 @@ public class GameStateSerializer
 
                 var hand = hands.Current;
                 var score = scores.Current;
-                var state = states[t].State;
+                var state = statesCache[t].State;
                 serializeState(state, normCalls, hand, t++, allActions, score);
             }
         }
@@ -92,7 +94,7 @@ public class GameStateSerializer
 
         for (; t < 36; t++)
             serializeState(
-                states[t].State, normCalls, Hand.EMPTY,
+                statesCache[t].State, normCalls, Hand.EMPTY,
                 t, allActions, scores.Current);
     }
 
@@ -228,11 +230,16 @@ public class GameStateSerializer
 
 public class GameReward
 {
-    public double Reward(GameLog log, int playerId)
+    public static double Reward(GameLog log, int t)
     {
         // intention of this reward system:
         // - players receive reward 1 as soon as they are in a winning state
         // - if they are in a losing or undetermined state, they receive reward 0
+
+        // info: t >= 32 relate to the final game outcome
+        //       from the view of the player with p_id = t%4
+        int playerId = t >= 32 ? t % 4 :
+            normPlayerId(log.Turns[t / 4].FirstDrawingPlayerId, t % 4);
 
         // info: players don't know yet who the sauspiel partner is
         //       -> no reward, even if it's already won
@@ -242,12 +249,16 @@ public class GameReward
 
         bool isCaller = log.CallerIds.Contains(playerId);
         var augen = log.UnrollAugen().Last();
-        double callerScore = log.CallerIds.ToArray()
-            .Select(i => augen[i]).Sum();
+        double callerScore = 0;
+        for (int i = 0; i < log.CallerIds.Length; i++)
+            callerScore += augen[log.CallerIds[i]];
 
         if (log.Call.Mode != GameMode.Sauspiel && log.Call.IsTout)
             return isCaller && callerScore == 120 ? 1 : 0;
         else
             return (isCaller && callerScore >= 61) || !isCaller ? 1 : 0;
     }
+
+    private static int normPlayerId(int id, int offset)
+        => (id - offset + 4) & 0x03;
 }
