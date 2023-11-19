@@ -2,7 +2,7 @@ namespace Schafkopf.Training;
 
 public class SupervisedSchafkopfDataset
 {
-    public FlatFeatureDataset GenerateDataset(
+    public static FlatFeatureDataset GenerateDataset(
         int trainSize, int testSize)
     {
         (var trainX, var trainY) = generateDataset(trainSize);
@@ -10,7 +10,7 @@ public class SupervisedSchafkopfDataset
         return new FlatFeatureDataset(trainX, trainY, testX, testY);
     }
 
-    private (Matrix2D, Matrix2D) generateDataset(int size)
+    private static (Matrix2D, Matrix2D) generateDataset(int size)
     {
         var x = Matrix2D.Zeros(size, GameState.NUM_FEATURES + 2);
         var y = Matrix2D.Zeros(size, 1);
@@ -18,6 +18,7 @@ public class SupervisedSchafkopfDataset
         int i = 0; int p = 0;
         foreach (var exp in generateExperiences(size))
         {
+            Console.Write($"\rdataset {i+1} / {size} complete               ");
             unsafe
             {
                 var card = exp.Action.CardPlayed;
@@ -28,6 +29,7 @@ public class SupervisedSchafkopfDataset
                 y.Data[i++] = exp.Reward;
             }
         }
+        Console.WriteLine();
 
         return (x, y);
     }
@@ -44,17 +46,28 @@ public class SupervisedSchafkopfDataset
 
         var serializer = new GameStateSerializer();
         var expBuffer = new SarsExp[32];
-        int p = 0;
+        for (int i = 0; i < 32; i++)
+            expBuffer[i] = new SarsExp() {
+                StateBefore = new GameState(),
+                StateAfter = new GameState()
+            };
 
+        int p = 0;
         while (true)
         {
             var log = session.ProcessGame();
+            if (log.Call.Mode == GameMode.Weiter)
+                continue;
+
             serializer.SerializeSarsExps(
                 log, expBuffer, GameReward.Reward);
 
             for (int i = 0; i < 32; i++)
                 if (numExamples == null || p++ < numExamples)
                     yield return expBuffer[i];
+
+            if (numExamples != null && p >= numExamples)
+                break;
         }
     }
 }

@@ -50,7 +50,7 @@ public class GameStateSerializer
             int p_id = actions.Current.PlayerId;
             int t_id = t0 / 4;
             bool isTerminal = t0 >= 28;
-            int t1 = playerPosOfTurn(completedGame, t_id+1, p_id);
+            int t1 = (t_id+1) * 4 + playerPosOfTurn(completedGame, t_id+1, p_id);
 
             exps[t0].Action.PlayerId = 0;
             exps[t0].Action.CardPlayed = card;
@@ -66,7 +66,7 @@ public class GameStateSerializer
 
     private void serializeHistory(GameLog completedGame, GameState[] statesCache)
     {
-        if (completedGame.TurnCount != 32)
+        if (completedGame.CardCount != 32)
             throw new ArgumentException("Can only process finished games!");
         if (statesCache.Length < 36)
             throw new ArgumentException("");
@@ -252,8 +252,8 @@ public class GameReward
 
         // info: players don't know yet who the sauspiel partner is
         //       -> no reward, even if it's already won
-        var currentTurn = log.Turns[log.CardCount / 4];
-        if (log.Call.Mode == GameMode.Sauspiel && !currentTurn.AlreadyGsucht)
+        bool alreadyGsucht = t < 28 ? log.Turns[t / 4].AlreadyGsucht : true;
+        if (log.Call.Mode == GameMode.Sauspiel && !alreadyGsucht)
             return 0;
 
         bool isCaller = log.CallerIds.Contains(playerId);
