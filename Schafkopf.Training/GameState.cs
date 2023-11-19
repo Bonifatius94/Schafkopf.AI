@@ -11,6 +11,12 @@ public struct GameState : IEquatable<GameState>
     public void LoadFeatures(double[] other)
         => Array.Copy(other, State, NUM_FEATURES);
 
+    public unsafe void ExportFeatures(double* other)
+    {
+        for (int i = 0; i < NUM_FEATURES; i++)
+            other[i] = State[i];
+    }
+
     public bool Equals(GameState other)
     {
         for (int i = 0; i < NUM_FEATURES; i++)
@@ -129,12 +135,12 @@ public class GameStateSerializer
         double* stateArr, GameCall call)
     {
         int p = 0;
-        stateArr[p++] = encode(call.Mode);
-        stateArr[p++] = encode(call.IsTout);
+        stateArr[p++] = GameEncoding.Encode(call.Mode);
+        stateArr[p++] = GameEncoding.Encode(call.IsTout);
         stateArr[p++] = (double)call.CallingPlayerId / 4;
         stateArr[p++] = (double)call.PartnerPlayerId / 4;
-        stateArr[p++] = encode(call.Trumpf);
-        stateArr[p++] = encode(call.GsuchteFarbe);
+        stateArr[p++] = GameEncoding.Encode(call.Trumpf);
+        stateArr[p++] = GameEncoding.Encode(call.GsuchteFarbe);
         return 6;
     }
 
@@ -175,38 +181,10 @@ public class GameStateSerializer
 
     private unsafe int serializeCard(double* stateArr, Card card)
     {
-        stateArr[0] = encode(card.Type);
-        stateArr[1] = encode(card.Color);
+        stateArr[0] = GameEncoding.Encode(card.Type);
+        stateArr[1] = GameEncoding.Encode(card.Color);
         return 2;
     }
-
-    private unsafe int encodeOnehot(double* stateArr, GameMode mode)
-        => encodeOnehot(stateArr, (int)mode, 4);
-
-    private unsafe int encodeOnehot(double* stateArr, CardColor color)
-        => encodeOnehot(stateArr, (int)color, 4);
-
-    private unsafe int encodeOnehot(double* stateArr, CardType type)
-        => encodeOnehot(stateArr, (int)type, 8);
-
-    private unsafe int encodeOnehot(double* stateArr, int id, int numClasses)
-    {
-        for (int i = 0; i < numClasses; i++)
-            stateArr[i] = 0;
-        stateArr[id] = 1;
-        return numClasses;
-    }
-
-    private unsafe int encodeOnehot(double* stateArr, bool flag)
-    {
-        stateArr[0] = flag ? 1 : -1;
-        return 1;
-    }
-
-    private double encode(GameMode mode) => (double)mode / 4;
-    private double encode(CardColor color) => (double)color / 4;
-    private double encode(CardType type) => (double)type / 8;
-    private double encode(bool flag) => flag ? 1 : 0;
 
     private GameCall normCallForPlayer(GameCall call, int p_id)
     {
@@ -226,6 +204,37 @@ public class GameStateSerializer
 
     private int normPlayerId(int id, int offset)
         => (id - offset + 4) & 0x03;
+}
+
+public class GameEncoding
+{
+    public static double Encode(GameMode mode) => (double)mode / 4;
+    public static double Encode(CardColor color) => (double)color / 4;
+    public static double Encode(CardType type) => (double)type / 8;
+    public static double Encode(bool flag) => flag ? 1 : 0;
+
+    public static unsafe int EncodeOnehot(double* stateArr, GameMode mode)
+        => EncodeOnehot(stateArr, (int)mode, 4);
+
+    public static unsafe int EncodeOnehot(double* stateArr, CardColor color)
+        => EncodeOnehot(stateArr, (int)color, 4);
+
+    public static unsafe int EncodeOnehot(double* stateArr, CardType type)
+        => EncodeOnehot(stateArr, (int)type, 8);
+
+    public static unsafe int EncodeOnehot(double* stateArr, int id, int numClasses)
+    {
+        for (int i = 0; i < numClasses; i++)
+            stateArr[i] = 0;
+        stateArr[id] = 1;
+        return numClasses;
+    }
+
+    public static unsafe int EncodeOnehot(double* stateArr, bool flag)
+    {
+        stateArr[0] = flag ? 1 : -1;
+        return 1;
+    }
 }
 
 public class GameReward
