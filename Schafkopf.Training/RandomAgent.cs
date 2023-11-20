@@ -11,6 +11,20 @@ public class HeuristicGameCaller
         ReadOnlySpan<GameCall> possibleCalls,
         int position, Hand hand, int klopfer)
     {
+        if (allowedModes.Contains(GameMode.Solo))
+        {
+            var call = canCallSolo(possibleCalls, position, hand, klopfer);
+            if (call.Mode == GameMode.Solo)
+                return call;
+        }
+
+        if (allowedModes.Contains(GameMode.Wenz))
+        {
+            var call = canCallWenz(possibleCalls, position, hand, klopfer);
+            if (call.Mode == GameMode.Wenz)
+                return call;
+        }
+
         if (allowedModes.Contains(GameMode.Sauspiel))
         {
             var call = canCallSauspiel(possibleCalls, hand);
@@ -57,6 +71,16 @@ public class HeuristicGameCaller
 
         return sauspielCalls.OrderBy(x => hand.FarbeCount(x.GsuchteFarbe)).First();
     }
+
+    private GameCall canCallSolo(
+            ReadOnlySpan<GameCall> possibleCalls,
+            int position, Hand hand, int klopfer)
+        => GameCall.Weiter(); // TODO: implement logic for solo decision
+
+    private GameCall canCallWenz(
+            ReadOnlySpan<GameCall> possibleCalls,
+            int position, Hand hand, int klopfer)
+        => GameCall.Weiter(); // TODO: implement logic for wenz decision
 }
 
 public class RandomAgent : ISchafkopfAIAgent

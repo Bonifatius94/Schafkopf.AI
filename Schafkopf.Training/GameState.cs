@@ -40,6 +40,8 @@ public class GameStateSerializer
         GameLog completedGame, SarsExp[] exps,
         Func<GameLog, int, double> reward)
     {
+        if (completedGame.CardCount != 32)
+            throw new ArgumentException("Can only process finished games!");
         serializeHistory(completedGame, stateBuffer);
 
         var actions = completedGame.UnrollActions().GetEnumerator();
@@ -61,16 +63,18 @@ public class GameStateSerializer
         }
     }
 
+    public GameState SerializeState(GameLog liveGame)
+    {
+        serializeHistory(liveGame, stateBuffer);
+        return stateBuffer[liveGame.CardCount - 1];
+    }
+
     private int playerPosOfTurn(GameLog log, int t_id, int p_id)
         => t_id == 8 ? p_id : normPlayerId(p_id, log.Turns[t_id].FirstDrawingPlayerId);
 
     private void serializeHistory(GameLog completedGame, GameState[] statesCache)
     {
-        if (completedGame.CardCount != 32)
-            throw new ArgumentException("Can only process finished games!");
-        if (statesCache.Length < 36)
-            throw new ArgumentException("");
-
+        int timesteps = completedGame.CardCount;
         var origCall = completedGame.Call;
         var hands = completedGame.UnrollHands().GetEnumerator();
         var scores = completedGame.UnrollAugen().GetEnumerator();
@@ -81,7 +85,7 @@ public class GameStateSerializer
         };
 
         int t = 0;
-        foreach (var turn in completedGame.Turns)
+        for (int t_id = 0; t_id < Math.Ceiling((double)timesteps / 4); t_id++)
         {
             scores.MoveNext();
 
@@ -93,6 +97,8 @@ public class GameStateSerializer
                 var score = scores.Current;
                 var state = statesCache[t].State;
                 serializeState(state, normCalls, hand, t++, allActions, score);
+
+                if (t == timesteps) return;
             }
         }
 
