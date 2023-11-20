@@ -37,7 +37,9 @@ public class SupervisedSchafkopfDataset
     private static IEnumerable<SarsExp> generateExperiences(
         int? numExamples = null)
     {
-        var agent = new RandomAgent();
+        var gameCaller = new HeuristicGameCaller(
+            new GameMode[] { GameMode.Sauspiel });
+        var agent = new RandomAgent(gameCaller);
         var table = new Table(
             new Player(0, agent), new Player(1, agent),
             new Player(2, agent), new Player(3, agent));

@@ -198,6 +198,9 @@ public unsafe struct Hand : IEnumerable<Card>
         return count;
     }
 
+    public int TrumpfCount()
+        => BitOperations.PopCount(((cards & EXISTING_BITMASK) << 1) & TRUMPF_BITMASK);
+
     #region SimpleImplForBenchmarks
 
     [Obsolete("Optimized version is faster!")]

@@ -18,7 +18,6 @@ public class Program
             trainSize: 1_000_000, testSize: 10_000);
         var optimizer = new AdamOpt(learnRate: 0.002);
         var lossFunc = new MeanSquaredError();
-        var accMetric = new MeanSquaredError();
 
         var session = new SupervisedTrainingSession(
             model, optimizer, lossFunc, dataset);

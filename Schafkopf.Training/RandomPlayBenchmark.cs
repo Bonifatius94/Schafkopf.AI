@@ -4,11 +4,13 @@ public class RandomPlayBenchmark
 {
     public void Benchmark(ISchafkopfAIAgent agentToEval, int epochs = 10_000)
     {
+        var gameCaller = new HeuristicGameCaller(
+            new GameMode[] { GameMode.Sauspiel, GameMode.Wenz, GameMode.Solo });
         var players = new Player[] {
             new Player(0, agentToEval),
-            new Player(1, new RandomAgent()),
-            new Player(2, new RandomAgent()),
-            new Player(3, new RandomAgent())
+            new Player(1, new RandomAgent(gameCaller)),
+            new Player(2, new RandomAgent(gameCaller)),
+            new Player(3, new RandomAgent(gameCaller))
         };
         var table = new Table(
             players[0], players[1],
