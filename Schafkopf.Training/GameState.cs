@@ -54,8 +54,7 @@ public class GameStateSerializer
             bool isTerminal = t0 >= 28;
             int t1 = (t_id+1) * 4 + playerPosOfTurn(completedGame, t_id+1, p_id);
 
-            exps[t0].Action.PlayerId = 0;
-            exps[t0].Action.CardPlayed = card;
+            exps[t0].Action = card;
             exps[t0].StateBefore.LoadFeatures(stateBuffer[t0].State);
             exps[t0].StateAfter.LoadFeatures(stateBuffer[t1].State);
             exps[t0].IsTerminal = isTerminal;

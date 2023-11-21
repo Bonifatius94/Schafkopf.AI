@@ -21,7 +21,7 @@ public class SupervisedSchafkopfDataset
             Console.Write($"\rdataset {i+1} / {size} complete               ");
             unsafe
             {
-                var card = exp.Action.CardPlayed;
+                var card = exp.Action;
                 x.Data[p++] = GameEncoding.Encode(card.Type);
                 x.Data[p++] = GameEncoding.Encode(card.Color);
                 exp.StateBefore.ExportFeatures(x.Data + p);
