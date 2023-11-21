@@ -208,61 +208,61 @@ public class SoftmaxLayer : ILayer
     }
 }
 
-public class FlattenLayer : ILayer
-{
-    public FlattenLayer(int axis = 1)
-        => this.axis = axis;
+// public class FlattenLayer : ILayer
+// {
+//     public FlattenLayer(int axis = 1)
+//         => this.axis = axis;
 
-    private int axis;
+//     private int axis;
 
-    public LayerCache Cache { get; private set; }
+//     public LayerCache Cache { get; private set; }
 
-    public int InputDims { get; private set; }
+//     public int InputDims { get; private set; }
 
-    public int OutputDims { get; private set; }
+//     public int OutputDims { get; private set; }
 
-    public void Compile(int inputDims)
-    {
-        InputDims = inputDims;
-    }
+//     public void Compile(int inputDims)
+//     {
+//         InputDims = inputDims;
+//     }
 
-    public void CompileCache(Matrix2D inputs, Matrix2D deltasOut)
-    {
-        int flatDims = inputs.NumRows * inputs.NumCols;
-        OutputDims = axis == 0 ? flatDims : 1;
-        int batchSize = axis == 0 ? 1 : flatDims;
+//     public void CompileCache(Matrix2D inputs, Matrix2D deltasOut)
+//     {
+//         int flatDims = inputs.NumRows * inputs.NumCols;
+//         OutputDims = axis == 0 ? flatDims : 1;
+//         int batchSize = axis == 0 ? 1 : flatDims;
 
-        Cache = new LayerCache() {
-            Input = inputs,
-            Output = Matrix2D.Zeros(batchSize, OutputDims),
-            DeltasIn = Matrix2D.Zeros(batchSize, OutputDims),
-            DeltasOut = deltasOut,
-            Gradients = Matrix2D.Null()
-        };
-    }
+//         Cache = new LayerCache() {
+//             Input = inputs,
+//             Output = Matrix2D.Zeros(batchSize, OutputDims),
+//             DeltasIn = Matrix2D.Zeros(batchSize, OutputDims),
+//             DeltasOut = deltasOut,
+//             Gradients = Matrix2D.Null()
+//         };
+//     }
 
-    public void Forward()
-    {
-        unsafe
-        {
-            int dataLen = Cache.Input.NumRows * Cache.Input.NumCols;
-            for (int i = 0; i < dataLen; i++)
-                Cache.Output.Data[i] = Cache.Input.Data[i];
-        }
-    }
+//     public void Forward()
+//     {
+//         unsafe
+//         {
+//             int dataLen = Cache.Input.NumRows * Cache.Input.NumCols;
+//             for (int i = 0; i < dataLen; i++)
+//                 Cache.Output.Data[i] = Cache.Input.Data[i];
+//         }
+//     }
 
-    public void Backward()
-    {
-        unsafe
-        {
-            int dataLen = Cache.DeltasIn.NumRows * Cache.DeltasIn.NumCols;
-            for (int i = 0; i < dataLen; i++)
-                Cache.DeltasOut.Data[i] = Cache.DeltasIn.Data[i];
-        }
-    }
+//     public void Backward()
+//     {
+//         unsafe
+//         {
+//             int dataLen = Cache.DeltasIn.NumRows * Cache.DeltasIn.NumCols;
+//             for (int i = 0; i < dataLen; i++)
+//                 Cache.DeltasOut.Data[i] = Cache.DeltasIn.Data[i];
+//         }
+//     }
 
-    public void ApplyGrads()
-    {
-        // info: layer has no trainable params
-    }
-}
+//     public void ApplyGrads()
+//     {
+//         // info: layer has no trainable params
+//     }
+// }

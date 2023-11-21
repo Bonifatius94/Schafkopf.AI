@@ -8,12 +8,14 @@ public unsafe class Matrix2D : IEquatable<Matrix2D>
     public static Matrix2D Zeros(int numRows, int numCols, bool hasCache = true)
         => FromData(numRows, numCols, new double[numRows * numCols], hasCache);
 
-    public static Matrix2D RandNorm(int numRows, int numCols, double mu, double sig, bool hasCache = true)
+    public static Matrix2D RandNorm(
+            int numRows, int numCols, double mu, double sig, bool hasCache = true)
         => FromData(numRows, numCols, hasCache: hasCache,
                 data: Enumerable.Range(0, numRows * numCols)
                     .Select(i => RandNormal.Next(mu, sig)).ToArray());
 
-    public static Matrix2D FromData(int numRows, int numCols, double[] data, bool hasCache = true)
+    public static Matrix2D FromData(
+        int numRows, int numCols, ReadOnlySpan<double> data, bool hasCache = true)
     {
         int size = sizeof(double) * numRows * numCols;
         var newData = Marshal.AllocHGlobal(size);
@@ -31,6 +33,9 @@ public unsafe class Matrix2D : IEquatable<Matrix2D>
     public static Matrix2D FromRawPointers(
             int numRows, int numCols, double* data, double* cache)
         => new Matrix2D(numRows, numCols, (IntPtr)data, (IntPtr)cache, false);
+
+    public static Matrix2D SliceRows(Matrix2D orig, int rowid, int length)
+        => FromRawPointers(length, orig.NumCols, orig.Data + rowid * orig.NumCols, orig.Cache);
 
     private static readonly Matrix2D NULL = new Matrix2D(0, 0, (IntPtr)null, (IntPtr)null, false);
     public static Matrix2D Null() => NULL;
