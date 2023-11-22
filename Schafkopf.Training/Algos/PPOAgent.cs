@@ -192,14 +192,14 @@ public struct PPOTrainBatch
     }
 
     private int size;
-    private Matrix2D StatesBefore;
-    private Matrix2D Actions;
-    private Matrix2D Rewards;
-    private Matrix2D Terminals;
-    private Matrix2D Returns;
-    private Matrix2D Advantages;
-    private Matrix2D OldProbs;
-    private Matrix2D OldBaselines;
+    public Matrix2D StatesBefore;
+    public Matrix2D Actions;
+    public Matrix2D Rewards;
+    public Matrix2D Terminals;
+    public Matrix2D Returns;
+    public Matrix2D Advantages;
+    public Matrix2D OldProbs;
+    public Matrix2D OldBaselines;
 
     public void Shuffle(int[] permCache)
     {
