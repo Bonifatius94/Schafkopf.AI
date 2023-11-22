@@ -2,8 +2,6 @@
 // TODO: train a policy to predict the likelihood
 //       of selecting an action in a given state
 
-using System.Runtime.CompilerServices;
-
 public class UniformDistribution
 {
     public UniformDistribution(int? seed = null)
@@ -180,7 +178,7 @@ public struct PPOTrainBatch
 {
     public PPOTrainBatch(int size)
     {
-        this.size = size;
+        Size = size;
         StatesBefore = Matrix2D.Zeros(size, 90);
         Actions = Matrix2D.Zeros(size, 1);
         Rewards = Matrix2D.Zeros(size, 1);
@@ -191,7 +189,7 @@ public struct PPOTrainBatch
         OldBaselines = Matrix2D.Zeros(size, 1);
     }
 
-    private int size;
+    public int Size;
     public Matrix2D StatesBefore;
     public Matrix2D Actions;
     public Matrix2D Rewards;
@@ -201,9 +199,22 @@ public struct PPOTrainBatch
     public Matrix2D OldProbs;
     public Matrix2D OldBaselines;
 
+    public void WriteRow(ACSarsExp exp, int rowid)
+    {
+        unsafe
+        {
+            exp.StateBefore.ExportFeatures(StatesBefore.Data + rowid * 90);
+            Actions.Data[rowid] = exp.Action.Id & Card.ORIG_CARD_MASK;
+            Rewards.Data[rowid] = exp.Reward;
+            Terminals.Data[rowid] = exp.IsTerminal ? 1 : 0;
+            OldProbs.Data[rowid] = exp.OldProb;
+            OldBaselines.Data[rowid] = exp.OldBaseline;
+        }
+    }
+
     public void Shuffle(int[] permCache)
     {
-        var perm = permCache ?? Perm.Identity(size);
+        var perm = permCache ?? Perm.Identity(Size);
         Perm.Permutate(perm);
 
         Matrix2D.ShuffleRows(StatesBefore, perm);
@@ -218,67 +229,109 @@ public struct PPOTrainBatch
 
     public IEnumerable<PPOTrainBatch> SampleBatched(int batchSize)
     {
-        var trainBuf = new PPOTrainBatch(batchSize);
-
         int p = 0;
-        int numBatches = size / batchSize;
+        int numBatches = Size / batchSize;
+        var trainBuf = new PPOTrainBatch() { Size = batchSize };
         for (int i = 0; i < numBatches; i++)
         {
-            Matrix2D.CopyData(trainBuf.StatesBefore, Matrix2D.SliceRows(StatesBefore, p, batchSize));
-            Matrix2D.CopyData(trainBuf.Actions, Matrix2D.SliceRows(Actions, p, batchSize));
-            Matrix2D.CopyData(trainBuf.Rewards, Matrix2D.SliceRows(Rewards, p, batchSize));
-            Matrix2D.CopyData(trainBuf.Terminals, Matrix2D.SliceRows(Terminals, p, batchSize));
-            Matrix2D.CopyData(trainBuf.Returns, Matrix2D.SliceRows(Returns, p, batchSize));
-            Matrix2D.CopyData(trainBuf.Advantages, Matrix2D.SliceRows(Advantages, p, batchSize));
-            Matrix2D.CopyData(trainBuf.OldProbs, Matrix2D.SliceRows(OldProbs, p, batchSize));
-            Matrix2D.CopyData(trainBuf.OldBaselines, Matrix2D.SliceRows(OldBaselines, p, batchSize));
+            trainBuf.StatesBefore = Matrix2D.SliceRows(StatesBefore, p, batchSize);
+            trainBuf.Actions = Matrix2D.SliceRows(Actions, p, batchSize);
+            trainBuf.Rewards = Matrix2D.SliceRows(Rewards, p, batchSize);
+            trainBuf.Terminals = Matrix2D.SliceRows(Terminals, p, batchSize);
+            trainBuf.Returns = Matrix2D.SliceRows(Returns, p, batchSize);
+            trainBuf.Advantages = Matrix2D.SliceRows(Advantages, p, batchSize);
+            trainBuf.OldProbs = Matrix2D.SliceRows(OldProbs, p, batchSize);
+            trainBuf.OldBaselines = Matrix2D.SliceRows(OldBaselines, p, batchSize);
             yield return trainBuf;
             p += batchSize;
         }
     }
+
+    public PPOTrainBatch SliceRows(int rowid, int length)
+        => new PPOTrainBatch {
+            Size = length,
+            StatesBefore = Matrix2D.SliceRows(StatesBefore, rowid, length),
+            Actions = Matrix2D.SliceRows(Actions, rowid, length),
+            Rewards = Matrix2D.SliceRows(Rewards, rowid, length),
+            Terminals = Matrix2D.SliceRows(Terminals, rowid, length),
+            Returns = Matrix2D.SliceRows(Returns, rowid, length),
+            Advantages = Matrix2D.SliceRows(Advantages, rowid, length),
+            OldProbs = Matrix2D.SliceRows(OldProbs, rowid, length),
+            OldBaselines = Matrix2D.SliceRows(OldBaselines, rowid, length)
+        };
 }
 
 public class PPORolloutBuffer
 {
-    public PPORolloutBuffer(int numEnvs, int steps)
+    public PPORolloutBuffer(int numEnvs, int steps, double gamma, double gaeGamma)
     {
         this.numEnvs = numEnvs;
         this.steps = steps;
-        totalSize = (steps + 1) * numEnvs;
-        cache = new PPOTrainBatch(totalSize);
-        cache = new PPOTrainBatch(totalSize);
-    }
+        this.gamma = gamma;
+        this.gaeGamma = gaeGamma;
 
-    private Random rng = new Random();
+        // info: the cache stores an extra timestep at the end
+        //       which facilitates proper GAE computation
+
+        int size = steps * numEnvs;
+        int sizeWithExtraStep = (steps + 1) * numEnvs;
+        cache = new PPOTrainBatch(sizeWithExtraStep);
+        cacheWithoutLastStep = cache.SliceRows(0, size);
+        cacheOnlyFirstStep = cache.SliceRows(0, numEnvs);
+        cacheOnlyLastStep = cache.SliceRows(size, numEnvs);
+        permCache = Perm.Identity(size);
+    }
 
     private int numEnvs;
     private int steps;
-    private int totalSize;
+    private double gamma;
+    private double gaeGamma;
     private PPOTrainBatch cache;
+    private PPOTrainBatch cacheWithoutLastStep;
+    private PPOTrainBatch cacheOnlyFirstStep;
+    private PPOTrainBatch cacheOnlyLastStep;
+    private int[] permCache;
+
+    public bool IsReadyForModelUpdate(int t) => t > 0 && t % steps == 0;
 
     public void AppendStep(ACSarsExp[] expsOfStep, int t)
     {
-        int p = t * numEnvs;
+        int offset = IsReadyForModelUpdate(t)
+            ? steps * numEnvs : (t % steps) * numEnvs;
         for (int i = 0; i < expsOfStep.Length; i++)
-        {
-            unsafe
-            {
-                expsOfStep[i].StateBefore.ExportFeatures(cache.StatesBefore.Data + p * 90);
-                cache.Actions.Data[p] = expsOfStep[i].Action.Id & Card.ORIG_CARD_MASK;
-                cache.Rewards.Data[p] = expsOfStep[i].Reward;
-                cache.Terminals.Data[p] = expsOfStep[i].IsTerminal ? 1 : 0;
-                cache.OldProbs.Data[p] = expsOfStep[i].OldProb;
-                cache.OldBaselines.Data[p] = expsOfStep[i].OldBaseline;
-                p++;
-            }
-        }
+            cache.WriteRow(expsOfStep[i], offset + i);
     }
 
-    public void CacheGAE(double gamma, double gaeGamma)
+    public IEnumerable<PPOTrainBatch> SampleDataset(int batchSize)
+    {
+        cacheGAE();
+
+        Perm.Permutate(permCache);
+        cacheWithoutLastStep.Shuffle(permCache);
+
+        foreach(var batch in cacheWithoutLastStep.SampleBatched(batchSize))
+            yield return batch;
+
+        copyOverlappingStep();
+    }
+
+    private void cacheGAE()
     {
         for (int t = steps - 1; t >= 0; t--)
         {
             // TODO: do the GAE magic
         }
+    }
+
+    private void copyOverlappingStep()
+    {
+        Matrix2D.CopyData(cacheOnlyLastStep.StatesBefore, cacheOnlyFirstStep.StatesBefore);
+        Matrix2D.CopyData(cacheOnlyLastStep.Actions, cacheOnlyFirstStep.Actions);
+        Matrix2D.CopyData(cacheOnlyLastStep.Rewards, cacheOnlyFirstStep.Rewards);
+        Matrix2D.CopyData(cacheOnlyLastStep.Terminals, cacheOnlyFirstStep.Terminals);
+        Matrix2D.CopyData(cacheOnlyLastStep.Returns, cacheOnlyFirstStep.Returns);
+        Matrix2D.CopyData(cacheOnlyLastStep.Advantages, cacheOnlyFirstStep.Advantages);
+        Matrix2D.CopyData(cacheOnlyLastStep.OldProbs, cacheOnlyFirstStep.OldProbs);
+        Matrix2D.CopyData(cacheOnlyLastStep.OldBaselines, cacheOnlyFirstStep.OldBaselines);
     }
 }
