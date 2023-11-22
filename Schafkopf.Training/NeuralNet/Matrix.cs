@@ -425,13 +425,14 @@ public enum MatmulFlags { NN, TN, NT, TT }
 
 public static class Perm
 {
-    private static readonly Random rng = new Random();
+    private static readonly Random globalRng = new Random();
 
     public static int[] Identity(int size)
         => Enumerable.Range(0, size).ToArray();
 
-    public static void Permutate(int[] perm)
+    public static void Permutate(int[] perm, int? seed = null)
     {
+        var rng = seed != null ? new Random(seed.Value) : globalRng;
         for (int i = 0; i < perm.Length - 1; i++)
         {
             int j = rng.Next(i, perm.Length);
