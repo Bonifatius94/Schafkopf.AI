@@ -34,8 +34,8 @@ public unsafe class Matrix2D : IEquatable<Matrix2D>
             int numRows, int numCols, double* data, double* cache)
         => new Matrix2D(numRows, numCols, (IntPtr)data, (IntPtr)cache, false);
 
-    public static Matrix2D SliceRows(Matrix2D orig, int rowid, int length)
-        => FromRawPointers(length, orig.NumCols, orig.Data + rowid * orig.NumCols, orig.Cache);
+    public Matrix2D SliceRows(int rowid, int length)
+        => FromRawPointers(length, NumCols, Data + rowid * NumCols, Cache);
 
     private static readonly Matrix2D NULL = new Matrix2D(0, 0, (IntPtr)null, (IntPtr)null, false);
     public static Matrix2D Null() => NULL;
@@ -315,6 +315,24 @@ public unsafe class Matrix2D : IEquatable<Matrix2D>
             res.Data[i] = a.Data[i] >= comp ? 1 : 0;
     }
 
+    public static void ElemLeq(Matrix2D a, double comp, Matrix2D res)
+    {
+        if (a.NumRows != res.NumRows || a.NumCols != res.NumCols)
+            throw new ArgumentException("Invalid matrix shapes!");
+
+        for (int i = 0; i < a.NumRows * a.NumCols; i++)
+            res.Data[i] = a.Data[i] <= comp ? 1 : 0;
+    }
+
+    public static void ElemNeq(Matrix2D a, double comp, Matrix2D res)
+    {
+        if (a.NumRows != res.NumRows || a.NumCols != res.NumCols)
+            throw new ArgumentException("Invalid matrix shapes!");
+
+        for (int i = 0; i < a.NumRows * a.NumCols; i++)
+            res.Data[i] = a.Data[i] != comp ? 1 : 0;
+    }
+
     public static void ElemSqrt(Matrix2D a, Matrix2D res)
     {
         if (a.NumRows != res.NumRows || a.NumCols != res.NumCols)
@@ -368,6 +386,31 @@ public unsafe class Matrix2D : IEquatable<Matrix2D>
     public static void BatchDiv(Matrix2D a, double b, Matrix2D res)
     {
         BatchMul(a, 1 / b, res);
+    }
+
+    public static void BatchOneOver(Matrix2D a, Matrix2D res)
+    {
+        for (int i = 0; i < a.NumRows * a.NumCols; i++)
+            res.Data[i] = 1 / a.Data[i];
+    }
+
+    public static double Mean(Matrix2D a)
+    {
+        double mean = 0.0;
+        for (int i = 0; i < a.NumRows * a.NumCols; i++)
+            mean += a.Data[i];
+        mean /= a.NumRows * a.NumCols;
+        return mean;
+    }
+
+    public static double StdDev(Matrix2D a)
+    {
+        double mean = Mean(a);
+        double variance = 0.0;
+        for (int i = 0; i < a.NumRows * a.NumCols; i++)
+            variance += Math.Pow(a.Data[i] - mean, 2);
+        variance /= a.NumRows * a.NumCols;
+        return Math.Sqrt(variance);
     }
 
     public static void ShuffleRows(Matrix2D a, int[] perm)

@@ -34,6 +34,14 @@ public class FFModel
         }
     }
 
+    public void TrainBatch(Matrix2D x, Matrix2D y, ILoss lossFunc, IOptimizer opt)
+    {
+        var deltas = Layers.Last().Cache.DeltasIn;
+        var pred = PredictBatch(x);
+        lossFunc.LossDeltas(pred, y, deltas);
+        FitBatch(deltas, opt);
+    }
+
     public Matrix2D PredictBatch(Matrix2D input)
     {
         Matrix2D.CopyData(input, Layers.First().Cache.Input);
@@ -42,14 +50,10 @@ public class FFModel
         return Layers.Last().Cache.Output;
     }
 
-    public void TrainBatch(Matrix2D x, Matrix2D y, ILoss lossFunc, IOptimizer opt)
+    public void FitBatch(Matrix2D deltas, IOptimizer opt)
     {
-        Matrix2D.CopyData(x, Layers.First().Cache.Input);
-        foreach (var layer in Layers)
-            layer.Forward();
-
-        var lastLayerCache = Layers.Last().Cache;
-        lossFunc.LossDeltas(lastLayerCache.Output, y, lastLayerCache.DeltasIn);
+        var modelDeltas = Layers.Last().Cache.DeltasIn;
+        Matrix2D.CopyData(deltas, modelDeltas);
 
         foreach (var layer in Layers.Reverse())
             layer.Backward();
