@@ -19,11 +19,13 @@ public class UniformDistribution
         }
         return probs.Length - 1;
     }
+
+    public int Sample(int numClasses) => rng.Next(0, numClasses);
 }
 
-public class PPOAgent : ISchafkopfAIAgent
+public class PPOModel
 {
-    public PPOAgent(PPOTrainingSettings config)
+    public PPOModel(PPOTrainingSettings config)
     {
         this.config = config;
 
@@ -32,7 +34,7 @@ public class PPOAgent : ISchafkopfAIAgent
             new ReLULayer(),
             new DenseLayer(64),
             new ReLULayer(),
-            new DenseLayer(32)
+            new DenseLayer(1)
         });
 
         strategy = new FFModel(new ILayer[] {
@@ -40,13 +42,13 @@ public class PPOAgent : ISchafkopfAIAgent
             new ReLULayer(),
             new DenseLayer(64),
             new ReLULayer(),
-            new DenseLayer(32),
+            new DenseLayer(config.NumActionDims),
             new SoftmaxLayer()
         });
 
-        valueFunc.Compile(config.BatchSize, 90);
-        strategy.Compile(config.BatchSize, 90);
-        featureCache = Matrix2D.Zeros(config.BatchSize, 90);
+        valueFunc.Compile(config.BatchSize, config.NumStateDims);
+        strategy.Compile(config.BatchSize, config.NumStateDims);
+        featureCache = Matrix2D.Zeros(config.BatchSize, config.NumStateDims);
         strategyOpt = new AdamOpt(config.LearnRate);
         valueFuncOpt = new AdamOpt(config.LearnRate);
     }
@@ -58,57 +60,30 @@ public class PPOAgent : ISchafkopfAIAgent
     private IOptimizer valueFuncOpt;
 
     private Matrix2D featureCache;
-    private GameStateSerializer stateSerializer = new GameStateSerializer();
     private UniformDistribution uniform = new UniformDistribution();
 
-    public Card ChooseCard(GameLog log, ReadOnlySpan<Card> possibleCards)
+    public void Predict(
+        Matrix2D s0, Matrix2D outActions,
+        Matrix2D outPiOnehot, Matrix2D outV)
     {
-        var x = featureCache;
-        var s0 = stateSerializer.SerializeState(log);
-        unsafe { s0.ExportFeatures(x.Data);}
+        int batchSize = s0.NumRows;
+        int numFeatures = s0.NumCols;
 
-        var predPi = strategy.PredictBatch(x);
-        var probDist = normProbDist(predPi, possibleCards);
-        int i = uniform.Sample(probDist);
-        var action = possibleCards[i];
-        return action;
-    }
+        var predPi = strategy.PredictBatch(s0);
+        var predV = valueFunc.PredictBatch(s0);
+        Matrix2D.CopyData(predPi, outPiOnehot);
 
-    public (Card, double, double) Predict(
-        GameLog log, ReadOnlySpan<Card> possibleCards)
-    {
-        var x = featureCache;
-        var s0 = stateSerializer.SerializeState(log);
-        unsafe { s0.ExportFeatures(x.Data);}
-
-        var predPi = strategy.PredictBatch(x);
-        var predV = valueFunc.PredictBatch(x);
-        var probDist = normProbDist(predPi, possibleCards);
-        int i = uniform.Sample(probDist);
-
-        var action = possibleCards[i];
-        var pi = predPi.At(0, action.Id);
-        var v = predV.At(0, action.Id);
-        return (action, pi, v);
-    }
-
-    private double[] probDistCache = new double[8];
-    private ReadOnlySpan<double> normProbDist(
-        Matrix2D pred, ReadOnlySpan<Card> possibleCards)
-    {
-        Span<double> probDistAll;
-        unsafe { probDistAll = new Span<double>(pred.Data, 32); }
-
-        double probSum = 0;
-        for (int i = 0; i < possibleCards.Length; i++)
-            probDistCache[i] = probDistAll[possibleCards[i].Id & Card.ORIG_CARD_MASK];
-        for (int i = 0; i < possibleCards.Length; i++)
-            probSum += probDistCache[i];
-        double scale = 1 / probSum;
-        for (int i = 0; i < possibleCards.Length; i++)
-            probDistCache[i] *= scale;
-
-        return probDistCache.AsSpan().Slice(0, possibleCards.Length);
+        for (int i = 0; i < batchSize; i++)
+        {
+            unsafe
+            {
+                var probDist = new Span<double>(
+                    predPi.Data + i * numFeatures, numFeatures);
+                int action = uniform.Sample(probDist);
+                outActions.Data[i] = action;
+                outV.Data[i] = predV.At(0, 0);
+            }
+        }
     }
 
     public void Train(PPORolloutBuffer memory)
@@ -195,28 +170,6 @@ public class PPOAgent : ISchafkopfAIAgent
         for (int i = 0; i < sparseClassIds.NumRows; i++)
             yield return i * numClasses + (int)sparseClassIds.At(0, i);
     }
-
-    public void OnGameFinished(GameLog final)
-    {
-        throw new NotImplementedException();
-    }
-
-    #region Misc
-
-    public bool CallKontra(GameLog log) => false;
-
-    public bool CallRe(GameLog log) => false;
-
-    public bool IsKlopfer(int position, ReadOnlySpan<Card> firstFourCards) => false;
-
-    private HeuristicGameCaller caller =
-        new HeuristicGameCaller(new GameMode[] { GameMode.Sauspiel });
-    public GameCall MakeCall(
-            ReadOnlySpan<GameCall> possibleCalls,
-            int position, Hand hand, int klopfer)
-        => caller.MakeCall(possibleCalls, position, hand, klopfer);
-
-    #endregion Misc
 }
 
 public class PPOTrainingSettings
@@ -234,6 +187,8 @@ public class PPOTrainingSettings
     public bool ClipValues = true;
     public int BatchSize = 64;
     public int NumEnvs = 32;
+    public int NumStateDims = 90;
+    public int NumActionDims = 32;
     public int StepsPerUpdate = 512;
     public int UpdateEpochs = 4;
     public int NumModelSnapshots = 20;
@@ -242,20 +197,224 @@ public class PPOTrainingSettings
     public int ModelSnapshotInterval => TrainSteps / NumModelSnapshots;
 }
 
+public interface ICardPicker
+{
+    Card ChooseCard(GameLog log, ReadOnlySpan<Card> possibleCards);
+}
+
+public class ComposedAgent : ISchafkopfAIAgent
+{
+    public ComposedAgent(
+        ISchafkopfAIAgent agent,
+        ICardPicker cardPicker)
+    {
+        this.agent = agent;
+        this.cardPicker = cardPicker;
+    }
+
+    private ISchafkopfAIAgent agent;
+    private ICardPicker cardPicker;
+
+    public Card ChooseCard(GameLog log, ReadOnlySpan<Card> possibleCards)
+        => cardPicker.ChooseCard(log, possibleCards);
+
+    public GameCall MakeCall(
+            ReadOnlySpan<GameCall> possibleCalls,
+            int position, Hand hand, int klopfer)
+        => agent.MakeCall(possibleCalls, position, hand, klopfer);
+
+    public bool CallKontra(GameLog log)
+        => agent.CallKontra(log);
+
+    public bool CallRe(GameLog log)
+        => agent.CallRe(log);
+
+    public bool IsKlopfer(int position, ReadOnlySpan<Card> firstFourCards)
+        => agent.IsKlopfer(position, firstFourCards);
+
+    public void OnGameFinished(GameLog final)
+        => agent.OnGameFinished(final);
+}
+
+public class PossibleCardPicker
+{
+    private UniformDistribution uniform = new UniformDistribution();
+
+    public Card PickCard(
+            ReadOnlySpan<Card> possibleCards,
+            ReadOnlySpan<double> predPi,
+            Card sampledCard)
+        => canPlaySampledCard(possibleCards, sampledCard) ? sampledCard
+            : possibleCards[uniform.Sample(normProbDist(predPi, possibleCards))];
+
+    private bool canPlaySampledCard(
+        ReadOnlySpan<Card> possibleCards, Card sampledCard)
+    {
+        foreach (var card in possibleCards)
+            if (card == sampledCard)
+                return true;
+        return false;
+    }
+
+    private double[] probDistCache = new double[8];
+    private ReadOnlySpan<double> normProbDist(
+        ReadOnlySpan<double> probDistAll, ReadOnlySpan<Card> possibleCards)
+    {
+        double probSum = 0;
+        for (int i = 0; i < possibleCards.Length; i++)
+            probDistCache[i] = probDistAll[possibleCards[i].Id & Card.ORIG_CARD_MASK];
+        for (int i = 0; i < possibleCards.Length; i++)
+            probSum += probDistCache[i];
+        double scale = 1 / probSum;
+        for (int i = 0; i < possibleCards.Length; i++)
+            probDistCache[i] *= scale;
+
+        return probDistCache.AsSpan().Slice(0, possibleCards.Length);
+    }
+}
+
+public class VectorizedCardPicker : ICardPicker
+{
+    public VectorizedCardPicker(
+        PPOTrainingSettings config,
+        PPOModel agent,
+        PPORolloutBuffer memory)
+    {
+        this.config = config;
+        this.agent = agent;
+        this.memory = memory;
+
+        inputs = new (GameLog, Card[], int)[config.BatchSize];
+        for (int i = 0; i < inputs.Length; i++)
+            inputs[i].Item2 = new Card[8];
+        outputs = new Card[config.BatchSize];
+
+        count = 0;
+        barr = new Barrier(config.BatchSize, (b) => predictBatched());
+        mut = new Mutex();
+
+        s0 = Matrix2D.Zeros(config.BatchSize, 90);
+        a0 = Matrix2D.Zeros(config.BatchSize, 1);
+        piOnehot = Matrix2D.Zeros(config.BatchSize, config.NumActionDims);
+        piSparse = Matrix2D.Zeros(config.BatchSize, 1);
+        V = Matrix2D.Zeros(config.BatchSize, 1);
+        expCache = new PPOTrainBatch(config.BatchSize, config.NumStateDims);
+    }
+
+    private PPOTrainingSettings config;
+    private PPOModel agent;
+    private PPORolloutBuffer memory;
+    private GameStateSerializer stateSerializer = new GameStateSerializer();
+    private PossibleCardPicker possCardsPicker = new PossibleCardPicker();
+
+    private int t = 0;
+    private (GameLog, Card[], int)[] inputs;
+    private Card[] outputs;
+    private Matrix2D s0, a0, piOnehot, piSparse, V;
+    private PPOTrainBatch expCache;
+
+    private int count;
+    private Barrier barr;
+    private Mutex mut = new Mutex();
+
+    public Card ChooseCard(
+        GameLog log, ReadOnlySpan<Card> possibleCards)
+    {
+        mut.WaitOne();
+
+        // TODO: don't draw random i, use env id
+        int i = count;
+        inputs[i].Item1 = log;
+        possibleCards.CopyTo(inputs[i].Item2);
+        inputs[i].Item3 = possibleCards.Length;
+        count++;
+
+        mut.ReleaseMutex();
+        barr.SignalAndWait();
+
+        return outputs[i];
+    }
+
+    private void predictBatched()
+    {
+        for (int i = 0; i < config.BatchSize; i++)
+        {
+            (var log, var _, int __) = inputs[i];
+            var state = stateSerializer.SerializeState(log);
+            unsafe { state.ExportFeatures(s0.Data + i * 90); }
+        }
+
+        agent.Predict(s0, a0, piOnehot, V);
+
+        for (int i = 0; i < config.BatchSize; i++)
+        {
+            (var _, var cardsCache, int cardsLen) = inputs[i];
+            var possCards = cardsCache.AsSpan(0, cardsLen);
+            Span<double> probDistAll;
+            unsafe { probDistAll = new Span<double>(piOnehot.Data + i * 32, 32); }
+
+            var sampledCard = new Card((byte)a0.At(i, 0));
+            sampledCard = possCardsPicker.PickCard(possCards, probDistAll, sampledCard);
+
+            unsafe
+            {
+                a0.Data[i] = sampledCard.Id;
+                piSparse.Data[i] = probDistAll[sampledCard.Id];
+            }
+        }
+
+        Matrix2D.CopyData(s0, expCache.StatesBefore);
+        Matrix2D.CopyData(a0, expCache.Actions);
+        Matrix2D.CopyData(piSparse, expCache.OldProbs);
+        Matrix2D.CopyData(V, expCache.OldBaselines);
+
+        // for (int i = 0; i < config.BatchSize; i++)
+        // {
+        //     (var log, var _, int __) = inputs[i];
+        //     GameReward.Reward(log);
+        // }
+
+        // TODO: include ways to determine the rewards and terminals
+        // Matrix2D.CopyData(cacheOnlyLastStep.Rewards, expCache.Rewards);
+        // Matrix2D.CopyData(cacheOnlyLastStep.Terminals, expCache.Terminals);
+
+
+        memory.AppendStep(expCache, t++);
+    }
+}
+
 public class PPOTrainingSession
 {
     public void Train()
     {
-        // TODO: implement training loop here ...
+        var config = new PPOTrainingSettings();
+        var rewardFunc = new GameReward();
+        var memory = new PPORolloutBuffer(config);
+        var ppoModel = new PPOModel(config);
+        var cardPicker = new VectorizedCardPicker(config, ppoModel, memory);
+        var heuristicGameCaller = new HeuristicAgent();
+        var agent = new ComposedAgent(heuristicGameCaller, cardPicker);
+
+        var tables = Enumerable.Range(0, config.NumEnvs)
+            .Select(i => new Table(
+                new Player(0, agent),
+                new Player(1, agent),
+                new Player(2, agent),
+                new Player(3, agent)
+            )).ToArray();
+        var sessions = Enumerable.Range(0, config.NumEnvs)
+            .Select(i => new GameSession(tables[i], new CardsDeck())).ToArray();
+
+        // TODO: finish implementation
     }
 }
 
 public struct PPOTrainBatch
 {
-    public PPOTrainBatch(int size)
+    public PPOTrainBatch(int size, int numStateDims)
     {
         Size = size;
-        StatesBefore = Matrix2D.Zeros(size, 90);
+        StatesBefore = Matrix2D.Zeros(size, numStateDims);
         Actions = Matrix2D.Zeros(size, 1);
         Rewards = Matrix2D.Zeros(size, 1);
         Terminals = Matrix2D.Zeros(size, 1);
@@ -274,19 +433,6 @@ public struct PPOTrainBatch
     public Matrix2D Advantages;
     public Matrix2D OldProbs;
     public Matrix2D OldBaselines;
-
-    public void WriteRow(ACSarsExp exp, int rowid)
-    {
-        unsafe
-        {
-            exp.StateBefore.ExportFeatures(StatesBefore.Data + rowid * 90);
-            Actions.Data[rowid] = exp.Action.Id & Card.ORIG_CARD_MASK;
-            Rewards.Data[rowid] = exp.Reward;
-            Terminals.Data[rowid] = exp.IsTerminal ? 1 : 0;
-            OldProbs.Data[rowid] = exp.OldProb;
-            OldBaselines.Data[rowid] = exp.OldBaseline;
-        }
-    }
 
     public void Shuffle(int[] permCache)
     {
@@ -339,19 +485,19 @@ public struct PPOTrainBatch
 
 public class PPORolloutBuffer
 {
-    public PPORolloutBuffer(int numEnvs, int steps, double gamma, double gaeGamma)
+    public PPORolloutBuffer(PPOTrainingSettings config)
     {
-        this.numEnvs = numEnvs;
-        this.steps = steps;
-        this.gamma = gamma;
-        this.gaeGamma = gaeGamma;
+        numEnvs = config.NumEnvs;
+        steps = config.StepsPerUpdate;
+        gamma = config.RewardDiscount;
+        gaeGamma = config.GAEDiscount;
 
         // info: the cache stores an extra timestep at the end
         //       which facilitates proper GAE computation
 
         int size = steps * numEnvs;
         int sizeWithExtraStep = (steps + 1) * numEnvs;
-        cache = new PPOTrainBatch(sizeWithExtraStep);
+        cache = new PPOTrainBatch(sizeWithExtraStep, config.NumStateDims);
         cacheWithoutLastStep = cache.SliceRows(0, size);
         cacheOnlyFirstStep = cache.SliceRows(0, numEnvs);
         cacheOnlyLastStep = cache.SliceRows(size, numEnvs);
@@ -370,12 +516,19 @@ public class PPORolloutBuffer
 
     public bool IsReadyForModelUpdate(int t) => t > 0 && t % steps == 0;
 
-    public void AppendStep(ACSarsExp[] expsOfStep, int t)
+    public void AppendStep(PPOTrainBatch expsOfStep, int t)
     {
         int offset = IsReadyForModelUpdate(t)
             ? steps * numEnvs : (t % steps) * numEnvs;
-        for (int i = 0; i < expsOfStep.Length; i++)
-            cache.WriteRow(expsOfStep[i], offset + i);
+
+        Matrix2D.CopyData(expsOfStep.StatesBefore, cache.StatesBefore.SliceRows(offset, numEnvs));
+        Matrix2D.CopyData(expsOfStep.Actions, cache.Actions.SliceRows(offset, numEnvs));
+        Matrix2D.CopyData(expsOfStep.Rewards, cache.Rewards.SliceRows(offset, numEnvs));
+        Matrix2D.CopyData(expsOfStep.Terminals, cache.Terminals.SliceRows(offset, numEnvs));
+        Matrix2D.CopyData(expsOfStep.Returns, cache.Returns.SliceRows(offset, numEnvs));
+        Matrix2D.CopyData(expsOfStep.Advantages, cache.Advantages.SliceRows(offset, numEnvs));
+        Matrix2D.CopyData(expsOfStep.OldProbs, cache.OldProbs.SliceRows(offset, numEnvs));
+        Matrix2D.CopyData(expsOfStep.OldBaselines, cache.OldBaselines.SliceRows(offset, numEnvs));
     }
 
     public IEnumerable<PPOTrainBatch> SampleDataset(int batchSize, int epochs = 1)
