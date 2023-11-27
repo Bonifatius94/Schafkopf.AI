@@ -37,6 +37,9 @@ public unsafe class Matrix2D : IEquatable<Matrix2D>
     public Matrix2D SliceRows(int rowid, int length)
         => FromRawPointers(length, NumCols, Data + rowid * NumCols, Cache);
 
+    public Span<double> SliceRowsRaw(int rowid, int length)
+        => new Span<double>(Data + rowid * NumCols, length * NumCols);
+
     private static readonly Matrix2D NULL = new Matrix2D(0, 0, (IntPtr)null, (IntPtr)null, false);
     public static Matrix2D Null() => NULL;
 
