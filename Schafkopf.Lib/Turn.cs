@@ -98,6 +98,7 @@ public readonly struct Turn
 
     public int FirstDrawingPlayerId => Meta.FirstDrawingPlayerId;
     public bool AlreadyGsucht => Meta.AlreadyGsucht;
+    public int DrawingPlayerId => (FirstDrawingPlayerId + CardsCount) % 4;
 
     public Card FirstCard => new Card(
         (byte)((Cards >> (Meta.FirstDrawingPlayerId * CARD_OFFSET))

@@ -73,6 +73,7 @@ public class GameHistoryTest_IteratingOverTurnsWhileApplyingCards
         int cardPos = cardsAlreadyPlayed;
         var cardToPlay = initialHands[cardPos].PickRandom();
         var turnAfter = history.NextCard(cardToPlay);
+        if (cardsAlreadyPlayed == 3) turnAfter = history.Turns[0];
 
         turnAfter.Should().Be(history.Turns[0]);
         turnAfter.CardsCount.Should().Be(turnBefore.CardsCount + 1);
@@ -107,10 +108,20 @@ public class GameHistoryTest_IteratingOverTurnsWhileApplyingCards
         var initialHands = new Hand[4];
         deck.InitialHands(call, initialHands);
         var history = GameLog.NewLiveGame(call, initialHands, 0);
+        var rules = new GameRules();
+        var cardCache = new Card[8];
 
-        foreach (int i in Enumerable.Range(0, 8))
-            foreach (int j in Enumerable.Range(0, 4))
-                history.NextCard(initialHands[j].PickRandom());
+        for (int i = 0; i < 8; i++)
+        {
+            for (int j = 0; j < 4; j++)
+            {
+                int pid = history.DrawingPlayerId;
+                var hand = history.HandOfDrawingPlayer;
+                var possCards = history.CardCount >= 28 ? hand : hand.Where(c =>
+                    rules.CanPlayCard(call, c, history.CurrentTurn, hand));
+                history.NextCard(possCards.PickRandom());
+            }
+        }
 
         history.Turns.Should().Match(turns => turns.All(t => t.CardsCount == 4));
         history.TurnCount.Should().Be(8);

@@ -98,11 +98,14 @@ public struct GameLog
             InitialHands[i] = initialHands[i];
         for (int i = 0; i < 8; i++)
             Turns[i] = history[i];
+        Hands = InitialHands.Select(
+            h => h.CacheTrumpf(call.IsTrumpf)).ToArray();
     }
 
     public GameCall Call;
     public Turn[] Turns;
     public Hand[] InitialHands;
+    public Hand[] Hands;
     public GameSessionMeta Meta;
 
     public int TurnCount => (int)Math.Ceiling((double)CardCount / 4);
@@ -132,29 +135,38 @@ public struct GameLog
     public void Kontra() => Meta.Kontra();
     public void Re() => Meta.Re();
 
+    public Turn CurrentTurn => Turns[CardCount / 4];
+    public int DrawingPlayerId => CurrentTurn.DrawingPlayerId;
+    public Hand HandOfDrawingPlayer => Hands[DrawingPlayerId];
+
     public Turn NextCard(Card card)
     {
+        int p_id = DrawingPlayerId;
+        Hands[p_id] = Hands[p_id].Discard(card);
+
         int t_id = CardCount / 4;
         Turns[t_id] = Turns[t_id].NextCard(card);
-        return Turns[t_id];
+        if (CardCount % 4 == 0 && t_id > 0 && t_id < 7)
+            return Turns[t_id+1] = Turn.InitNextTurn(Turns[t_id]);
+        else
+            return Turns[t_id];
     }
 
     public IEnumerable<GameAction> UnrollActions()
     {
         var turnCache = new Card[4];
+        var action = new GameAction();
 
         foreach (var turn in Turns)
         {
             int p_id = turn.FirstDrawingPlayerId;
             turn.CopyCards(turnCache);
 
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < turn.CardsCount; i++)
             {
                 var card = turnCache[p_id];
-                var action = new GameAction() {
-                    PlayerId = (byte)p_id,
-                    CardPlayed = card
-                };
+                action.PlayerId = (byte)p_id;
+                action.CardPlayed = card;
                 yield return action;
                 p_id = (p_id + 1) % 4;
             }
@@ -163,13 +175,17 @@ public struct GameLog
 
     public IEnumerable<Hand> UnrollHands()
     {
+        int i = 0;
         var hands = InitialHands.ToArray();
         foreach (var action in UnrollActions())
         {
+            if (i++ >= CardCount)
+                break;
             yield return hands[action.PlayerId];
             hands[action.PlayerId] = hands[action.PlayerId].Discard(action.CardPlayed);
         }
-        yield return hands[0];
+        if (CardCount == 32)
+            yield return Hand.EMPTY;
     }
 
     public IEnumerable<int[]> UnrollAugen()

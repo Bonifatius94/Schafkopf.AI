@@ -128,16 +128,13 @@ public class TestGameResult_Laufende
 
         for (int i = 0; i < 8; i++)
         {
-            var turn = log.Turns[i];
-            var playersInOrder = Enumerable.Range(0, 4)
-                .Select(i => (kommtRaus + i) % 4);
-
-            foreach (int pid in playersInOrder)
+            for (int j = 0; j < 4; j++)
             {
-                var possCards = hands[pid].Where(c =>
-                    possCardEval.CanPlayCard(call, c, turn, hands[pid]));
-                possCards = log.TurnCount < 8 ? possCards : hands[pid];
-                turn = log.NextCard(possCards.PickRandom());
+                int pid = log.DrawingPlayerId;
+                var hand = log.HandOfDrawingPlayer;
+                var possCards = log.CardCount >= 28 ? hand : hand.Where(c =>
+                    possCardEval.CanPlayCard(call, c, log.CurrentTurn, hand));
+                log.NextCard(possCards.PickRandom());
             }
         }
 

@@ -2,6 +2,9 @@ namespace Schafkopf.Lib;
 
 public class GameRules
 {
+    public ReadOnlySpan<Card> PossibleCards(GameLog log, Card[] cache)
+        => PossibleCards(log.Call, log.CurrentTurn, log.HandOfDrawingPlayer, cache);
+
     public ReadOnlySpan<Card> PossibleCards(
         GameCall call, Turn currentTurn, Hand playerHand, Card[] cache)
     {
