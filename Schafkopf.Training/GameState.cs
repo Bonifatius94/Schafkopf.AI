@@ -64,20 +64,21 @@ public class GameStateSerializer
 
     public GameState SerializeState(GameLog liveGame)
     {
-        serializeHistory(liveGame, stateBuffer);
-        return stateBuffer[liveGame.CardCount - 1];
+        int t = liveGame.CardCount;
+        serializeHistory(liveGame, stateBuffer, t);
+        return stateBuffer[t];
     }
 
     private int playerPosOfTurn(GameLog log, int t_id, int p_id)
         => t_id == 8 ? p_id : normPlayerId(p_id, log.Turns[t_id].FirstDrawingPlayerId);
 
-    private void serializeHistory(GameLog completedGame, GameState[] statesCache)
+    private void serializeHistory(GameLog history, GameState[] statesCache, int skip = 0)
     {
-        int timesteps = completedGame.CardCount;
-        var origCall = completedGame.Call;
-        var hands = completedGame.UnrollHands().GetEnumerator();
-        var scores = completedGame.UnrollAugen().GetEnumerator();
-        var allActions = completedGame.UnrollActions().ToArray();
+        int timesteps = history.CardCount;
+        var origCall = history.Call;
+        var hands = history.UnrollHands().GetEnumerator();
+        var scores = history.UnrollAugen().GetEnumerator();
+        var allActions = history.UnrollActions().ToArray();
         var normCalls = new GameCall[] {
             normCallForPlayer(origCall, 0), normCallForPlayer(origCall, 1),
             normCallForPlayer(origCall, 2), normCallForPlayer(origCall, 3)
@@ -92,10 +93,13 @@ public class GameStateSerializer
             {
                 hands.MoveNext();
 
-                var hand = hands.Current;
-                var score = scores.Current;
-                var state = statesCache[t].State;
-                serializeState(state, normCalls, hand, t++, allActions, score);
+                if (t >= skip)
+                {
+                    var hand = hands.Current;
+                    var score = scores.Current;
+                    var state = statesCache[t].State;
+                    serializeState(state, normCalls, hand, t++, allActions, score);
+                }
 
                 if (t == timesteps) return;
             }
