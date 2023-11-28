@@ -61,8 +61,7 @@ public class SupervisedSchafkopfDataset
             if (log.Call.Mode == GameMode.Weiter)
                 continue;
 
-            serializer.SerializeSarsExps(
-                log, expBuffer, GameReward.Reward);
+            serializer.SerializeSarsExps(log, expBuffer);
 
             for (int i = 0; i < 32; i++)
                 if (numExamples == null || p++ < numExamples)

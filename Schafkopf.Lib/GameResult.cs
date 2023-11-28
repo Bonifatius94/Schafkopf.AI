@@ -56,7 +56,10 @@ public class GameScoreEvaluation
 {
     public GameScoreEvaluation(GameLog log)
     {
-        var augen = log.UnrollAugen().Last();
+        var augen = new int[4];
+        foreach (var turn in log.Turns)
+            augen[turn.WinnerId] += turn.Augen;
+
         ScoreCaller = log.CallerIds.ToArray().Select(id => augen[id]).Sum();
         ScoreOpponents = 120 - ScoreCaller;
 

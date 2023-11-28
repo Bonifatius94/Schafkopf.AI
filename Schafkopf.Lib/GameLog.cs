@@ -151,53 +151,6 @@ public struct GameLog
         else
             return Turns[t_id];
     }
-
-    public IEnumerable<GameAction> UnrollActions()
-    {
-        var turnCache = new Card[4];
-        var action = new GameAction();
-
-        foreach (var turn in Turns)
-        {
-            int p_id = turn.FirstDrawingPlayerId;
-            turn.CopyCards(turnCache);
-
-            for (int i = 0; i < turn.CardsCount; i++)
-            {
-                var card = turnCache[p_id];
-                action.PlayerId = (byte)p_id;
-                action.CardPlayed = card;
-                yield return action;
-                p_id = (p_id + 1) % 4;
-            }
-        }
-    }
-
-    public IEnumerable<Hand> UnrollHands()
-    {
-        int i = 0;
-        var hands = InitialHands.ToArray();
-        foreach (var action in UnrollActions())
-        {
-            if (i++ >= CardCount)
-                break;
-            yield return hands[action.PlayerId];
-            hands[action.PlayerId] = hands[action.PlayerId].Discard(action.CardPlayed);
-        }
-        if (CardCount == 32)
-            yield return Hand.EMPTY;
-    }
-
-    public IEnumerable<int[]> UnrollAugen()
-    {
-        var augen = new int[4];
-        foreach (var turn in Turns)
-        {
-            yield return augen;
-            augen[turn.WinnerId] += turn.Augen;
-        }
-        yield return augen;
-    }
 }
 
 public struct GameAction : IEquatable<GameAction>
