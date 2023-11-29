@@ -389,19 +389,11 @@ public class PPORolloutBuffer
 
     public bool IsReadyForModelUpdate(int t) => t > 0 && t % Steps == 0;
 
-    public void AppendStep(PPOTrainBatch expsOfStep, int t)
+    public PPOTrainBatch? SliceStep(int t)
     {
         int offset = IsReadyForModelUpdate(t)
             ? Steps * NumEnvs : (t % Steps) * NumEnvs;
-
-        Matrix2D.CopyData(expsOfStep.StatesBefore, cache.StatesBefore.SliceRows(offset, NumEnvs));
-        Matrix2D.CopyData(expsOfStep.Actions, cache.Actions.SliceRows(offset, NumEnvs));
-        Matrix2D.CopyData(expsOfStep.Rewards, cache.Rewards.SliceRows(offset, NumEnvs));
-        Matrix2D.CopyData(expsOfStep.Terminals, cache.Terminals.SliceRows(offset, NumEnvs));
-        Matrix2D.CopyData(expsOfStep.Returns, cache.Returns.SliceRows(offset, NumEnvs));
-        Matrix2D.CopyData(expsOfStep.Advantages, cache.Advantages.SliceRows(offset, NumEnvs));
-        Matrix2D.CopyData(expsOfStep.OldProbs, cache.OldProbs.SliceRows(offset, NumEnvs));
-        Matrix2D.CopyData(expsOfStep.OldBaselines, cache.OldBaselines.SliceRows(offset, NumEnvs));
+        return (t > Steps) ? null : cache.SliceRows(offset, NumEnvs);
     }
 
     public IEnumerable<PPOTrainBatch> SampleDataset(int batchSize, int epochs = 1)

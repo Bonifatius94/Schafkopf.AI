@@ -312,7 +312,7 @@ public static class GameLogEx
 
 public static class GameReward
 {
-    public static IEnumerable<(int, double)> UnrollRewards(this GameLog completeGame)
+    public static IEnumerable<(int, int, double)> UnrollRewards(this GameLog completeGame)
     {
         int callerId = completeGame.Call.CallingPlayerId;
         int partnerId = completeGame.Call.PartnerPlayerId;
@@ -347,7 +347,7 @@ public static class GameReward
                 bool knowsPartner = isPartner || completeGame.Turns[t / 4].AlreadyGsucht;
                 double reward = rewardSauspiel(
                     ownAugen, partnerAugen, isCaller || isPartner, knowsPartner);
-                yield return (p_id, reward);
+                yield return (t / 4, p_id, reward);
             }
             else // Wenz or Solo
             {
@@ -357,7 +357,7 @@ public static class GameReward
                 bool isCaller = p_id == callerId;
                 bool isTout = completeGame.Call.IsTout;
                 double reward = rewardSoloWenz(callerAugen, opponentAugen, isCaller, isTout);
-                yield return (p_id, reward);
+                yield return (t / 4, p_id, reward);
             }
 
             t++;

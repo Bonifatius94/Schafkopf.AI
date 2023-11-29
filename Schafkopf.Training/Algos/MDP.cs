@@ -14,60 +14,153 @@ public class CardPickerExpCollector
     private PPOModel strategy;
     private PossibleCardPicker cardSampler;
 
+    private struct TurnBatches
+    {
+        public TurnBatches(int numSessions)
+        {
+            s0Batches = Enumerable.Range(0, 4)
+                .Select(i => Matrix2D.Zeros(numSessions, 90)).ToArray();
+            a0Batches = Enumerable.Range(0, 4)
+                .Select(i => Matrix2D.Zeros(numSessions, 1)).ToArray();
+            piBatches = Enumerable.Range(0, 4)
+                .Select(i => Matrix2D.Zeros(numSessions, 32)).ToArray();
+            piSparseBatches = Enumerable.Range(0, 4)
+                .Select(i => Matrix2D.Zeros(numSessions, 32)).ToArray();
+            vBatches = Enumerable.Range(0, 4)
+                .Select(i => Matrix2D.Zeros(numSessions, 1)).ToArray();
+        }
+
+        public Matrix2D[] s0Batches { get; set; }
+        public Matrix2D[] a0Batches { get; set; }
+        public Matrix2D[] piBatches { get; set; }
+        public Matrix2D[] piSparseBatches { get; set; }
+        public Matrix2D[] vBatches { get; set; }
+    }
+
     public void Collect(PPORolloutBuffer buffer)
     {
         if (buffer.NumEnvs % 4 != 0)
             throw new ArgumentException("The number of envs needs to be "
                 + "divisible by 4 because 4 agents are playing the game!");
+        if (buffer.Steps % 8 != 0)
+            throw new ArgumentException("The number of steps needs to be "
+                + "divisible by 8 because each agent plays 8 cards per game!");
 
-        int numGames = buffer.NumEnvs / 4;
-        var envs = Enumerable.Range(0, numGames)
+        int numGames = buffer.Steps / 8;
+        int numSessions = buffer.NumEnvs / 4;
+        var envs = Enumerable.Range(0, numSessions)
             .Select(i => new CardPickerEnv()).ToArray();
         var states = envs.Select(env => env.Reset()).ToArray();
-        var s0Batch = Matrix2D.Zeros(numGames, 90);
-        var a0Batch = Matrix2D.Zeros(numGames, 1);
-        var piBatch = Matrix2D.Zeros(numGames, 32);
-        var piSparse = Matrix2D.Zeros(numGames, 32);
-        var vBatch = Matrix2D.Zeros(numGames, 1);
-        var cardsCache = new Card[8];
-        var logsCache = new GameLog[numGames];
-        var predBuffer = new PPOPredictionCache(buffer.NumEnvs, 8);
+        var batchesOfTurns = Enumerable.Range(0, 8)
+            .Select(i => new TurnBatches(numSessions)).ToArray();
+        var rewards = Matrix2D.Zeros(8, buffer.NumEnvs);
 
-        int step = 0;
-        while (step < buffer.Steps)
+        for (int gameId = 0; gameId < numGames + 1; gameId++)
         {
+            playGame(envs, states, batchesOfTurns);
+            prepareRewards(states, rewards);
+            fillBuffer(gameId, buffer, states, batchesOfTurns, rewards);
+        }
+    }
+
+    private void fillBuffer(
+        int gameId, PPORolloutBuffer buffer, GameLog[] states,
+        TurnBatches[] batchesOfTurns, Matrix2D rewards)
+    {
+        for (int t_id = 0; t_id < 8; t_id++)
+        {
+            var expBufNull = buffer.SliceStep(gameId * 8 + t_id);
+            if (expBufNull == null) return;
+            var expBuf = expBufNull.Value;
+
+            var batches = batchesOfTurns[t_id];
+            var r1Batch = rewards.SliceRows(t_id, 1);
+
             for (int envId = 0; envId < states.Length; envId++)
             {
-                var s0 = stateSerializer.SerializeState(states[envId]);
-                unsafe { s0.ExportFeatures(s0Batch.Data + envId * 90); }
+                var p_ids = states[envId].UnrollActingPlayers()
+                    .Skip(t_id * 4).Take(4).Zip(Enumerable.Range(0, 4));
+                foreach ((int p_id, int i) in p_ids)
+                {
+                    var s0Batch = batches.s0Batches[i];
+                    var a0Batch = batches.a0Batches[i];
+                    var vBatch = batches.vBatches[i];
+                    var piSparseBatch = batches.piSparseBatches[i];
+
+                    int rowid = envId * 4 + p_id;
+                    Matrix2D.CopyData(
+                        s0Batch.SliceRows(envId, 1),
+                        expBuf.StatesBefore.SliceRows(rowid, 1));
+
+                    unsafe
+                    {
+                        expBuf.Actions.Data[rowid] = a0Batch.Data[envId];
+                        expBuf.Rewards.Data[rowid] = rewards.Data[envId];
+                        expBuf.Terminals.Data[rowid] = t_id == 7 ? 1 : 0;
+                        expBuf.OldProbs.Data[rowid] = piSparseBatch.Data[envId];
+                        expBuf.OldBaselines.Data[rowid] = vBatch.Data[envId];
+                    }
+                }
             }
+        }
+    }
 
-            strategy.Predict(s0Batch, piBatch, vBatch);
-
-            var actions = a0Batch.SliceRowsRaw(0, numGames);
-            var selProbs = piSparse.SliceRowsRaw(0, numGames);
-            for (int envId = 0; envId < numGames; envId++)
+    private void prepareRewards(GameLog[] states, Matrix2D rewards)
+    {
+        for (int envId = 0; envId < states.Length; envId++)
+        {
+            var finalState = states[envId];
+            foreach ((int t_id, var p_id, var reward) in finalState.UnrollRewards())
             {
-                var piSlice = piBatch.SliceRowsRaw(envId, 1);
-                var possCards = rules.PossibleCards(states[envId], cardsCache);
-                var card = cardSampler.PickCard(possCards, piSlice);
-                int action = card.Id % 32;
-                actions[envId] = action;
-                selProbs[envId] = piSlice[action];
+                int rowid = states.Length * 4 * t_id + envId * 4 + p_id;
+                unsafe { rewards.Data[rowid] = reward; }
             }
+        }
+    }
 
-            for (int envId = 0; envId < numGames; envId++)
-            {
-                (var newState, double reward, bool isTerminal) =
-                    envs[envId].Step(new Card((byte)actions[envId]));
-                states[envId] = newState;
-            }
+    private Card[] cardsCache = new Card[8];
+    private void playGame(CardPickerEnv[] envs, GameLog[] states, TurnBatches[] batchesOfTurns)
+    {
+        for (int t_id = 0; t_id < 8; t_id++)
+        {
+            var batches = batchesOfTurns[t_id];
 
-            if (step % 32 == 0)
+            for (int i = 0; i < 4; i++)
             {
-                // TODO: continue implementation
-                // 1) evaluate the game logs to determine rewards
-                // 2) fill the training buffer with game histories
+                var s0Batch = batches.s0Batches[i];
+                var a0Batch = batches.a0Batches[i];
+                var piBatch = batches.piBatches[i];
+                var vBatch = batches.vBatches[i];
+                var piSparseBatch = batches.piSparseBatches[i];
+
+                for (int envId = 0; envId < states.Length; envId++)
+                {
+                    var s0 = stateSerializer.SerializeState(states[envId]);
+                    unsafe { s0.ExportFeatures(s0Batch.Data + envId * 90); }
+                }
+
+                strategy.Predict(s0Batch, piBatch, vBatch);
+
+                var actions = a0Batch.SliceRowsRaw(0, envs.Length);
+                var selProbs = piSparseBatch.SliceRowsRaw(0, envs.Length);
+                for (int envId = 0; envId < envs.Length; envId++)
+                {
+                    var piSlice = piBatch.SliceRowsRaw(envId, 1);
+                    var possCards = rules.PossibleCards(states[envId], cardsCache);
+                    var card = cardSampler.PickCard(possCards, piSlice);
+                    int action = card.Id % 32;
+                    actions[envId] = action;
+                    selProbs[envId] = piSlice[action];
+                }
+
+                for (int envId = 0; envId < envs.Length; envId++)
+                {
+                    // info: rewards and terminals are
+                    //       determined after the game is over
+                    (var newState, double reward, bool isTerminal) =
+                        envs[envId].Step(new Card((byte)actions[envId]));
+                    states[envId] = newState;
+                }
             }
         }
     }
