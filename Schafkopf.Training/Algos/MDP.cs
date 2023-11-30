@@ -2,49 +2,24 @@ namespace Schafkopf.Training;
 
 public class CardPickerExpCollector
 {
-    public CardPickerExpCollector(
-        PPOModel strategy, PossibleCardPicker cardSampler)
+    public CardPickerExpCollector(PPOModel strategy)
     {
         this.strategy = strategy;
-        this.cardSampler = cardSampler;
     }
 
     private GameRules rules = new GameRules();
     private GameStateSerializer stateSerializer = new GameStateSerializer();
     private PPOModel strategy;
-    private PossibleCardPicker cardSampler;
-
-    private struct TurnBatches
-    {
-        public TurnBatches(int numSessions)
-        {
-            s0Batches = Enumerable.Range(0, 4)
-                .Select(i => Matrix2D.Zeros(numSessions, 90)).ToArray();
-            a0Batches = Enumerable.Range(0, 4)
-                .Select(i => Matrix2D.Zeros(numSessions, 1)).ToArray();
-            piBatches = Enumerable.Range(0, 4)
-                .Select(i => Matrix2D.Zeros(numSessions, 32)).ToArray();
-            piSparseBatches = Enumerable.Range(0, 4)
-                .Select(i => Matrix2D.Zeros(numSessions, 32)).ToArray();
-            vBatches = Enumerable.Range(0, 4)
-                .Select(i => Matrix2D.Zeros(numSessions, 1)).ToArray();
-        }
-
-        public Matrix2D[] s0Batches { get; set; }
-        public Matrix2D[] a0Batches { get; set; }
-        public Matrix2D[] piBatches { get; set; }
-        public Matrix2D[] piSparseBatches { get; set; }
-        public Matrix2D[] vBatches { get; set; }
-    }
+    private PossibleCardPicker cardSampler = new PossibleCardPicker();
 
     public void Collect(PPORolloutBuffer buffer)
     {
         if (buffer.NumEnvs % 4 != 0)
             throw new ArgumentException("The number of envs needs to be "
                 + "divisible by 4 because 4 agents are playing the game!");
-        if (buffer.Steps % 8 != 0)
-            throw new ArgumentException("The number of steps needs to be "
-                + "divisible by 8 because each agent plays 8 cards per game!");
+        // if (buffer.Steps % 8 != 0)
+        //     throw new ArgumentException("The number of steps needs to be "
+        //         + "divisible by 8 because each agent plays 8 cards per game!");
 
         int numGames = buffer.Steps / 8;
         int numSessions = buffer.NumEnvs / 4;
@@ -95,7 +70,7 @@ public class CardPickerExpCollector
                     unsafe
                     {
                         expBuf.Actions.Data[rowid] = a0Batch.Data[envId];
-                        expBuf.Rewards.Data[rowid] = rewards.Data[envId];
+                        expBuf.Rewards.Data[rowid] = r1Batch.Data[envId];
                         expBuf.Terminals.Data[rowid] = t_id == 7 ? 1 : 0;
                         expBuf.OldProbs.Data[rowid] = piSparseBatch.Data[envId];
                         expBuf.OldBaselines.Data[rowid] = vBatch.Data[envId];
@@ -136,7 +111,7 @@ public class CardPickerExpCollector
                 for (int envId = 0; envId < states.Length; envId++)
                 {
                     var s0 = stateSerializer.SerializeState(states[envId]);
-                    unsafe { s0.ExportFeatures(s0Batch.Data + envId * 90); }
+                    s0.ExportFeatures(s0Batch.SliceRowsRaw(envId, 1));
                 }
 
                 strategy.Predict(s0Batch, piBatch, vBatch);
@@ -162,6 +137,69 @@ public class CardPickerExpCollector
                     states[envId] = newState;
                 }
             }
+        }
+    }
+
+    private struct TurnBatches
+    {
+        public TurnBatches(int numSessions)
+        {
+            s0Batches = Enumerable.Range(0, 4)
+                .Select(i => Matrix2D.Zeros(numSessions, 90)).ToArray();
+            a0Batches = Enumerable.Range(0, 4)
+                .Select(i => Matrix2D.Zeros(numSessions, 1)).ToArray();
+            piBatches = Enumerable.Range(0, 4)
+                .Select(i => Matrix2D.Zeros(numSessions, 32)).ToArray();
+            piSparseBatches = Enumerable.Range(0, 4)
+                .Select(i => Matrix2D.Zeros(numSessions, 32)).ToArray();
+            vBatches = Enumerable.Range(0, 4)
+                .Select(i => Matrix2D.Zeros(numSessions, 1)).ToArray();
+        }
+
+        public Matrix2D[] s0Batches { get; set; }
+        public Matrix2D[] a0Batches { get; set; }
+        public Matrix2D[] piBatches { get; set; }
+        public Matrix2D[] piSparseBatches { get; set; }
+        public Matrix2D[] vBatches { get; set; }
+    }
+
+    private class PossibleCardPicker
+    {
+        private UniformDistribution uniform = new UniformDistribution();
+
+        public Card PickCard(
+                ReadOnlySpan<Card> possibleCards,
+                ReadOnlySpan<double> predPi,
+                Card sampledCard)
+            => canPlaySampledCard(possibleCards, sampledCard) ? sampledCard
+                : possibleCards[uniform.Sample(normProbDist(predPi, possibleCards))];
+
+        public Card PickCard(ReadOnlySpan<Card> possibleCards, ReadOnlySpan<double> predPi)
+            => possibleCards[uniform.Sample(normProbDist(predPi, possibleCards))];
+
+        private bool canPlaySampledCard(
+            ReadOnlySpan<Card> possibleCards, Card sampledCard)
+        {
+            foreach (var card in possibleCards)
+                if (card == sampledCard)
+                    return true;
+            return false;
+        }
+
+        private double[] probDistCache = new double[8];
+        private ReadOnlySpan<double> normProbDist(
+            ReadOnlySpan<double> probDistAll, ReadOnlySpan<Card> possibleCards)
+        {
+            double probSum = 0;
+            for (int i = 0; i < possibleCards.Length; i++)
+                probDistCache[i] = probDistAll[possibleCards[i].Id & Card.ORIG_CARD_MASK];
+            for (int i = 0; i < possibleCards.Length; i++)
+                probSum += probDistCache[i];
+            double scale = 1 / probSum;
+            for (int i = 0; i < possibleCards.Length; i++)
+                probDistCache[i] *= scale;
+
+            return probDistCache.AsSpan().Slice(0, possibleCards.Length);
         }
     }
 }

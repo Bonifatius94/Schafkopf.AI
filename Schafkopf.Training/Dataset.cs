@@ -1,5 +1,25 @@
 namespace Schafkopf.Training;
 
+public struct SarsExp : IEquatable<SarsExp>
+{
+    public SarsExp() { }
+
+    public GameState StateBefore = new GameState();
+    public GameState StateAfter = new GameState();
+    public Card Action = new Card();
+    public double Reward = 0.0;
+    public bool IsTerminal = false;
+
+    public bool Equals(SarsExp other)
+        => StateBefore.Equals(other.StateBefore)
+            && StateAfter.Equals(other.StateAfter)
+            && Action == other.Action
+            && Reward == other.Reward
+            && IsTerminal == other.IsTerminal;
+
+    public override int GetHashCode() => 0;
+}
+
 public class SupervisedSchafkopfDataset
 {
     public static FlatFeatureDataset GenerateDataset(
@@ -24,8 +44,9 @@ public class SupervisedSchafkopfDataset
                 var card = exp.Action;
                 x.Data[p++] = GameEncoding.Encode(card.Type);
                 x.Data[p++] = GameEncoding.Encode(card.Color);
-                exp.StateBefore.ExportFeatures(x.Data + p);
-                p += GameState.NUM_FEATURES;
+                var stateDest = new Span<double>(x.Data + p, GameState.NUM_FEATURES);
+                exp.StateBefore.ExportFeatures(stateDest);
+                p += stateDest.Length;
                 y.Data[i++] = exp.Reward;
             }
         }
@@ -39,6 +60,8 @@ public class SupervisedSchafkopfDataset
     {
         var gameCaller = new HeuristicGameCaller(
             new GameMode[] { GameMode.Sauspiel });
+
+        // TODO: supervised transfer learning requires pre-trained agent / heuristic
         var agent = new RandomAgent(gameCaller);
         var table = new Table(
             new Player(0, agent), new Player(1, agent),

@@ -2,9 +2,9 @@ namespace Schafkopf.Training;
 
 public class HeuristicAgent : ISchafkopfAIAgent
 {
-    private Random rng = new Random();
     private HeuristicGameCaller caller =
         new HeuristicGameCaller(new GameMode[] { GameMode.Sauspiel });
+    private HeuristicCardPicker cardPicker = new HeuristicCardPicker();
 
     public GameCall MakeCall(
             ReadOnlySpan<GameCall> possibleCalls,
@@ -12,12 +12,45 @@ public class HeuristicAgent : ISchafkopfAIAgent
         => caller.MakeCall(possibleCalls, position, hand, klopfer);
 
     public Card ChooseCard(GameLog log, ReadOnlySpan<Card> possibleCards)
-        => possibleCards[rng.Next(0, possibleCards.Length)];
+        => cardPicker.ChooseCard(log, possibleCards);
 
     public bool IsKlopfer(int position, ReadOnlySpan<Card> firstFourCards) => false;
     public bool CallKontra(GameLog log) => false;
     public bool CallRe(GameLog log) => false;
     public void OnGameFinished(GameLog final) => throw new NotImplementedException();
+}
+
+public class HeuristicCardPicker
+{
+    private Random rng = new Random();
+
+    public Card ChooseCard(GameLog log, ReadOnlySpan<Card> possibleCards)
+    {
+        if (log.Call.Mode == GameMode.Solo)
+            return chooseCardForSolo(log, possibleCards);
+        else if (log.Call.Mode == GameMode.Wenz)
+            return chooseCardForWenz(log, possibleCards);
+        else // if (log.Call.Mode == GameMode.Sauspiel)
+            return chooseCardForSauspiel(log, possibleCards);
+    }
+
+    private Card chooseCardForSolo(GameLog log, ReadOnlySpan<Card> possibleCards)
+    {
+        // TODO: implement heuristic
+        return possibleCards[rng.Next(0, possibleCards.Length)];
+    }
+
+    private Card chooseCardForWenz(GameLog log, ReadOnlySpan<Card> possibleCards)
+    {
+        // TODO: implement heuristic
+        return possibleCards[rng.Next(0, possibleCards.Length)];
+    }
+
+    private Card chooseCardForSauspiel(GameLog log, ReadOnlySpan<Card> possibleCards)
+    {
+        // TODO: implement heuristic
+        return possibleCards[rng.Next(0, possibleCards.Length)];
+    }
 }
 
 public class HeuristicGameCaller

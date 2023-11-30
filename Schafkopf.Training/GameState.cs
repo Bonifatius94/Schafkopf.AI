@@ -11,7 +11,7 @@ public struct GameState : IEquatable<GameState>
     public void LoadFeatures(double[] other)
         => Array.Copy(other, State, NUM_FEATURES);
 
-    public unsafe void ExportFeatures(double* other)
+    public unsafe void ExportFeatures(Span<double> other)
     {
         for (int i = 0; i < NUM_FEATURES; i++)
             other[i] = State[i];

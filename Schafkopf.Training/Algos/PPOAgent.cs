@@ -4,57 +4,8 @@ public class PPOTrainingSession
 {
     public void Train()
     {
-        // var config = new PPOTrainingSettings();
-        // var rewardFunc = new GameReward();
-        // var memory = new PPORolloutBuffer(config);
-        // var predCache = new PPOPredictionCache(config.NumEnvs, config.StepsPerUpdate);
-        // var ppoModel = new PPOModel(config);
-        // var cardPicker = new VectorizedCardPicker(config, ppoModel, predCache);
-        // var vecEnv = new VectorizedCardPickerEnv(cardPicker, config.BatchSize);
-        // var heuristicGameCaller = new HeuristicAgent();
-        // var envProxies = Enumerable.Range(0, config.NumEnvs)
-        //     .Select(i => new EnvCardPicker(i, vecEnv)).ToArray();
-        // var agents = Enumerable.Range(0, config.NumEnvs)
-        //     .Select(i => new ComposedAgent(heuristicGameCaller, envProxies[i])).ToArray();
-
-        // var tables = Enumerable.Range(0, config.NumEnvs)
-        //     .Select(i => new Table(
-        //         new Player(0, agents[i]),
-        //         new Player(1, agents[i]),
-        //         new Player(2, agents[i]),
-        //         new Player(3, agents[i])
-        //     )).ToArray();
-        // var sessions = Enumerable.Range(0, config.NumEnvs)
-        //     .Select(i => new GameSession(tables[i], new CardsDeck())).ToArray();
-
-        // for (int i = 0; i < 10_000; i++)
-        // {
-        //     var games = sessions.AsParallel().Select(sess => sess.ProcessGame());
-        // }
+        
     }
-}
-
-public class UniformDistribution
-{
-    public UniformDistribution(int? seed = null)
-        => rng = seed != null ? new Random(seed.Value) : new Random();
-
-    private Random rng;
-
-    public int Sample(ReadOnlySpan<double> probs)
-    {
-        double p = rng.NextDouble();
-        double sum = 0;
-        for (int i = 0; i < probs.Length - 1; i++)
-        {
-            sum += probs[i];
-            if (p < sum)
-                return i;
-        }
-        return probs.Length - 1;
-    }
-
-    public int Sample(int numClasses) => rng.Next(0, numClasses);
 }
 
 public class PPOModel
@@ -94,7 +45,6 @@ public class PPOModel
     private IOptimizer valueFuncOpt;
 
     private Matrix2D featureCache;
-    private UniformDistribution uniform = new UniformDistribution();
 
     public void Predict(Matrix2D s0, Matrix2D outPiOnehot, Matrix2D outV)
     {
@@ -213,73 +163,6 @@ public class PPOTrainingSettings
 
     public int TrainSteps => TotalSteps / NumEnvs;
     public int ModelSnapshotInterval => TrainSteps / NumModelSnapshots;
-}
-
-public class PossibleCardPicker
-{
-    private UniformDistribution uniform = new UniformDistribution();
-
-    public Card PickCard(
-            ReadOnlySpan<Card> possibleCards,
-            ReadOnlySpan<double> predPi,
-            Card sampledCard)
-        => canPlaySampledCard(possibleCards, sampledCard) ? sampledCard
-            : possibleCards[uniform.Sample(normProbDist(predPi, possibleCards))];
-
-    public Card PickCard(ReadOnlySpan<Card> possibleCards, ReadOnlySpan<double> predPi)
-        => possibleCards[uniform.Sample(normProbDist(predPi, possibleCards))];
-
-    private bool canPlaySampledCard(
-        ReadOnlySpan<Card> possibleCards, Card sampledCard)
-    {
-        foreach (var card in possibleCards)
-            if (card == sampledCard)
-                return true;
-        return false;
-    }
-
-    private double[] probDistCache = new double[8];
-    private ReadOnlySpan<double> normProbDist(
-        ReadOnlySpan<double> probDistAll, ReadOnlySpan<Card> possibleCards)
-    {
-        double probSum = 0;
-        for (int i = 0; i < possibleCards.Length; i++)
-            probDistCache[i] = probDistAll[possibleCards[i].Id & Card.ORIG_CARD_MASK];
-        for (int i = 0; i < possibleCards.Length; i++)
-            probSum += probDistCache[i];
-        double scale = 1 / probSum;
-        for (int i = 0; i < possibleCards.Length; i++)
-            probDistCache[i] *= scale;
-
-        return probDistCache.AsSpan().Slice(0, possibleCards.Length);
-    }
-}
-
-public struct PPOPredictionCache
-{
-    public PPOPredictionCache(int numEnvs, int steps)
-    {
-        this.numEnvs = numEnvs;
-        int size = steps * numEnvs;
-        oldProbs = new double[size];
-        oldBaselines = new double[size];
-    }
-
-    private int numEnvs;
-    private double[] oldProbs;
-    private double[] oldBaselines;
-
-    public void AppendStep(int t, ReadOnlySpan<double> pi, ReadOnlySpan<double> v)
-    {
-        pi.CopyTo(oldProbs.AsSpan(t * numEnvs));
-        v.CopyTo(oldBaselines.AsSpan(t * numEnvs));
-    }
-
-    public void Export(Span<double> pi, Span<double> v)
-    {
-        oldProbs.CopyTo(pi);
-        oldBaselines.CopyTo(v);
-    }
 }
 
 public struct PPOTrainBatch
