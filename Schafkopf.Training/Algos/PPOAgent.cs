@@ -1,11 +1,93 @@
+
 namespace Schafkopf.Training;
+
+public class PPOTrainingSettings
+{
+    public int TotalSteps = 10_000_000;
+    public double LearnRate = 3e-4;
+    public double RewardDiscount = 0.99;
+    public double GAEDiscount = 0.95;
+    public double ProbClip = 0.2;
+    public double ValueClip = 0.2;
+    public double VFCoef = 0.5;
+    public double EntCoef = 0.01;
+    public bool NormAdvantages = true;
+    public bool ClipValues = true;
+    public int BatchSize = 64;
+    public int NumEnvs = 32;
+    public int NumStateDims = 90;
+    public int NumActionDims = 32;
+    public int StepsPerUpdate = 512;
+    public int UpdateEpochs = 10;
+    public int NumModelSnapshots = 20;
+
+    public int TrainSteps => TotalSteps / NumEnvs;
+    public int ModelSnapshotInterval => TrainSteps / NumModelSnapshots;
+    public int NumTrainings => TrainSteps / StepsPerUpdate;
+}
 
 public class PPOTrainingSession
 {
-    public void Train()
+    public PPOModel Train(PPOTrainingSettings config)
     {
-        
+        var model = new PPOModel(config);
+        var rollout = new PPORolloutBuffer(config);
+        var exps = new CardPickerExpCollector(model);
+        var benchmark = new RandomPlayBenchmark();
+        var agent = new PPOAgent(model);
+
+        for (int ep = 0; ep < config.NumTrainings; ep++)
+        {
+            exps.Collect(rollout);
+            model.Train(rollout);
+
+            if ((ep + 1) % 10 == 0)
+            {
+                double winRate = benchmark.Benchmark(agent);
+                Console.WriteLine($"epoch {ep}: win rate vs. random agents is {winRate}");
+            }
+        }
+
+        return model;
     }
+}
+
+public class PPOAgent : ISchafkopfAIAgent
+{
+    public PPOAgent(PPOModel model)
+    {
+        this.model = model;
+    }
+
+    private PPOModel model;
+    private HeuristicAgent heuristicAgent = new HeuristicAgent();
+    private GameStateSerializer stateSerializer = new GameStateSerializer();
+    private PossibleCardPicker sampler = new PossibleCardPicker();
+    private UniformDistribution uniform = new UniformDistribution();
+
+    private Matrix2D s0 = Matrix2D.Zeros(1, 90);
+    private Matrix2D piOh = Matrix2D.Zeros(1, 32);
+    private Matrix2D V = Matrix2D.Zeros(1, 1);
+
+    public Card ChooseCard(GameLog log, ReadOnlySpan<Card> possibleCards)
+    {
+        var state = stateSerializer.SerializeState(log);
+        state.ExportFeatures(s0.SliceRowsRaw(0, 1));
+        model.Predict(s0, piOh, V);
+        var predDist = piOh.SliceRowsRaw(0, 1);
+        var card = new Card((byte)uniform.Sample(predDist));
+        return sampler.PickCard(possibleCards, predDist, card);
+    }
+
+    public bool CallKontra(GameLog log) => heuristicAgent.CallKontra(log);
+    public bool CallRe(GameLog log) => heuristicAgent.CallRe(log);
+    public bool IsKlopfer(int position, ReadOnlySpan<Card> firstFourCards)
+        => heuristicAgent.IsKlopfer(position, firstFourCards);
+    public GameCall MakeCall(
+            ReadOnlySpan<GameCall> possibleCalls,
+            int position, Hand hand, int klopfer)
+        => heuristicAgent.MakeCall(possibleCalls, position, hand, klopfer);
+    public void OnGameFinished(GameLog final) => heuristicAgent.OnGameFinished(final);
 }
 
 public class PPOModel
@@ -65,11 +147,13 @@ public class PPOModel
 
     private void updateModels(PPOTrainBatch batch)
     {
+        // update strategy pi(s)
         var predPi = strategy.PredictBatch(batch.StatesBefore);
         var policyDeltas = strategy.Layers.Last().Cache.DeltasIn;
         computePolicyDeltas(batch, predPi, policyDeltas);
         strategy.FitBatch(policyDeltas, strategyOpt);
 
+        // update baseline V(s)
         var predV = valueFunc.PredictBatch(batch.StatesBefore);
         var valueDeltas = valueFunc.Layers.Last().Cache.DeltasIn;
         computeValueDeltas(batch, predV, valueDeltas);
@@ -140,29 +224,44 @@ public class PPOModel
     }
 }
 
-public class PPOTrainingSettings
+public class PossibleCardPicker
 {
-    public int NumObsFeatures { get; set; }
-    public int TotalSteps = 10_000_000;
-    public double LearnRate = 3e-4;
-    public double RewardDiscount = 0.99;
-    public double GAEDiscount = 0.95;
-    public double ProbClip = 0.2;
-    public double ValueClip = 0.2;
-    public double VFCoef = 0.5;
-    public double EntCoef = 0.01;
-    public bool NormAdvantages = true;
-    public bool ClipValues = true;
-    public int BatchSize = 64;
-    public int NumEnvs = 32;
-    public int NumStateDims = 90;
-    public int NumActionDims = 32;
-    public int StepsPerUpdate = 512;
-    public int UpdateEpochs = 4;
-    public int NumModelSnapshots = 20;
+    private UniformDistribution uniform = new UniformDistribution();
 
-    public int TrainSteps => TotalSteps / NumEnvs;
-    public int ModelSnapshotInterval => TrainSteps / NumModelSnapshots;
+    public Card PickCard(
+            ReadOnlySpan<Card> possibleCards,
+            ReadOnlySpan<double> predPi,
+            Card sampledCard)
+        => canPlaySampledCard(possibleCards, sampledCard) ? sampledCard
+            : possibleCards[uniform.Sample(normProbDist(predPi, possibleCards))];
+
+    public Card PickCard(ReadOnlySpan<Card> possibleCards, ReadOnlySpan<double> predPi)
+        => possibleCards[uniform.Sample(normProbDist(predPi, possibleCards))];
+
+    private bool canPlaySampledCard(
+        ReadOnlySpan<Card> possibleCards, Card sampledCard)
+    {
+        foreach (var card in possibleCards)
+            if (card == sampledCard)
+                return true;
+        return false;
+    }
+
+    private double[] probDistCache = new double[8];
+    private ReadOnlySpan<double> normProbDist(
+        ReadOnlySpan<double> probDistAll, ReadOnlySpan<Card> possibleCards)
+    {
+        double probSum = 0;
+        for (int i = 0; i < possibleCards.Length; i++)
+            probDistCache[i] = probDistAll[possibleCards[i].Id & Card.ORIG_CARD_MASK];
+        for (int i = 0; i < possibleCards.Length; i++)
+            probSum += probDistCache[i];
+        double scale = 1 / probSum;
+        for (int i = 0; i < possibleCards.Length; i++)
+            probDistCache[i] *= scale;
+
+        return probDistCache.AsSpan().Slice(0, possibleCards.Length);
+    }
 }
 
 public struct PPOTrainBatch

@@ -162,46 +162,6 @@ public class CardPickerExpCollector
         public Matrix2D[] piSparseBatches { get; set; }
         public Matrix2D[] vBatches { get; set; }
     }
-
-    private class PossibleCardPicker
-    {
-        private UniformDistribution uniform = new UniformDistribution();
-
-        public Card PickCard(
-                ReadOnlySpan<Card> possibleCards,
-                ReadOnlySpan<double> predPi,
-                Card sampledCard)
-            => canPlaySampledCard(possibleCards, sampledCard) ? sampledCard
-                : possibleCards[uniform.Sample(normProbDist(predPi, possibleCards))];
-
-        public Card PickCard(ReadOnlySpan<Card> possibleCards, ReadOnlySpan<double> predPi)
-            => possibleCards[uniform.Sample(normProbDist(predPi, possibleCards))];
-
-        private bool canPlaySampledCard(
-            ReadOnlySpan<Card> possibleCards, Card sampledCard)
-        {
-            foreach (var card in possibleCards)
-                if (card == sampledCard)
-                    return true;
-            return false;
-        }
-
-        private double[] probDistCache = new double[8];
-        private ReadOnlySpan<double> normProbDist(
-            ReadOnlySpan<double> probDistAll, ReadOnlySpan<Card> possibleCards)
-        {
-            double probSum = 0;
-            for (int i = 0; i < possibleCards.Length; i++)
-                probDistCache[i] = probDistAll[possibleCards[i].Id & Card.ORIG_CARD_MASK];
-            for (int i = 0; i < possibleCards.Length; i++)
-                probSum += probDistCache[i];
-            double scale = 1 / probSum;
-            for (int i = 0; i < possibleCards.Length; i++)
-                probDistCache[i] *= scale;
-
-            return probDistCache.AsSpan().Slice(0, possibleCards.Length);
-        }
-    }
 }
 
 public class CardPickerEnv

@@ -85,7 +85,7 @@ public class GameStateSerializer
         };
 
         int t = 0;
-        for (int t_id = 0; t_id < Math.Ceiling((double)timesteps / 4); t_id++)
+        for (int t_id = 0; t_id < Math.Min(timesteps / 4 + 1, 8); t_id++)
         {
             scores.MoveNext();
 
@@ -95,13 +95,15 @@ public class GameStateSerializer
 
                 if (t >= skip)
                 {
+                    int actingPlayer = t == history.CardCount
+                        ? history.DrawingPlayerId : allActions[t].PlayerId;
                     var hand = hands.Current;
                     var score = scores.Current;
                     var state = statesCache[t].State;
-                    serializeState(state, normCalls, hand, t++, allActions, score);
+                    serializeState(state, normCalls, hand, t, actingPlayer, allActions, score);
                 }
 
-                if (t == timesteps) return;
+                if (t++ == history.CardCount) return; // TODO: check this condition
             }
         }
 
@@ -110,12 +112,12 @@ public class GameStateSerializer
         for (; t < 36; t++)
             serializeState(
                 statesCache[t].State, normCalls, Hand.EMPTY,
-                t, allActions, scores.Current);
+                t, t % 4, allActions, scores.Current);
     }
 
     private unsafe void serializeState(
         double[] state, ReadOnlySpan<GameCall> normCalls, Hand hand, int t,
-        ReadOnlySpan<GameAction> turnHistory, int[] augen)
+        int actingPlayer, ReadOnlySpan<GameAction> turnHistory, int[] augen)
     {
         if (state.Length < 90)
             throw new IndexOutOfRangeException("Memory overflow");
@@ -126,7 +128,7 @@ public class GameStateSerializer
         //  - turn history (64 floats)
         //  - augen (4 floats)
 
-        int actingPlayer = t < 32 ? turnHistory[t].PlayerId : t & 0x3;
+        // int actingPlayer = t < 32 ? (t == 0 ? kommtRaus : turnHistory[t].PlayerId) : t % 4;
         var call = normCalls[actingPlayer];
 
         fixed (double* stateArr = &state[0])
@@ -250,17 +252,14 @@ public static class GameLogEx
 {
     public static IEnumerable<GameAction> UnrollActions(this GameLog log)
     {
-        var turnCache = new Card[4];
         var action = new GameAction();
 
         foreach (var turn in log.Turns)
         {
             int p_id = turn.FirstDrawingPlayerId;
-            turn.CopyCards(turnCache);
 
-            for (int i = 0; i < turn.CardsCount; i++)
+            foreach (var card in turn.AllCards)
             {
-                var card = turnCache[p_id];
                 action.PlayerId = (byte)p_id;
                 action.CardPlayed = card;
                 yield return action;

@@ -2,7 +2,7 @@ namespace Schafkopf.Training;
 
 public class RandomPlayBenchmark
 {
-    public void Benchmark(ISchafkopfAIAgent agentToEval, int epochs = 10_000)
+    public double Benchmark(ISchafkopfAIAgent agentToEval, int epochs = 10_000)
     {
         var gameCaller = new HeuristicGameCaller(
             new GameMode[] { GameMode.Sauspiel, GameMode.Wenz, GameMode.Solo });
@@ -22,13 +22,16 @@ public class RandomPlayBenchmark
         for (int i = 0; i < epochs; i++)
         {
             var log = session.ProcessGame();
+
+            // info: only evaluate games where cards were played
+            if (log.Call.Mode == GameMode.Weiter) { i--; continue; }
+
             var eval = new GameScoreEvaluation(log);
             bool isCaller = log.CallerIds.Contains(0);
             bool isWin = !eval.DidCallerWin ^ isCaller;
             wins += isWin ? 1 : 0;
         }
 
-        double winRate = (double)wins / epochs;
-        Console.WriteLine($"agent scored a win rate of {winRate}!");
+        return (double)wins / epochs; // win rate
     }
 }
