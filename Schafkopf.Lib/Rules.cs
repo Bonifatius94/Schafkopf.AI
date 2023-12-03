@@ -9,9 +9,13 @@ public class GameRules
         GameCall call, Turn currentTurn, Hand playerHand, Card[] cache)
     {
         int p = 0;
-        foreach (var card in playerHand)
-            if (CanPlayCard(call, card, currentTurn, playerHand))
-                cache[p++] = card;
+        if (playerHand.CardsCount == 1)
+            cache[p++] = playerHand.LastCard;
+        else
+            foreach (var card in playerHand)
+                if (CanPlayCard(call, card, currentTurn, playerHand))
+                    cache[p++] = card;
+
         return cache.AsSpan(0, p);
     }
 

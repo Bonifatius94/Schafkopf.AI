@@ -117,8 +117,7 @@ public class GameHistoryTest_IteratingOverTurnsWhileApplyingCards
             {
                 int pid = history.DrawingPlayerId;
                 var hand = history.HandOfDrawingPlayer;
-                var possCards = history.CardCount >= 28 ? hand : hand.Where(c =>
-                    rules.CanPlayCard(call, c, history.CurrentTurn, hand));
+                var possCards = rules.PossibleCards(history, cardCache);
                 history.NextCard(possCards.PickRandom());
             }
         }

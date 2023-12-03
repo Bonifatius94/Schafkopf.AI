@@ -24,7 +24,7 @@ public class CardPickerEnvTests
         Assert.Equal(32, state.CardCount); // assert that no exception occurred
     }
 
-    [Fact(Skip="raises error (needs to be fixed)")]
+    [Fact]
     public void Test_CanPlayConsequtiveGames()
     {
         var rules = new GameRules();

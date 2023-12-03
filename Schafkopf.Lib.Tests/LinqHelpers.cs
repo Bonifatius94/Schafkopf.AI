@@ -9,6 +9,9 @@ public static class PickRandomEx
     public static T PickRandom<T>(this IEnumerable<T> items)
         => items.ElementAt(rng.Next(items.Count()));
 
+    public static T PickRandom<T>(this ReadOnlySpan<T> items)
+        => items[rng.Next(items.Length)];
+
     public static IEnumerable<T> RandomSubset<T>(
             this IEnumerable<T> items, int count)
         => new EqualDistPermutator_256(items.Count())

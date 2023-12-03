@@ -122,21 +122,13 @@ public class TestGameResult_Laufende
 
     private static GameLog playRandomValidGame(GameCall call, Hand[] hands)
     {
-        var possCardEval = new GameRules();
+        var rules = new GameRules();
         int kommtRaus = Enumerable.Range(0, 4).PickRandom();
         var log = GameLog.NewLiveGame(call, hands, kommtRaus);
+        var cache = new Card[8];
 
-        for (int i = 0; i < 8; i++)
-        {
-            for (int j = 0; j < 4; j++)
-            {
-                int pid = log.DrawingPlayerId;
-                var hand = log.HandOfDrawingPlayer;
-                var possCards = log.CardCount >= 28 ? hand : hand.Where(c =>
-                    possCardEval.CanPlayCard(call, c, log.CurrentTurn, hand));
-                log.NextCard(possCards.PickRandom());
-            }
-        }
+        for (int i = 0; i < 32; i++)
+            log.NextCard(rules.PossibleCards(log, cache).PickRandom());
 
         return log;
     }

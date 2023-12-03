@@ -63,7 +63,6 @@ public class PPOAgent : ISchafkopfAIAgent
     private HeuristicAgent heuristicAgent = new HeuristicAgent();
     private GameStateSerializer stateSerializer = new GameStateSerializer();
     private PossibleCardPicker sampler = new PossibleCardPicker();
-    private UniformDistribution uniform = new UniformDistribution();
 
     private Matrix2D s0 = Matrix2D.Zeros(1, 90);
     private Matrix2D piOh = Matrix2D.Zeros(1, 32);
@@ -75,8 +74,7 @@ public class PPOAgent : ISchafkopfAIAgent
         state.ExportFeatures(s0.SliceRowsRaw(0, 1));
         model.Predict(s0, piOh, V);
         var predDist = piOh.SliceRowsRaw(0, 1);
-        var card = new Card((byte)uniform.Sample(predDist));
-        return sampler.PickCard(possibleCards, predDist, card);
+        return sampler.PickCard(possibleCards, predDist);
     }
 
     public bool CallKontra(GameLog log) => heuristicAgent.CallKontra(log);
@@ -229,24 +227,8 @@ public class PossibleCardPicker
 {
     private UniformDistribution uniform = new UniformDistribution();
 
-    public Card PickCard(
-            ReadOnlySpan<Card> possibleCards,
-            ReadOnlySpan<double> predPi,
-            Card sampledCard)
-        => canPlaySampledCard(possibleCards, sampledCard) ? sampledCard
-            : possibleCards[uniform.Sample(normProbDist(predPi, possibleCards))];
-
     public Card PickCard(ReadOnlySpan<Card> possibleCards, ReadOnlySpan<double> predPi)
         => possibleCards[uniform.Sample(normProbDist(predPi, possibleCards))];
-
-    private bool canPlaySampledCard(
-        ReadOnlySpan<Card> possibleCards, Card sampledCard)
-    {
-        foreach (var card in possibleCards)
-            if (card == sampledCard)
-                return true;
-        return false;
-    }
 
     private double[] probDistCache = new double[8];
     private ReadOnlySpan<double> normProbDist(

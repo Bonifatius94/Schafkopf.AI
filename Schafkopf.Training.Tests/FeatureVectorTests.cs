@@ -48,8 +48,7 @@ public class FeatureVectorTests
         var cardsCache = new Card[8];
 
         foreach (var _ in Enumerable.Range(0, 32))
-            liveGame.NextCard(gameRules.PossibleCards(
-                liveGame, cardsCache).ToArray().First());
+            liveGame.NextCard(gameRules.PossibleCards(liveGame, cardsCache)[0]);
 
         return liveGame;
     }

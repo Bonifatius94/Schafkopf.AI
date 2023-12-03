@@ -34,7 +34,7 @@ public class CardPickerExpCollector
 
         for (int gameId = 0; gameId < numGames + 1; gameId++)
         {
-            Console.Write($"\rcollecting ppo training data {(gameId)} / { numGames } ...        ");
+            Console.Write($"\rcollecting ppo training data { gameId+1 } / { numGames } ...        ");
             playGame(envs, states, batchesOfTurns);
             prepareRewards(states, rewards);
             fillBuffer(gameId, buffer, states, batchesOfTurns, rewards);

@@ -95,6 +95,11 @@ public unsafe struct Hand : IEnumerable<Card>
 
     public Card this[int i] => cardAt(i);
 
+    // info: only works for hands with only 1 card left
+    //       Discard() copies discarded cards to the front,
+    //       so the last card is at the last index.
+    public Card LastCard => this[7];
+
     // info: cache has to be of size 4 !!!
     public void FirstFour(Card[] cache)
     {
