@@ -101,6 +101,8 @@ public class CardPickerExpCollector
     private Card[] cardsCache = new Card[8];
     private void playGame(CardPickerEnv[] envs, GameLog[] states, TurnBatches[] batchesOfTurns)
     {
+        var selCards = new Card[states.Length];
+
         for (int t_id = 0; t_id < 8; t_id++)
         {
             var batches = batchesOfTurns[t_id];
@@ -129,15 +131,13 @@ public class CardPickerExpCollector
                     var possCards = rules.PossibleCards(states[envId], cardsCache);
                     var card = cardSampler.PickCard(possCards, piSlice);
                     int action = card.Id % 32;
+                    selCards[envId] = card;
                     actions[envId] = action;
                     selProbs[envId] = piSlice[action];
                 }
 
                 for (int envId = 0; envId < envs.Length; envId++)
-                {
-                    var action = new Card((byte)actions[envId]);
-                    states[envId] = envs[envId].Step(action).Item1;
-                }
+                    states[envId] = envs[envId].Step(selCards[envId]).Item1;
             }
         }
     }
