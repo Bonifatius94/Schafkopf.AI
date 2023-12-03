@@ -14,7 +14,7 @@ public class PPOTrainingSettings
     public bool NormAdvantages = true;
     public bool ClipValues = true;
     public int BatchSize = 64;
-    public int NumEnvs = 32;
+    public int NumEnvs = 64;
     public int NumStateDims = 90;
     public int NumActionDims = 32;
     public int StepsPerUpdate = 512;
@@ -125,8 +125,9 @@ public class PPOModel
     private FFModel strategy;
     private IOptimizer strategyOpt;
     private IOptimizer valueFuncOpt;
-
     private Matrix2D featureCache;
+
+    public int BatchSize => config.BatchSize;
 
     public void Predict(Matrix2D s0, Matrix2D outPiOnehot, Matrix2D outV)
     {

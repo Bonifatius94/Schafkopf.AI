@@ -21,20 +21,25 @@ public class CardPickerExpCollector
         //     throw new ArgumentException("The number of steps needs to be "
         //         + "divisible by 8 because each agent plays 8 cards per game!");
 
+        Console.Write($"collect data");
+
         int numGames = buffer.Steps / 8;
         int numSessions = buffer.NumEnvs / 4;
         var envs = Enumerable.Range(0, numSessions)
             .Select(i => new CardPickerEnv()).ToArray();
         var states = envs.Select(env => env.Reset()).ToArray();
         var batchesOfTurns = Enumerable.Range(0, 8)
-            .Select(i => new TurnBatches(numSessions)).ToArray();
+            .Select(i => new TurnBatches(buffer.NumEnvs)).ToArray();
         var rewards = Matrix2D.Zeros(8, buffer.NumEnvs);
 
         for (int gameId = 0; gameId < numGames + 1; gameId++)
         {
+            Console.Write($"\rcollecting ppo training data {(gameId)} / { numGames } ...        ");
             playGame(envs, states, batchesOfTurns);
             prepareRewards(states, rewards);
             fillBuffer(gameId, buffer, states, batchesOfTurns, rewards);
+            for (int i = 0; i < states.Length; i++)
+                states[i] = envs[i].Reset();
         }
     }
 
@@ -130,11 +135,8 @@ public class CardPickerExpCollector
 
                 for (int envId = 0; envId < envs.Length; envId++)
                 {
-                    // info: rewards and terminals are
-                    //       determined after the game is over
-                    (var newState, double reward, bool isTerminal) =
-                        envs[envId].Step(new Card((byte)actions[envId]));
-                    states[envId] = newState;
+                    var action = new Card((byte)actions[envId]);
+                    states[envId] = envs[envId].Step(action).Item1;
                 }
             }
         }
@@ -177,15 +179,16 @@ public class CardPickerEnv
     public GameLog Reset()
     {
         kommtRaus = (kommtRaus + 1) % 4;
-        deck.Shuffle();
-        deck.InitialHands(initialHandsCache);
 
-        // info: klopfer is not required to train a card picker
-        int klopfer = 0; // askForKlopfer(initialHandsCache);
-        var call = makeCalls(klopfer, initialHandsCache, kommtRaus);
-        log = GameLog.NewLiveGame(call, initialHandsCache, kommtRaus, klopfer);
+        GameCall call; int klopfer = 0;
+        do {
+            deck.Shuffle();
+            deck.InitialHands(initialHandsCache);
+            call = makeCalls(klopfer, initialHandsCache, kommtRaus);
+        }
+        while (call.Mode == GameMode.Weiter);
 
-        return log;
+        return log = GameLog.NewLiveGame(call, initialHandsCache, kommtRaus, klopfer);
     }
 
     public (GameLog, double, bool) Step(Card cardToPlay)
@@ -193,13 +196,7 @@ public class CardPickerEnv
         if (log.CardCount >= 32)
             throw new InvalidOperationException("Game is already finished!");
 
-        // info: kontra/re is not required to train a card picker
-        // if (log.CardCount <= 1)
-        //     askForKontraRe(log);
-
         log.NextCard(cardToPlay);
-
-        // info: reward doesn't relate to the next state, compute it in calling scope
         return (log, 0.0, log.CardCount >= 28);
     }
 
