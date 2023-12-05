@@ -38,16 +38,16 @@ public class PPOTrainingSession
 
         for (int ep = 0; ep < config.NumTrainings; ep++)
         {
+            Console.WriteLine($"epoch {ep+1}");
             exps.Collect(rollout);
             model.Train(rollout);
 
-            if ((ep + 1) % 10 == 0)
-            {
-                model.RecompileCache(batchSize: 1);
-                double winRate = benchmark.Benchmark(agent);
-                model.RecompileCache(batchSize: config.BatchSize);
-                Console.WriteLine($"epoch {ep}: win rate vs. random agents is {winRate}");
-            }
+            model.RecompileCache(batchSize: 1);
+            double winRate = benchmark.Benchmark(agent);
+            model.RecompileCache(batchSize: config.BatchSize);
+
+            Console.WriteLine($"win rate vs. random agents: {winRate}");
+            Console.WriteLine("--------------------------------------");
         }
 
         return model;
@@ -150,7 +150,7 @@ public class PPOModel
         int i = 1;
         foreach (var batch in batches)
         {
-            Console.Write($"\rtraining {i++} / {numBatches}");
+            Console.Write($"\rtraining {i++} / {numBatches}           ");
             updateModels(batch);
         }
         Console.WriteLine();

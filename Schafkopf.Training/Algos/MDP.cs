@@ -32,14 +32,13 @@ public class CardPickerExpCollector
 
         for (int gameId = 0; gameId < numGames + 1; gameId++)
         {
-            Console.Write($"\rcollecting ppo training data { gameId+1 } / { numGames+1 } ...        ");
+            Console.Write($"\rcollecting data { gameId+1 } / { numGames+1 }        ");
             playGame(envs, states, batchesOfTurns);
             prepareRewards(states, rewards);
             fillBuffer(gameId, buffer, states, batchesOfTurns, rewards);
             for (int i = 0; i < states.Length; i++)
                 states[i] = envs[i].Reset();
         }
-
         Console.WriteLine();
     }
 

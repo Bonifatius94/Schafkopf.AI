@@ -21,6 +21,7 @@ public class RandomPlayBenchmark
         int wins = 0;
         for (int i = 0; i < epochs; i++)
         {
+            Console.Write($"\rbenchmarking {i+1} / {epochs}          ");
             var log = session.ProcessGame();
 
             // info: only evaluate games where cards were played
@@ -31,6 +32,7 @@ public class RandomPlayBenchmark
             bool isWin = !eval.DidCallerWin ^ isCaller;
             wins += isWin ? 1 : 0;
         }
+        Console.WriteLine();
 
         return (double)wins / epochs; // win rate
     }
