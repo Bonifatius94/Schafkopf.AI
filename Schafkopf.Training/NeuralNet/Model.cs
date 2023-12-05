@@ -14,16 +14,22 @@ public class FFModel
 
     public void Compile(int batchSize, int inputDims)
     {
-        BatchSize = batchSize;
-        GradsTape = new List<Matrix2D>();
-        var input = Matrix2D.Zeros(batchSize, inputDims);
-        var deltaOut = Matrix2D.Zeros(batchSize, inputDims);
-
         foreach (var layer in Layers)
         {
             layer.Compile(inputDims);
             inputDims = layer.OutputDims;
         }
+
+        RecompileCache(batchSize);
+    }
+
+    public void RecompileCache(int batchSize)
+    {
+        BatchSize = batchSize;
+        GradsTape = new List<Matrix2D>();
+        int inputDims = Layers.First().InputDims;
+        var input = Matrix2D.Zeros(batchSize, inputDims);
+        var deltaOut = Matrix2D.Zeros(batchSize, inputDims);
 
         foreach (var layer in Layers)
         {

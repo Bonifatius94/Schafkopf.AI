@@ -43,7 +43,9 @@ public class PPOTrainingSession
 
             if ((ep + 1) % 10 == 0)
             {
+                model.RecompileCache(batchSize: 1);
                 double winRate = benchmark.Benchmark(agent);
+                model.RecompileCache(batchSize: config.BatchSize);
                 Console.WriteLine($"epoch {ep}: win rate vs. random agents is {winRate}");
             }
         }
@@ -126,6 +128,7 @@ public class PPOModel
     private IOptimizer strategyOpt;
     private IOptimizer valueFuncOpt;
     private Matrix2D featureCache;
+    private ILoss mse = new MeanSquaredError();
 
     public int BatchSize => config.BatchSize;
 
@@ -139,25 +142,33 @@ public class PPOModel
 
     public void Train(PPORolloutBuffer memory)
     {
+        int numBatches = memory.NumBatches(
+            config.BatchSize, config.UpdateEpochs);
         var batches = memory.SampleDataset(
             config.BatchSize, config.UpdateEpochs);
 
+        int i = 1;
         foreach (var batch in batches)
+        {
+            Console.Write($"\rtraining {i++} / {numBatches}");
             updateModels(batch);
+        }
+        Console.WriteLine();
     }
 
     private void updateModels(PPOTrainBatch batch)
     {
         // update strategy pi(s)
         var predPi = strategy.PredictBatch(batch.StatesBefore);
-        var policyDeltas = strategy.Layers.Last().Cache.DeltasIn;
-        computePolicyDeltas(batch, predPi, policyDeltas);
-        strategy.FitBatch(policyDeltas, strategyOpt);
+        var strategyDeltas = strategy.Layers.Last().Cache.DeltasIn;
+        computePolicyDeltas(batch, predPi, strategyDeltas);
+        strategy.FitBatch(strategyDeltas, strategyOpt);
 
         // update baseline V(s)
         var predV = valueFunc.PredictBatch(batch.StatesBefore);
         var valueDeltas = valueFunc.Layers.Last().Cache.DeltasIn;
-        computeValueDeltas(batch, predV, valueDeltas);
+        mse.LossDeltas(predV, batch.Returns, valueDeltas);
+        // TODO: add value clipping
         valueFunc.FitBatch(valueDeltas, valueFuncOpt);
     }
 
@@ -182,7 +193,8 @@ public class PPOModel
             advantages = normAdvantages;
         }
 
-        var onehots = onehotIndices(batch.Actions, 32).Zip(Enumerable.Range(0, 32));
+        var onehots = onehotIndices(batch.Actions, config.NumActionDims)
+            .Zip(Enumerable.Range(0, config.NumActionDims));
         foreach ((int p, int i) in onehots)
             unsafe { newProbs.Data[i] = predPi.Data[p]; }
         Matrix2D.BatchAdd(batch.OldProbs, 1e-8, policyRatios);
@@ -203,25 +215,16 @@ public class PPOModel
             unsafe { policyDeltas.Data[p] = policyDeltasSparse.Data[i]; }
     }
 
-    private void computeValueDeltas(
-        PPOTrainBatch batch, Matrix2D predV, Matrix2D valueDeltas)
-    {
-        var mse = new MeanSquaredError();
-        var valueDeltasSparse = Matrix2D.Zeros(batch.Size, 1);
-        mse.LossDeltas(predV, batch.Returns, valueDeltasSparse);
-
-        // TODO: add value clipping
-
-        Matrix2D.BatchMul(valueDeltas, 0, valueDeltas);
-        var onehots = onehotIndices(batch.Actions, 32).Zip(Enumerable.Range(0, 32));
-        foreach ((int p, int i) in onehots)
-            unsafe { valueDeltas.Data[p] = valueDeltasSparse.Data[i]; }
-    }
-
     private IEnumerable<int> onehotIndices(Matrix2D sparseClassIds, int numClasses)
     {
         for (int i = 0; i < sparseClassIds.NumRows; i++)
             yield return i * numClasses + (int)sparseClassIds.At(0, i);
+    }
+
+    public void RecompileCache(int batchSize)
+    {
+        strategy.RecompileCache(batchSize);
+        valueFunc.RecompileCache(batchSize);
     }
 }
 
@@ -356,6 +359,9 @@ public class PPORolloutBuffer
 
     public bool IsReadyForModelUpdate(int t) => t > 0 && t % Steps == 0;
 
+    public int NumBatches(int batchSize, int epochs = 1)
+        => cacheWithoutLastStep.Size / batchSize * epochs;
+
     public PPOTrainBatch? SliceStep(int t)
     {
         int offset = IsReadyForModelUpdate(t)
@@ -374,7 +380,7 @@ public class PPORolloutBuffer
                 yield return batch;
         }
 
-        copyOverlappingStep();
+        // copyOverlappingStep();
     }
 
     private void shuffleDataset()

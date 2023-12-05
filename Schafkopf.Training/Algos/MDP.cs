@@ -21,8 +21,6 @@ public class CardPickerExpCollector
         //     throw new ArgumentException("The number of steps needs to be "
         //         + "divisible by 8 because each agent plays 8 cards per game!");
 
-        Console.Write($"collect data");
-
         int numGames = buffer.Steps / 8;
         int numSessions = buffer.NumEnvs / 4;
         var envs = Enumerable.Range(0, numSessions)
@@ -34,13 +32,15 @@ public class CardPickerExpCollector
 
         for (int gameId = 0; gameId < numGames + 1; gameId++)
         {
-            Console.Write($"\rcollecting ppo training data { gameId+1 } / { numGames } ...        ");
+            Console.Write($"\rcollecting ppo training data { gameId+1 } / { numGames+1 } ...        ");
             playGame(envs, states, batchesOfTurns);
             prepareRewards(states, rewards);
             fillBuffer(gameId, buffer, states, batchesOfTurns, rewards);
             for (int i = 0; i < states.Length; i++)
                 states[i] = envs[i].Reset();
         }
+
+        Console.WriteLine();
     }
 
     private void fillBuffer(
@@ -153,7 +153,7 @@ public class CardPickerExpCollector
             piBatches = Enumerable.Range(0, 4)
                 .Select(i => Matrix2D.Zeros(numSessions, 32)).ToArray();
             piSparseBatches = Enumerable.Range(0, 4)
-                .Select(i => Matrix2D.Zeros(numSessions, 32)).ToArray();
+                .Select(i => Matrix2D.Zeros(numSessions, 1)).ToArray();
             vBatches = Enumerable.Range(0, 4)
                 .Select(i => Matrix2D.Zeros(numSessions, 1)).ToArray();
         }
