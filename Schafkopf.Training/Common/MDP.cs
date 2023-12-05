@@ -1,6 +1,12 @@
 namespace Schafkopf.Training;
 
-public class CardPickerEnv
+public interface MDPEnv<StateT, ActionT>
+{
+    StateT Reset();
+    (StateT, double, bool) Step(ActionT cardToPlay);
+}
+
+public class CardPickerEnv : MDPEnv<GameLog, Card>
 {
     private CardsDeck deck = new CardsDeck();
     private int kommtRaus = 3;
@@ -58,4 +64,86 @@ public class CardPickerEnv
     }
 
     #endregion Call
+}
+
+public class MultiAgentCardPickerEnv : MDPEnv<GameLog, Card>
+{
+    public MultiAgentCardPickerEnv()
+    {
+        env = new CardPickerEnv();
+        threadIds = new int[4];
+        termBarr = new Barrier(4);
+        restBarr = new Barrier(4, (b) => { state = env.Reset(); });
+        stateModMut = new Mutex();
+        state = env.Reset();
+    }
+
+    private CardPickerEnv env;
+    private GameLog state;
+    private int[] threadIds;
+    private Barrier termBarr;
+    private Barrier restBarr;
+    private Mutex stateModMut;
+
+    private int playerIdByThread()
+    {
+        int threadId = Environment.CurrentManagedThreadId;
+        for (int i = 0; i < 4; i++)
+            if (threadIds[i] == threadId)
+                return i;
+
+        throw new InvalidOperationException(
+            "Unregistered thread playing games!");
+    }
+
+    public void Register(int playerId)
+    {
+        threadIds[playerId] = Environment.CurrentManagedThreadId;
+    }
+
+    public GameLog Reset()
+    {
+        int playerId = playerIdByThread();
+        while (state.DrawingPlayerId != playerId)
+            Thread.Sleep(1);
+        return state;
+    }
+
+    public (GameLog, double, bool) Step(Card cardToPlay)
+    {
+        int t_id = state.CardCount / 4;
+        bool isTermial = state.CardCount >= 28;
+        stateModMut.WaitOne();
+        (state, var _, var __) = env.Step(cardToPlay);
+        stateModMut.ReleaseMutex();
+
+        if (isTermial)
+        {
+            // info: wait until game is in final state
+            termBarr.SignalAndWait();
+            var finalState = state;
+            restBarr.SignalAndWait();
+
+            // TODO: include reward computation here ...
+            return (finalState, 0.0, true);
+        }
+        else
+        {
+            // info: wait until it's the player's turn again
+            int playerId = playerIdByThread();
+            while (checkId(playerId))
+                Thread.Sleep(1);
+
+            // TODO: include reward computation here ...
+            return (state, 0.0, false);
+        }
+    }
+
+    private bool checkId(int playerId)
+    {
+        stateModMut.WaitOne();
+        bool ret = state.DrawingPlayerId != playerId;
+        stateModMut.ReleaseMutex();
+        return ret;
+    }
 }

@@ -47,3 +47,56 @@ public class CardPickerEnvTests
         }
     }
 }
+
+public class MultiAgentCardPickerEnvTests
+{
+    [Fact]
+    public void Test_CanPlayGame()
+    {
+        var env = new MultiAgentCardPickerEnv();
+
+        var tasks = Enumerable.Range(0, 4)
+            .Select(i => Task.Run(() => playGame(i, env))).ToArray();
+        Task.WaitAll(tasks, 1000);
+
+        var finalStates = tasks.Select(x => x.Result);
+        Assert.True(finalStates.All(s => s.CardCount == 32));
+    }
+
+    [Fact]
+    public void Test_CanPlayConsequtiveGames()
+    {
+        var env = new MultiAgentCardPickerEnv();
+
+        var tasks = Enumerable.Range(0, 4)
+            .Select(i => Task.Run(() => {
+                for (int j = 0; j < 100; j++)
+                {
+                    var finalState = playGame(i, env);
+                    Assert.Equal(32, finalState.CardCount);
+                }
+            })).ToArray();
+        Task.WaitAll(tasks, 10_000);
+
+        Assert.True(tasks.All(s => s.Status == TaskStatus.RanToCompletion));
+    }
+
+    private static readonly Random rng = new Random();
+
+    private GameLog playGame(int playerId, MultiAgentCardPickerEnv env)
+    {
+        var cache = new Card[8];
+        var rules = new GameRules();
+        var pickCard = (GameLog s) => {
+            var possCards = rules.PossibleCards(s, cache);
+            return possCards[rng.Next(possCards.Length)];
+        };
+
+        env.Register(playerId);
+        var state = env.Reset();
+        for (int i = 0; i < 8; i++)
+            (state, var reward, var isTerm) = env.Step(pickCard(state));
+
+        return state;
+    }
+}
