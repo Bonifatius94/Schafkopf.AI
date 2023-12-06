@@ -72,8 +72,8 @@ public class MultiAgentCardPickerEnv : MDPEnv<GameLog, Card>
     {
         env = new CardPickerEnv();
         threadIds = new int[4];
-        termBarr = new Barrier(4);
-        restBarr = new Barrier(4, (b) => { state = env.Reset(); });
+        gameFinishedBarr = new Barrier(4);
+        resetBarr = new Barrier(4, (b) => { state = env.Reset(); });
         stateModMut = new Mutex();
         state = env.Reset();
     }
@@ -81,8 +81,8 @@ public class MultiAgentCardPickerEnv : MDPEnv<GameLog, Card>
     private CardPickerEnv env;
     private GameLog state;
     private int[] threadIds;
-    private Barrier termBarr;
-    private Barrier restBarr;
+    private Barrier gameFinishedBarr;
+    private Barrier resetBarr;
     private Mutex stateModMut;
 
     private int playerIdByThread()
@@ -104,45 +104,46 @@ public class MultiAgentCardPickerEnv : MDPEnv<GameLog, Card>
     public GameLog Reset()
     {
         int playerId = playerIdByThread();
-        while (state.DrawingPlayerId != playerId)
+        while (!isPlayersTurn(playerId))
             Thread.Sleep(1);
         return state;
     }
 
     public (GameLog, double, bool) Step(Card cardToPlay)
     {
-        int t_id = state.CardCount / 4;
         bool isTermial = state.CardCount >= 28;
+        int playerId = playerIdByThread();
+
         stateModMut.WaitOne();
         (state, var _, var __) = env.Step(cardToPlay);
         stateModMut.ReleaseMutex();
 
         if (isTermial)
         {
-            // info: wait until game is in final state
-            termBarr.SignalAndWait();
+            // wait for last turn to finish, cache final state
+            gameFinishedBarr.SignalAndWait();
             var finalState = state;
-            restBarr.SignalAndWait();
 
-            // TODO: include reward computation here ...
-            return (finalState, 0.0, true);
+            // start a new game after all agents cached the final state
+            resetBarr.SignalAndWait();
+
+            double reward = CardPickerReward.Reward(finalState, playerId);
+            return (finalState, reward, true);
         }
         else
         {
-            // info: wait until it's the player's turn again
-            int playerId = playerIdByThread();
-            while (checkId(playerId))
+            while (!isPlayersTurn(playerId))
                 Thread.Sleep(1);
 
-            // TODO: include reward computation here ...
-            return (state, 0.0, false);
+            double reward = CardPickerReward.Reward(state, playerId);
+            return (state, reward, false);
         }
     }
 
-    private bool checkId(int playerId)
+    private bool isPlayersTurn(int playerId)
     {
         stateModMut.WaitOne();
-        bool ret = state.DrawingPlayerId != playerId;
+        bool ret = state.DrawingPlayerId == playerId;
         stateModMut.ReleaseMutex();
         return ret;
     }

@@ -43,7 +43,7 @@ public class GameStateSerializer
         serializeHistory(completedGame, stateBuffer);
 
         var actions = completedGame.UnrollActions().GetEnumerator();
-        var rewards = completedGame.UnrollRewards().GetEnumerator();
+        var rewards = CardPickerReward.UnrollRewards(completedGame).GetEnumerator();
         for (int t0 = 0; t0 < 32; t0++)
         {
             rewards.MoveNext();
@@ -309,13 +309,18 @@ public static class GameLogEx
     }
 }
 
-public static class GameReward
+public static class CardPickerReward
 {
-    public static IEnumerable<(int, int, double)> UnrollRewards(this GameLog completeGame)
+    public static double Reward(GameLog liveGame, int p_id)
     {
-        int callerId = completeGame.Call.CallingPlayerId;
-        int partnerId = completeGame.Call.PartnerPlayerId;
-        var oppIds = completeGame.OpponentIds.ToArray();
+        int t_id = Math.Min(liveGame.CardCount / 4, 7);
+        var augen = liveGame.UnrollAugen().Skip(t_id).First();
+        var turn = liveGame.Turns[t_id];
+        return reward(liveGame.Call, p_id, augen, turn.AlreadyGsucht);
+    }
+
+    public static IEnumerable<(int, int, double)> UnrollRewards(GameLog completeGame)
+    {
         var augenIter = completeGame.UnrollAugen().GetEnumerator();
         augenIter.MoveNext();
 
@@ -325,41 +330,53 @@ public static class GameReward
             if (t % 4 == 0)
                 augenIter.MoveNext();
             var augen = augenIter.Current;
-
-            if (completeGame.Call.Mode == GameMode.Sauspiel)
-            {
-                int p_id = action.PlayerId;
-                bool isCaller = p_id == callerId;
-                bool isPartner = p_id == partnerId;
-
-                int ownAugen = augen[p_id];
-                int partnerAugen;
-                if (isCaller)
-                    partnerAugen = augen[partnerId];
-                else if (isPartner)
-                    partnerAugen = augen[callerId];
-                else if (p_id == oppIds[0])
-                    partnerAugen = augen[oppIds[1]];
-                else // if (p_id == oppIds[0])
-                    partnerAugen = augen[oppIds[0]];
-
-                bool knowsPartner = isPartner || completeGame.Turns[t / 4].AlreadyGsucht;
-                double reward = rewardSauspiel(
-                    ownAugen, partnerAugen, isCaller || isPartner, knowsPartner);
-                yield return (t / 4, p_id, reward);
-            }
-            else // Wenz or Solo
-            {
-                int p_id = action.PlayerId;
-                int callerAugen = augen[callerId];
-                int opponentAugen = augen.Sum() - callerAugen;
-                bool isCaller = p_id == callerId;
-                bool isTout = completeGame.Call.IsTout;
-                double reward = rewardSoloWenz(callerAugen, opponentAugen, isCaller, isTout);
-                yield return (t / 4, p_id, reward);
-            }
-
+            int t_id = Math.Min(t / 4, 7);
+            int p_id = action.PlayerId;
+            var turn = completeGame.Turns[t_id];
+            bool alreadyGsucht = turn.AlreadyGsucht;
+            double r = reward(completeGame.Call, p_id, augen, alreadyGsucht);
+            yield return (t_id, p_id, r);
             t++;
+        }
+    }
+
+    private static double reward(
+        GameCall call, int p_id,
+        int[] augen, bool alreadyGsucht)
+    {
+        int callerId = call.CallingPlayerId;
+        int partnerId = call.PartnerPlayerId;
+        var oppIds = call.OpponentIds;
+
+        if (call.Mode == GameMode.Sauspiel)
+        {
+            bool isCaller = p_id == callerId;
+            bool isPartner = p_id == partnerId;
+
+            int ownAugen = augen[p_id];
+            int partnerAugen;
+            if (isCaller)
+                partnerAugen = augen[partnerId];
+            else if (isPartner)
+                partnerAugen = augen[callerId];
+            else if (p_id == oppIds[0])
+                partnerAugen = augen[oppIds[1]];
+            else // if (p_id == oppIds[0])
+                partnerAugen = augen[oppIds[0]];
+
+            bool knowsPartner = isPartner || alreadyGsucht;
+            double reward = rewardSauspiel(
+                ownAugen, partnerAugen, isCaller || isPartner, knowsPartner);
+            return reward;
+        }
+        else // Wenz or Solo
+        {
+            int callerAugen = augen[callerId];
+            int opponentAugen = augen.Sum() - callerAugen;
+            bool isCaller = p_id == callerId;
+            bool isTout = call.IsTout;
+            double reward = rewardSoloWenz(callerAugen, opponentAugen, isCaller, isTout);
+            return reward;
         }
     }
 

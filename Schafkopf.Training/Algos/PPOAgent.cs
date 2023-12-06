@@ -317,7 +317,8 @@ public class CardPickerExpCollector
         for (int envId = 0; envId < states.Length; envId++)
         {
             var finalState = states[envId];
-            foreach ((int t_id, var p_id, var reward) in finalState.UnrollRewards())
+            foreach ((int t_id, var p_id, var reward)
+                in CardPickerReward.UnrollRewards(finalState))
             {
                 int rowid = states.Length * 4 * t_id + envId * 4 + p_id;
                 unsafe { rewards.Data[rowid] = reward; }
