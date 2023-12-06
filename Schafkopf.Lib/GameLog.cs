@@ -22,47 +22,6 @@ public struct GameSessionMeta
 
     public int Multipliers => Klopfer + (IsKontraCalled ? 1 : 0)
         + (IsReCalled ? 1 : 0) + (Call.IsTout ? 1 : 0);
-
-    private static readonly int[][] playerIdCache = new int[][] {
-        new int[] {            }, // 0 0 0 0
-        new int[] { 0,         }, // 0 0 0 1
-        new int[] {    1,      }, // 0 0 1 0
-        new int[] { 0, 1,      }, // 0 0 1 1
-        new int[] {       2,   }, // 0 1 0 0
-        new int[] { 0,    2,   }, // 0 1 0 1
-        new int[] {    1, 2,   }, // 0 1 1 0
-        new int[] { 0, 1, 2    }, // 0 1 1 1
-        new int[] {          3 }, // 1 0 0 0
-        new int[] { 0,       3 }, // 1 0 0 1
-        new int[] {    1,    3 }, // 1 0 1 0
-        new int[] { 0, 1,    3 }, // 1 0 1 1
-        new int[] {       2, 3 }, // 1 1 0 0
-        new int[] { 0,    2, 3 }, // 1 1 0 1
-        new int[] {    1, 2, 3 }, // 1 1 1 0
-        new int[] { 0, 1, 2, 3 }, // 1 1 1 1
-    };
-
-    public ReadOnlySpan<int> CallerIds => callerIds();
-    public ReadOnlySpan<int> OpponentIds => opponentIds();
-
-    private ReadOnlySpan<int> callerIds()
-    {
-        int mask = 0;
-        mask |= 1 << Call.CallingPlayerId;
-        if (Call.Mode == GameMode.Sauspiel)
-            mask |= 1 << Call.PartnerPlayerId;
-        return playerIdCache[mask];
-    }
-
-    private ReadOnlySpan<int> opponentIds()
-    {
-        int mask = 0;
-        mask |= 1 << Call.CallingPlayerId;
-        if (Call.Mode == GameMode.Sauspiel)
-            mask |= 1 << Call.PartnerPlayerId;
-        mask = ~mask & 0xF;
-        return playerIdCache[mask];
-    }
 }
 
 public struct GameLog
@@ -127,8 +86,8 @@ public struct GameLog
         }
     }
 
-    public ReadOnlySpan<int> CallerIds => Meta.CallerIds;
-    public ReadOnlySpan<int> OpponentIds => Meta.OpponentIds;
+    public ReadOnlySpan<int> CallerIds => Call.CallerIds;
+    public ReadOnlySpan<int> OpponentIds => Call.OpponentIds;
     public bool IsKontraCalled => Meta.IsKontraCalled;
     public int Multipliers => Meta.Multipliers;
 

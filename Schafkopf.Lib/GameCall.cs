@@ -79,6 +79,47 @@ public readonly struct GameCall
 
     public Card GsuchteSau => gsuchteSauByFarbe[(int)GsuchteFarbe];
 
+    private static readonly int[][] playerIdCache = new int[][] {
+        new int[] {            }, // 0 0 0 0
+        new int[] { 0,         }, // 0 0 0 1
+        new int[] {    1,      }, // 0 0 1 0
+        new int[] { 0, 1,      }, // 0 0 1 1
+        new int[] {       2,   }, // 0 1 0 0
+        new int[] { 0,    2,   }, // 0 1 0 1
+        new int[] {    1, 2,   }, // 0 1 1 0
+        new int[] { 0, 1, 2    }, // 0 1 1 1
+        new int[] {          3 }, // 1 0 0 0
+        new int[] { 0,       3 }, // 1 0 0 1
+        new int[] {    1,    3 }, // 1 0 1 0
+        new int[] { 0, 1,    3 }, // 1 0 1 1
+        new int[] {       2, 3 }, // 1 1 0 0
+        new int[] { 0,    2, 3 }, // 1 1 0 1
+        new int[] {    1, 2, 3 }, // 1 1 1 0
+        new int[] { 0, 1, 2, 3 }, // 1 1 1 1
+    };
+
+    public ReadOnlySpan<int> CallerIds => callerIds();
+    public ReadOnlySpan<int> OpponentIds => opponentIds();
+
+    private ReadOnlySpan<int> callerIds()
+    {
+        int mask = 0;
+        mask |= 1 << CallingPlayerId;
+        if (Mode == GameMode.Sauspiel)
+            mask |= 1 << PartnerPlayerId;
+        return playerIdCache[mask];
+    }
+
+    private ReadOnlySpan<int> opponentIds()
+    {
+        int mask = 0;
+        mask |= 1 << CallingPlayerId;
+        if (Mode == GameMode.Sauspiel)
+            mask |= 1 << PartnerPlayerId;
+        mask = ~mask & 0xF;
+        return playerIdCache[mask];
+    }
+
     #region Trumpf
 
     private static readonly TrumpfEvaluator[] evaluators =
