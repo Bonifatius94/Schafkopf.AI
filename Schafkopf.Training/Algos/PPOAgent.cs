@@ -1,6 +1,3 @@
-
-using System.Text;
-
 namespace Schafkopf.Training;
 
 public class PPOTrainingSettings
@@ -177,6 +174,7 @@ public class PPOModel
     private void computePolicyDeltas(
         PPOTrainBatch batch, Matrix2D predPi, Matrix2D policyDeltas)
     {
+        // TODO: get rid of allocation
         var normAdvantages = Matrix2D.Zeros(batch.Size, 1);
         var policyRatios = Matrix2D.Zeros(batch.Size, 1);
         var derPolicyRatios = Matrix2D.Zeros(batch.Size, 1);
@@ -244,8 +242,10 @@ public class CardPickerExpCollector
             .Select(i => new AsyncCardPickerAgent(vecAgent)).ToArray();
 
         var expCache = new PPOExp[buffer.NumEnvs];
+        int t = 0;
         var barr = new Barrier(buffer.NumEnvs, (b) => {
-            // TODO: apply exp cache to rollout buffer
+            buffer.AppendStep(expCache, t++);
+            Console.Write($"\rcollecting ppo data {t} / {buffer.Steps}    ");
         });
 
         var collectTasks = Enumerable.Range(0, buffer.NumEnvs)
@@ -261,6 +261,7 @@ public class CardPickerExpCollector
             .ToArray();
 
         Task.WaitAll(collectTasks);
+        Console.WriteLine();
     }
 }
 
@@ -302,7 +303,8 @@ public class VectorizedCardPickerAgent
         threadIds[sessionId] = Environment.CurrentManagedThreadId;
     }
 
-    public (Card, double, double) Predict(GameState state, ReadOnlySpan<Card> possCards)
+    public (Card, double, double) Predict(
+        GameState state, ReadOnlySpan<Card> possCards)
     {
         int sessionId = sessionIdByThread();
         var s0Slice = states.SliceRowsRaw(sessionId, 1);
@@ -498,11 +500,29 @@ public class PPORolloutBuffer
     public int NumBatches(int batchSize, int epochs = 1)
         => cacheWithoutLastStep.Size / batchSize * epochs;
 
-    public PPOTrainBatch? SliceStep(int t)
+    public void AppendStep(PPOExp[] exps, int t)
     {
+        if (exps.Length != NumEnvs)
+            throw new ArgumentException("Invalid amount of experiences!");
+
         int offset = IsReadyForModelUpdate(t)
             ? Steps * NumEnvs : (t % Steps) * NumEnvs;
-        return (t > Steps) ? null : cache.SliceRows(offset, NumEnvs);
+        var buffer = cache.SliceRows(offset, NumEnvs);
+
+        for (int i = 0; i < exps.Length; i++)
+        {
+            var exp = exps[i];
+            unsafe
+            {
+                var s0Dest = buffer.StatesBefore.SliceRowsRaw(i, 1);
+                exp.StateBefore.ExportFeatures(s0Dest);
+                buffer.Actions.Data[i] = exp.Action.Id % 32;
+                buffer.Rewards.Data[i] = exp.Reward;
+                buffer.Terminals.Data[i] = exp.IsTerminal ? 1 : 0;
+                buffer.OldProbs.Data[i] = exp.OldProb;
+                buffer.OldBaselines.Data[i] = exp.OldBaseline;
+            }
+        }
     }
 
     public IEnumerable<PPOTrainBatch> SampleDataset(int batchSize, int epochs = 1)
