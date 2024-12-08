@@ -36,7 +36,7 @@ public class GameStateSerializer
         => Enumerable.Range(0, 36).Select(x => new GameState()).ToArray();
 
     private GameState[] stateBuffer = NewBuffer();
-    public void SerializeSarsExps(GameLog completedGame, SarsExp[] exps)
+    public void SerializeSarsExps(GameLog completedGame, SchafkopfSarsExp[] exps)
     {
         if (completedGame.CardCount != 32)
             throw new ArgumentException("Can only process finished games!");

@@ -11,7 +11,7 @@ public class FeatureVectorTests
         var call = GameCall.Sauspiel(0, 1, CardColor.Schell);
         var history = generateHistoryWithCall(call);
 
-        var newExp = () => new SarsExp() { StateBefore = new GameState() };
+        var newExp = () => new SchafkopfSarsExp() { StateBefore = new GameState() };
         var states = Enumerable.Range(0, 32).Select(i => newExp()).ToArray();
         serializer.SerializeSarsExps(history, states);
 

@@ -20,7 +20,7 @@ public enum CardColor
     Eichel
 }
 
-public readonly struct Card
+public readonly struct Card : IEquatable<Card>
 {
     public const byte EXISTING_FLAG = 0x20;
     public const byte TRUMPF_FLAG = 0x40;
@@ -60,6 +60,9 @@ public readonly struct Card
     public override bool Equals([NotNullWhen(true)] object? obj)
         => obj is Card c && (c.Id & ORIG_CARD_MASK) == (this.Id & ORIG_CARD_MASK);
 
+    public bool Equals(Card other)
+        => Equals((object?)other);
+
     public override int GetHashCode() => Id & ORIG_CARD_MASK;
 
     public static bool operator ==(Card a, Card b)
@@ -71,5 +74,6 @@ public readonly struct Card
 
     public override string ToString()
         => $"{Color} {Type}{(IsTrumpf ? " (trumpf)" : "")}";
+
     // TODO: add an emoji format
 }

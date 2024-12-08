@@ -1,39 +1,43 @@
 namespace Schafkopf.Training;
 
-public struct SarsExp : IEquatable<SarsExp>
+public class SarsExp<TState, TAction> : IEquatable<SarsExp<TState, TAction>>
+    where TState : IEquatable<TState>, new() where TAction : IEquatable<TAction>, new()
 {
     public SarsExp() { }
 
-    public GameState StateBefore = new GameState();
-    public GameState StateAfter = new GameState();
-    public Card Action = new Card();
+    public TState StateBefore = new TState();
+    public TState StateAfter = new TState();
+    public TAction Action = new TAction();
     public double Reward = 0.0;
     public bool IsTerminal = false;
 
-    public bool Equals(SarsExp other)
-        => StateBefore.Equals(other.StateBefore)
+    public bool Equals(SarsExp<TState, TAction>? other)
+        => other != null
+            && StateBefore.Equals(other.StateBefore)
             && StateAfter.Equals(other.StateAfter)
-            && Action == other.Action
+            && Action.Equals(other.Action)
             && Reward == other.Reward
             && IsTerminal == other.IsTerminal;
 
     public override int GetHashCode() => 0;
 }
 
-public struct PPOExp : IEquatable<PPOExp>
+public class PPOExp<TState, TAction> : IEquatable<PPOExp<TState, TAction>>
+    where TState : IEquatable<TState>, new() where TAction : IEquatable<TAction>, new()
 {
     public PPOExp() { }
 
-    public GameState StateBefore = new GameState();
-    public Card Action = new Card();
+    public TState StateBefore = new TState();
+    public TAction Action = new TAction();
     public double Reward = 0.0;
     public bool IsTerminal = false;
     public double OldProb = 0.0;
     public double OldBaseline = 0.0;
 
-    public bool Equals(PPOExp other)
-        => StateBefore.Equals(other.StateBefore)
-            && Action == other.Action
+    public bool Equals(PPOExp<TState, TAction>? other)
+        => other != null
+            && StateBefore.Equals(other.StateBefore)
+            && Action.Equals(other.Action)
             && Reward == other.Reward
             && IsTerminal == other.IsTerminal
             && OldProb == other.OldProb
