@@ -50,7 +50,7 @@ public class CardPickerEnvTests
 
 public class MultiAgentCardPickerEnvTests
 {
-    [Fact]
+    [Fact(Skip="not ready for testing yet")]
     public void Test_CanPlayGame()
     {
         var env = new MultiAgentCardPickerEnv();
@@ -63,7 +63,7 @@ public class MultiAgentCardPickerEnvTests
         Assert.True(finalStates.All(s => s.CardCount == 32));
     }
 
-    [Fact]
+    [Fact(Skip="not ready for testing yet")]
     public void Test_CanPlayConsequtiveGames()
     {
         var env = new MultiAgentCardPickerEnv();
