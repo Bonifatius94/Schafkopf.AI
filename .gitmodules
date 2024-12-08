@@ -1,0 +1,3 @@
+[submodule "BackpropNet"]
+	path = BackpropNet
+	url = git@github.com:Bonifatius94/BackpropNet.git
