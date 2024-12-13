@@ -39,13 +39,15 @@ public class PPOModel
             new DenseLayer(1)
         });
 
+        piSampler = new UniformSamplingLayer();
         strategy = new FFModel(new ILayer[] {
             new DenseLayer(64),
             new ReLULayer(),
             new DenseLayer(64),
             new ReLULayer(),
             new DenseLayer(config.NumActionDims),
-            new SoftmaxLayer()
+            new SoftmaxLayer(),
+            piSampler
         });
 
         valueFunc.Compile(config.BatchSize, config.NumStateDims);
@@ -60,6 +62,7 @@ public class PPOModel
     private PPOTrainingSettings config;
     private FFModel valueFunc;
     private FFModel strategy;
+    private ISampler piSampler;
     private IOptimizer strategyOpt;
     private IOptimizer valueFuncOpt;
     private Matrix2D featureCache;
@@ -67,11 +70,13 @@ public class PPOModel
 
     public int BatchSize => config.BatchSize;
 
-    public void Predict(Matrix2D s0, Matrix2D outPiOnehot, Matrix2D outV)
+    public void Predict(Matrix2D s0, Matrix2D outPi, Matrix2D outProbs, Matrix2D outV)
     {
         var predPi = strategy.PredictBatch(s0);
         var predV = valueFunc.PredictBatch(s0);
-        Matrix2D.CopyData(predPi, outPiOnehot);
+        var predProbs = piSampler.FetchSelectionProbs();
+        Matrix2D.CopyData(predPi, outPi);
+        Matrix2D.CopyData(predProbs, outProbs);
         Matrix2D.CopyData(predV, outV);
     }
 

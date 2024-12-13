@@ -35,20 +35,12 @@ public class PPOTraining_CartPole_Tests
             buf.SliceRowsRaw(0, 1)[0] = (int)a0.Direction;
         };
 
-        // TODO: model one-hot sampling as a new class
-        var uniform = new UniformDistribution();
         var actionsCache = Enumerable.Range(0, config.NumEnvs)
             .Select(x => new CartPoleAction()).ToArray();
-        var probsCache = new double[config.NumEnvs];
-        var sampleActions = (Matrix2D piOH) => {
-            for (int i = 0; i < piOH.NumRows; i++)
-            {
-                var probDist = piOH.SliceRowsRaw(i, 1);
-                var idx = uniform.Sample(probDist);
-                actionsCache[i].Direction = (CartPoleDirection)idx;
-                probsCache[i] = probDist[idx];
-            }
-            return ((IList<CartPoleAction>)actionsCache, (IList<double>)probsCache);
+        var sampleActions = (Matrix2D pi) => {
+            for (int i = 0; i < pi.NumRows; i++)
+                actionsCache[i].Direction = (CartPoleDirection)(int)pi.At(i, 0);
+            return (IList<CartPoleAction>)actionsCache;
         };
 
         var rollout = new PPORolloutBuffer<CartPoleState, CartPoleAction>(
@@ -75,7 +67,7 @@ public class SingleAgentExpCollector<TState, TAction>
     public SingleAgentExpCollector(
         PPOTrainingSettings config,
         Action<TState, Matrix2D> encodeState,
-        Func<Matrix2D, (IList<TAction>, IList<double>)> sampleActions,
+        Func<Matrix2D, IList<TAction>> sampleActions,
         Func<MDPEnv<TState, TAction>> envFactory)
     {
         this.config = config;
@@ -91,19 +83,21 @@ public class SingleAgentExpCollector<TState, TAction>
 
         s0_enc = Matrix2D.Zeros(config.NumEnvs, config.NumStateDims);
         v = Matrix2D.Zeros(config.NumEnvs, 1);
-        pi = Matrix2D.Zeros(config.NumEnvs, config.NumActionDims);
+        pi = Matrix2D.Zeros(config.NumEnvs, 1);
+        piProbs = Matrix2D.Zeros(config.NumEnvs, 1);
     }
 
     private readonly PPOTrainingSettings config;
     private readonly VectorizedEnv<TState, TAction> vecEnv;
     private readonly Action<TState, Matrix2D> encodeState;
-    private readonly Func<Matrix2D, (IList<TAction>, IList<double>)> sampleActions;
+    private readonly Func<Matrix2D, IList<TAction>> sampleActions;
 
     private TState[] s0;
     private PPOExp<TState, TAction>[] exps;
     private Matrix2D s0_enc;
     private Matrix2D v;
     private Matrix2D pi;
+    private Matrix2D piProbs;
 
     public void Collect(PPORolloutBuffer<TState, TAction> buffer, PPOModel model)
     {
@@ -112,8 +106,8 @@ public class SingleAgentExpCollector<TState, TAction>
             for (int i = 0; i < config.NumEnvs; i++)
                 encodeState(s0[i], s0_enc.SliceRows(i, 1));
 
-            model.Predict(s0_enc, v, pi);
-            (var a0, var p_a0) = sampleActions(pi);
+            model.Predict(s0_enc, pi, piProbs, v);
+            var a0 = sampleActions(pi);
 
             (var s1, var r1, var t1) = vecEnv.Step(a0);
 
@@ -123,8 +117,8 @@ public class SingleAgentExpCollector<TState, TAction>
                 exps[i].Action = a0[i];
                 exps[i].Reward = r1[i];
                 exps[i].IsTerminal = t1[i];
-                exps[i].OldProb = p_a0[i];
-                exps[i].OldBaseline = v.SliceRowsRaw(i, 1)[0];
+                exps[i].OldProb = piProbs.At(i, 0);
+                exps[i].OldBaseline = v.At(i, 0);
             }
 
             for (int i = 0; i < config.NumEnvs; i++)
@@ -166,7 +160,7 @@ public class VectorizedEnv<TState, TAction>
     public IList<TState> Reset()
     {
         for (int i = 0; i < envs.Count; i++)
-            states[i] = envs[0].Reset();
+            states[i] = envs[i].Reset();
         return states;
     }
 
@@ -226,11 +220,12 @@ public class CartPoleEnv : MDPEnv<CartPoleState, CartPoleAction>
             theta_dot + tau * thetaacc
         );
 
+        // TODO: check if this condition is correct
         var terminated =
-            x < -x_threshold
-            || x > x_threshold
-            || theta < -theta_threshold_radians
-            || theta > theta_threshold_radians;
+            x > -x_threshold
+            && x < x_threshold
+            && theta > -theta_threshold_radians
+            && theta < theta_threshold_radians;
 
         var reward = 1.0;
         return (state.Value, reward, terminated);
@@ -240,9 +235,9 @@ public class CartPoleEnv : MDPEnv<CartPoleState, CartPoleAction>
     {
         state = new CartPoleState(
             sample(x_threshold * -2, x_threshold * 2),
-            sample(-0.05, 0.05),
+            sample(-10.0, 10.0),
             sample(theta_threshold_radians * -2, theta_threshold_radians * 2),
-            sample(-0.05, 0.05)
+            sample(-Math.PI, Math.PI)
         );
         return state.Value;
     }

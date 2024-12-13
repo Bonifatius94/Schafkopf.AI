@@ -45,16 +45,17 @@ public class SchafkopfPPOAgent : ISchafkopfAIAgent
     private PossibleCardPicker sampler = new PossibleCardPicker();
 
     private Matrix2D s0 = Matrix2D.Zeros(1, 90);
-    private Matrix2D piOh = Matrix2D.Zeros(1, 32);
+    private Matrix2D pi = Matrix2D.Zeros(1, 1);
+    private Matrix2D piProbs = Matrix2D.Zeros(1, 1);
     private Matrix2D V = Matrix2D.Zeros(1, 1);
 
     public Card ChooseCard(GameLog log, ReadOnlySpan<Card> possibleCards)
     {
         var state = stateSerializer.SerializeState(log);
         state.ExportFeatures(s0.SliceRowsRaw(0, 1));
-        model.Predict(s0, piOh, V);
-        var predDist = piOh.SliceRowsRaw(0, 1);
-        return sampler.PickCard(possibleCards, predDist);
+        model.Predict(s0, pi, piProbs, V);
+        var idx = (int)pi.At(0, 0);
+        return possibleCards[idx];
     }
 
     public bool CallKontra(GameLog log) => heuristicAgent.CallKontra(log);
@@ -110,14 +111,15 @@ public class VectorizedCardPickerAgent
     public VectorizedCardPickerAgent(PPOModel strategy, int numSessions)
     {
         states = Matrix2D.Zeros(numSessions, GameState.NUM_FEATURES);
-        predPi = Matrix2D.Zeros(numSessions, 32);
+        predPi = Matrix2D.Zeros(numSessions, 1);
+        predPiProbs = Matrix2D.Zeros(numSessions, 1);
         predV = Matrix2D.Zeros(numSessions, 1);
 
         samplers = Enumerable.Range(0, numSessions)
             .Select(i => new PossibleCardPicker()).ToArray();
 
         threadIds = new int[numSessions];
-        barr = new Barrier(numSessions, (b) => strategy.Predict(states, predPi, predV));
+        barr = new Barrier(numSessions, (b) => strategy.Predict(states, predPi, predPiProbs, predV));
     }
 
     private int[] threadIds;
@@ -125,6 +127,7 @@ public class VectorizedCardPickerAgent
 
     private Matrix2D states;
     private Matrix2D predPi;
+    private Matrix2D predPiProbs;
     private Matrix2D predV;
 
     private PossibleCardPicker[] samplers;
@@ -152,9 +155,9 @@ public class VectorizedCardPickerAgent
 
         barr.SignalAndWait();
 
-        var predPiDistr = predPi.SliceRowsRaw(sessionId, 1);
-        var card = samplers[sessionId].PickCard(possCards, predPiDistr);
-        double pi = predPiDistr[card.Id % 32];
+        var idx = (int)predPi.At(sessionId, 0);
+        var pi = predPi.At(sessionId, 0);
+        var card = possCards[idx];
         double V = predV.At(sessionId, 0);
 
         return (card, pi, V);
@@ -208,10 +211,8 @@ public class AsyncCardPickerAgent
 
 public class PossibleCardPicker
 {
-    private UniformDistribution uniform = new UniformDistribution();
-
     public Card PickCard(ReadOnlySpan<Card> possibleCards, ReadOnlySpan<double> predPi)
-        => possibleCards[uniform.Sample(normProbDist(predPi, possibleCards))];
+        => possibleCards[normProbDist(predPi, possibleCards).Sample()];
 
     private double[] probDistCache = new double[8];
     private ReadOnlySpan<double> normProbDist(
