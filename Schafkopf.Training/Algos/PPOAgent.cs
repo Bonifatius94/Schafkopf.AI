@@ -25,6 +25,150 @@ public class PPOTrainingSettings
     public int NumTrainings => TrainSteps / StepsPerUpdate;
 }
 
+public class VecorizedPPOAgent<TState, TAction>
+{
+    public VecorizedPPOAgent(
+        Action<TState, Matrix2D> encodeState,
+        Func<Matrix2D, IList<TAction>> sampleActions,
+        PPOTrainingSettings config)
+    {
+        this.encodeState = encodeState;
+        this.sampleActions = sampleActions;
+
+        s0 = Matrix2D.Zeros(config.NumEnvs, config.NumStateDims);
+        v = Matrix2D.Zeros(config.NumEnvs, 1);
+        pi = Matrix2D.Zeros(config.NumEnvs, 1);
+        piProbs = Matrix2D.Zeros(config.NumEnvs, 1);
+    }
+
+    private readonly Action<TState, Matrix2D> encodeState;
+    private readonly Func<Matrix2D, IList<TAction>> sampleActions;
+
+    private readonly Matrix2D s0;
+    private readonly Matrix2D pi;
+    private readonly Matrix2D piProbs;
+    private readonly Matrix2D v;
+
+    public IList<TAction> PickActions(PPOModel model, IList<TState> states)
+    {
+        for (int i = 0; i < states.Count; i++)
+            encodeState(states[i], s0.SliceRows(i, 1));
+
+        model.Predict(s0, pi, piProbs, v);
+        return sampleActions(pi);
+    }
+
+    public (IList<TAction>, Matrix2D, Matrix2D) PickActionsWithMeta(
+        PPOModel model, IList<TState> states)
+    {
+        for (int i = 0; i < states.Count; i++)
+            encodeState(states[i], s0.SliceRows(i, 1));
+
+        model.Predict(s0, pi, piProbs, v);
+        return (sampleActions(pi), piProbs, v);
+    }
+}
+
+public interface IPPOAdapter<TState, TAction>
+{
+    void EncodeState(TState s0, Matrix2D buf);
+    void EncodeAction(TAction a0, Matrix2D buf);
+    IList<TAction> SampleActions(Matrix2D pi);
+}
+
+public class SingleAgentExpCollector<TState, TAction>
+    where TState : IEquatable<TState>, new()
+    where TAction : IEquatable<TAction>, new()
+{
+    public SingleAgentExpCollector(
+        PPOTrainingSettings config,
+        IPPOAdapter<TState, TAction> adapter,
+        Func<MDPEnv<TState, TAction>> envFactory)
+    {
+        this.config = config;
+
+        var envs = Enumerable.Range(0, config.NumEnvs)
+            .Select(i => envFactory()).ToList();
+        vecEnv = new VectorizedEnv<TState, TAction>(envs);
+        exps = Enumerable.Range(0, config.NumEnvs)
+            .Select(i => new PPOExp<TState, TAction>()).ToArray();
+        s0 = vecEnv.Reset().ToArray();
+        agent = new VecorizedPPOAgent<TState, TAction>(
+            adapter.EncodeState, adapter.SampleActions, config
+        );
+    }
+
+    private readonly PPOTrainingSettings config;
+    private readonly VecorizedPPOAgent<TState, TAction> agent;
+    private readonly VectorizedEnv<TState, TAction> vecEnv;
+
+    private TState[] s0;
+    private PPOExp<TState, TAction>[] exps;
+
+    public void Collect(PPORolloutBuffer<TState, TAction> buffer, PPOModel model)
+    {
+        for (int t = 0; t < buffer.Steps; t++)
+        {
+            (var a0, var piProbs, var v) = agent.PickActionsWithMeta(model, s0);
+            (var s1, var r1, var t1) = vecEnv.Step(a0);
+
+            for (int i = 0; i < config.NumEnvs; i++)
+            {
+                exps[i].StateBefore = s0[i];
+                exps[i].Action = a0[i];
+                exps[i].Reward = r1[i];
+                exps[i].IsTerminal = t1[i];
+                exps[i].OldProb = piProbs.At(i, 0);
+                exps[i].OldBaseline = v.At(i, 0);
+            }
+
+            for (int i = 0; i < config.NumEnvs; i++)
+                s0[i] = s1[i];
+
+            buffer.AppendStep(exps, t);
+        }
+    }
+}
+
+public class VectorizedEnv<TState, TAction>
+{
+    public VectorizedEnv(IList<MDPEnv<TState, TAction>> envs)
+    {
+        this.envs = envs;
+        states = new TState[envs.Count];
+        rewards = new double[envs.Count];
+        terminals = new bool[envs.Count];
+    }
+
+    private readonly IList<MDPEnv<TState, TAction>> envs;
+    private IList<TState> states;
+    private IList<double> rewards;
+    private IList<bool> terminals;
+
+    public int NumEnvs => envs.Count;
+
+    public IList<TState> Reset()
+    {
+        for (int i = 0; i < envs.Count; i++)
+            states[i] = envs[i].Reset();
+        return states;
+    }
+
+    public (IList<TState>, IList<double>, IList<bool>) Step(IList<TAction> actions)
+    {
+        for (int i = 0; i < envs.Count; i++)
+        {
+            (var s1, var r1, var t1) = envs[i].Step(actions[i]);
+            s1 = t1 ? envs[i].Reset() : s1;
+            states[i] = s1;
+            rewards[i] = r1;
+            terminals[i] = t1;
+        }
+
+        return (states, rewards, terminals);
+    }
+}
+
 public class PPOModel
 {
     public PPOModel(PPOTrainingSettings config)
@@ -246,17 +390,13 @@ public struct PPOTrainBatch
 }
 
 public class PPORolloutBuffer<TState, TAction>
-        where TState : IEquatable<TState>, new()
-        where TAction : IEquatable<TAction>, new()
+    where TState : IEquatable<TState>, new()
+    where TAction : IEquatable<TAction>, new()
 {
     public PPORolloutBuffer(
         PPOTrainingSettings config,
-        Action<TState, Matrix2D> encodeState,
-        Action<TAction, Matrix2D> encodeAction)
+        IPPOAdapter<TState, TAction> adapter)
     {
-        this.encodeState = encodeState;
-        this.encodeAction = encodeAction;
-
         NumEnvs = config.NumEnvs;
         Steps = config.StepsPerUpdate;
         gamma = config.RewardDiscount;
@@ -278,8 +418,7 @@ public class PPORolloutBuffer<TState, TAction>
         permCache = Perm.Identity(size);
     }
 
-    private Action<TState, Matrix2D> encodeState;
-    private Action<TAction, Matrix2D> encodeAction;
+    private IPPOAdapter<TState, TAction> adapter;
     public int NumEnvs;
     public int Steps;
     private double gamma;
@@ -310,9 +449,9 @@ public class PPORolloutBuffer<TState, TAction>
             unsafe
             {
                 var s0Dest = buffer.StatesBefore.SliceRows(i, 1);
-                encodeState(exp.StateBefore, s0Dest);
+                adapter.EncodeState(exp.StateBefore, s0Dest);
                 var a0Dest = buffer.Actions.SliceRows(i, 1);
-                encodeAction(exp.Action, a0Dest);
+                adapter.EncodeAction(exp.Action, a0Dest);
                 buffer.Rewards.Data[i] = exp.Reward;
                 buffer.Terminals.Data[i] = exp.IsTerminal ? 1 : 0;
                 buffer.OldProbs.Data[i] = exp.OldProb;

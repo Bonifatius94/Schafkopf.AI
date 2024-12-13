@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Schafkopf.Lib.Benchmarks", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Schafkopf.Training.Tests", "Schafkopf.Training.Tests\Schafkopf.Training.Tests.csproj", "{BE812100-DF7C-45F3-B7CC-37A7847588AB}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RLNetDemo", "RLNetDemo\RLNetDemo.csproj", "{3BBB9EC8-2DB2-4691-988F-5FFE2DFE8AD5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -42,5 +44,9 @@ Global
 		{BE812100-DF7C-45F3-B7CC-37A7847588AB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BE812100-DF7C-45F3-B7CC-37A7847588AB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BE812100-DF7C-45F3-B7CC-37A7847588AB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3BBB9EC8-2DB2-4691-988F-5FFE2DFE8AD5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3BBB9EC8-2DB2-4691-988F-5FFE2DFE8AD5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3BBB9EC8-2DB2-4691-988F-5FFE2DFE8AD5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3BBB9EC8-2DB2-4691-988F-5FFE2DFE8AD5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

@@ -1,36 +1,70 @@
 namespace Schafkopf.Training;
 
+// public class CardPickerPPOAdapter : IPPOAdapter<GameState, Card>
+// {
+//     public CardPickerPPOAdapter(PPOTrainingSettings config)
+//         => actionsCache = Enumerable.Range(0, config.NumEnvs)
+//             .Select(i => new Card(0)).ToArray();
+
+//     private readonly Card[] actionsCache;
+
+//     public void EncodeAction(Card a0, Matrix2D buf)
+//     {
+//         throw new NotImplementedException();
+//     }
+
+//     public void EncodeState(GameState s0, Matrix2D buf)
+//     {
+//         s0.ExportFeatures(buf.SliceRowsRaw(0, 1));
+//     }
+
+//     public IList<Card> SampleActions(Matrix2D pi)
+//     {
+//         for (int i = 0; i < pi.NumRows; i++)
+//             actionsCache[i].Id = (int)pi.At(i, 0);
+//         return actionsCache;
+//     }
+// }
+
 public class SchafkopfPPOTrainingSession
 {
     public PPOModel Train(PPOTrainingSettings config)
     {
-        var model = new PPOModel(config);
-        var rollout = new PPORolloutBuffer<GameState, Card>(
-            config,
-            (s0, buf) => s0.ExportFeatures(buf.SliceRowsRaw(0, 1)),
-            (a0, buf) => buf.SliceRowsRaw(0, 1)[0] = a0.Id % 32
-        );
-        var exps = new CardPickerExpCollector();
-        var benchmark = new RandomPlayBenchmark();
-        var agent = new SchafkopfPPOAgent(model);
-
-        for (int ep = 0; ep < config.NumTrainings; ep++)
-        {
-            Console.WriteLine($"epoch {ep+1}");
-            exps.Collect(rollout, model);
-            model.Train(rollout);
-
-            model.RecompileCache(batchSize: 1);
-            double winRate = benchmark.Benchmark(agent);
-            model.RecompileCache(batchSize: config.BatchSize);
-
-            Console.WriteLine($"win rate vs. random agents: {winRate}");
-            Console.WriteLine("--------------------------------------");
-        }
-
-        return model;
+        // TODO: implement training procedure
+        throw new NotImplementedException();
     }
 }
+
+// public class SchafkopfPPOTrainingSession
+// {
+//     public PPOModel Train(PPOTrainingSettings config)
+//     {
+//         var model = new PPOModel(config);
+//         var rollout = new PPORolloutBuffer<GameState, Card>(
+//             config,
+
+//         );
+//         var exps = new CardPickerExpCollector();
+//         var benchmark = new RandomPlayBenchmark();
+//         var agent = new SchafkopfPPOAgent(model);
+
+//         for (int ep = 0; ep < config.NumTrainings; ep++)
+//         {
+//             Console.WriteLine($"epoch {ep+1}");
+//             exps.Collect(rollout, model);
+//             model.Train(rollout);
+
+//             model.RecompileCache(batchSize: 1);
+//             double winRate = benchmark.Benchmark(agent);
+//             model.RecompileCache(batchSize: config.BatchSize);
+
+//             Console.WriteLine($"win rate vs. random agents: {winRate}");
+//             Console.WriteLine("--------------------------------------");
+//         }
+
+//         return model;
+//     }
+// }
 
 public class SchafkopfPPOAgent : ISchafkopfAIAgent
 {

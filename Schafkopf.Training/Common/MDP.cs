@@ -2,6 +2,7 @@ namespace Schafkopf.Training;
 
 public interface MDPEnv<StateT, ActionT>
 {
+    void Seed(int seed);
     StateT Reset();
     (StateT, double, bool) Step(ActionT cardToPlay);
 }
@@ -15,6 +16,11 @@ public class CardPickerEnv : MDPEnv<GameLog, Card>
 
     private GameLog log;
     private Hand[] initialHandsCache = new Hand[4];
+
+    public void Seed(int seed)
+    {
+        // nothing to do here ... environment is deterministic
+    }
 
     public GameLog Reset()
     {
@@ -99,6 +105,11 @@ public class MultiAgentCardPickerEnv : MDPEnv<GameLog, Card>
     public void Register(int playerId)
     {
         threadIds[playerId] = Environment.CurrentManagedThreadId;
+    }
+
+    public void Seed(int seed)
+    {
+        // nothing to do here ... environment is deterministic
     }
 
     public GameLog Reset()
