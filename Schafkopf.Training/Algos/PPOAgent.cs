@@ -175,32 +175,37 @@ public class PPOModel
     {
         this.config = config;
 
-        valueFunc = new FFModel(new ILayer[] {
+        var sharedLayers = new ILayer[] {
             new DenseLayer(64),
             new ReLULayer(),
             new DenseLayer(64),
             new ReLULayer(),
+        };
+        var valueFuncHead = new ILayer[] {
             new DenseLayer(1)
-        });
-
+        };
         piSampler = new UniformSamplingLayer();
-        strategy = new FFModel(new ILayer[] {
-            new DenseLayer(64),
-            new ReLULayer(),
-            new DenseLayer(64),
-            new ReLULayer(),
+        var strategyHead = new ILayer[] {
             new DenseLayer(config.NumActionDims),
             new SoftmaxLayer(),
             piSampler
-        });
+        };
+
+        valueFunc = new FFModel(sharedLayers.Concat(valueFuncHead).ToArray());
+        strategy = new FFModel(sharedLayers.Concat(strategyHead).ToArray());
 
         valueFunc.Compile(config.BatchSize, config.NumStateDims);
         strategy.Compile(config.BatchSize, config.NumStateDims);
-        featureCache = Matrix2D.Zeros(config.BatchSize, config.NumStateDims);
         strategyOpt = new AdamOpt(config.LearnRate);
         valueFuncOpt = new AdamOpt(config.LearnRate);
         strategyOpt.Compile(strategy.GradsTape);
         valueFuncOpt.Compile(valueFunc.GradsTape);
+
+        normAdvantages = Matrix2D.Zeros(config.BatchSize, 1);
+        policyRatios = Matrix2D.Zeros(config.BatchSize, 1);
+        derPolicyRatios = Matrix2D.Zeros(config.BatchSize, 1);
+        derNewProbs = Matrix2D.Zeros(config.BatchSize, 1);
+        clipMask = Matrix2D.Zeros(config.BatchSize, 1);
     }
 
     private PPOTrainingSettings config;
@@ -209,8 +214,13 @@ public class PPOModel
     private ISampler piSampler;
     private IOptimizer strategyOpt;
     private IOptimizer valueFuncOpt;
-    private Matrix2D featureCache;
     private ILoss mse = new MeanSquaredError();
+
+    private Matrix2D normAdvantages;
+    private Matrix2D policyRatios;
+    private Matrix2D derPolicyRatios;
+    private Matrix2D derNewProbs;
+    private Matrix2D clipMask;
 
     public int BatchSize => config.BatchSize;
 
@@ -224,7 +234,10 @@ public class PPOModel
         Matrix2D.CopyData(predV, outV);
     }
 
-    public void Train<TState, TAction>(PPORolloutBuffer<TState, TAction> memory)
+    public void Train<TState, TAction>(
+            PPORolloutBuffer<TState, TAction> memory,
+            bool showProgress = true
+        )
         where TState : IEquatable<TState>, new()
         where TAction : IEquatable<TAction>, new()
     {
@@ -236,16 +249,20 @@ public class PPOModel
         int i = 1;
         foreach (var batch in batches)
         {
-            Console.Write($"\rtraining {i++} / {numBatches}           ");
+            if (showProgress)
+                Console.Write($"\rtraining {i++} / {numBatches}           ");
             updateModels(batch);
         }
-        Console.WriteLine();
+        if (showProgress)
+            Console.WriteLine();
     }
 
     private void updateModels(PPOTrainBatch batch)
     {
         // update strategy pi(s)
+        piSampler.Seed(batch.Actions.SliceRows(0, batch.Size));
         var predPi = strategy.PredictBatch(batch.StatesBefore);
+        piSampler.Unseed();
         var strategyDeltas = strategy.Layers.Last().Cache.DeltasIn;
         computePolicyDeltas(batch, predPi, strategyDeltas);
         strategy.FitBatch(strategyDeltas, strategyOpt);
@@ -261,15 +278,6 @@ public class PPOModel
     private void computePolicyDeltas(
         PPOTrainBatch batch, Matrix2D predPi, Matrix2D policyDeltas)
     {
-        // TODO: get rid of allocation
-        var normAdvantages = Matrix2D.Zeros(batch.Size, 1);
-        var policyRatios = Matrix2D.Zeros(batch.Size, 1);
-        var derPolicyRatios = Matrix2D.Zeros(batch.Size, 1);
-        var newProbs = Matrix2D.Zeros(batch.Size, 1);
-        var derNewProbs = Matrix2D.Zeros(batch.Size, 1);
-        var clipMask = Matrix2D.Zeros(batch.Size, 1);
-        var policyDeltasSparse = Matrix2D.Zeros(batch.Size, 1);
-
         var advantages = batch.Advantages;
         if (config.NormAdvantages)
         {
@@ -280,12 +288,8 @@ public class PPOModel
             advantages = normAdvantages;
         }
 
-        var onehots = onehotIndices(batch.Actions, config.NumActionDims)
-            .Zip(Enumerable.Range(0, config.NumActionDims));
-        foreach ((int p, int i) in onehots)
-            unsafe { newProbs.Data[i] = predPi.Data[p]; }
         Matrix2D.BatchAdd(batch.OldProbs, 1e-8, policyRatios);
-        Matrix2D.ElemDiv(policyRatios, newProbs, policyRatios);
+        Matrix2D.ElemDiv(policyRatios, predPi, policyRatios);
         Matrix2D.BatchOneOver(derNewProbs, derPolicyRatios);
         Matrix2D.ElemMul(policyRatios, derPolicyRatios, derPolicyRatios);
 
@@ -293,19 +297,9 @@ public class PPOModel
         Matrix2D.ElemLeq(policyRatios, 1 - config.ProbClip, clipMask);
         Matrix2D.ElemNeq(clipMask, 1, clipMask);
 
-        Matrix2D.ElemMul(clipMask, derPolicyRatios, policyDeltasSparse);
-        Matrix2D.ElemMul(policyDeltasSparse, advantages, policyDeltasSparse);
-        Matrix2D.BatchMul(policyDeltasSparse, -1, policyDeltasSparse);
-
-        Matrix2D.BatchMul(policyDeltas, 0, policyDeltas);
-        foreach ((int p, int i) in onehots)
-            unsafe { policyDeltas.Data[p] = policyDeltasSparse.Data[i]; }
-    }
-
-    private IEnumerable<int> onehotIndices(Matrix2D sparseClassIds, int numClasses)
-    {
-        for (int i = 0; i < sparseClassIds.NumRows; i++)
-            yield return i * numClasses + (int)sparseClassIds.At(0, i);
+        Matrix2D.ElemMul(clipMask, derPolicyRatios, policyDeltas);
+        Matrix2D.ElemMul(policyDeltas, advantages, policyDeltas);
+        Matrix2D.BatchMul(policyDeltas, -1, policyDeltas);
     }
 
     public void RecompileCache(int batchSize)
@@ -397,6 +391,7 @@ public class PPORolloutBuffer<TState, TAction>
         PPOTrainingSettings config,
         IPPOAdapter<TState, TAction> adapter)
     {
+        Adapter = adapter;
         NumEnvs = config.NumEnvs;
         Steps = config.StepsPerUpdate;
         gamma = config.RewardDiscount;
@@ -418,7 +413,7 @@ public class PPORolloutBuffer<TState, TAction>
         permCache = Perm.Identity(size);
     }
 
-    private IPPOAdapter<TState, TAction> adapter;
+    private IPPOAdapter<TState, TAction> Adapter;
     public int NumEnvs;
     public int Steps;
     private double gamma;
@@ -449,9 +444,9 @@ public class PPORolloutBuffer<TState, TAction>
             unsafe
             {
                 var s0Dest = buffer.StatesBefore.SliceRows(i, 1);
-                adapter.EncodeState(exp.StateBefore, s0Dest);
+                Adapter.EncodeState(exp.StateBefore, s0Dest);
                 var a0Dest = buffer.Actions.SliceRows(i, 1);
-                adapter.EncodeAction(exp.Action, a0Dest);
+                Adapter.EncodeAction(exp.Action, a0Dest);
                 buffer.Rewards.Data[i] = exp.Reward;
                 buffer.Terminals.Data[i] = exp.IsTerminal ? 1 : 0;
                 buffer.OldProbs.Data[i] = exp.OldProb;

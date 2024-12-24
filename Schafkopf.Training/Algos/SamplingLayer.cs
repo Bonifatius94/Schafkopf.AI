@@ -5,6 +5,8 @@ namespace BackpropNet;
 public interface ISampler : ILayer
 {
     void Seed(int seed);
+    void Seed(Matrix2D seed);
+    void Unseed();
     Matrix2D FetchSelectionProbs();
 }
 
@@ -23,6 +25,8 @@ public class UniformSamplingLayer : ISampler
     private bool sparse;
     private Random Rng;
     private Matrix2D SelectionProbs;
+    private bool Deterministic;
+    private IList<int> SparseIdx;
 
     public void Compile(int inputDims)
     {
@@ -45,10 +49,21 @@ public class UniformSamplingLayer : ISampler
         };
 
         SelectionProbs = Matrix2D.Zeros(batchSize, 1);
+        SparseIdx = new int[batchSize];
     }
 
     public void Seed(int seed)
         => Rng = new Random(seed);
+
+    public void Seed(Matrix2D seed)
+    {
+        Deterministic = true;
+        for (int i = 0; i < seed.NumRows; i++)
+            SparseIdx[i] = (int)seed.At(i, 0);
+    }
+
+    public void Unseed()
+        => Deterministic = false;
 
     public Matrix2D FetchSelectionProbs()
         => SelectionProbs;
@@ -66,7 +81,7 @@ public class UniformSamplingLayer : ISampler
         for (int i = 0; i < batchSize; i++)
         {
             var probDist = Cache.Input.SliceRowsRaw(i, 1);
-            var idx = probDist.Sample(Rng);
+            var idx = Deterministic ? SparseIdx[i] : probDist.Sample(Rng);
             selProbs[i] = probDist[idx];
             if (sparse)
                 output[offset++] = idx;

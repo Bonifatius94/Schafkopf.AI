@@ -37,17 +37,17 @@ public class CartPoleEnv : MDPEnv<CartPoleState, CartPoleAction>
     private const double x_threshold = 2.4;
 
     private CartPoleState high = new CartPoleState(
-        x: x_threshold * 2.0,
-        x_dot: float.MaxValue,
-        theta: theta_threshold_radians * 2.0,
-        theta_dot: float.MaxValue
+        x: 4.8,
+        x_dot: 0,
+        theta: 0.42,
+        theta_dot: 0
     );
 
     private CartPoleState low = new CartPoleState(
-        x: x_threshold * -2.0,
-        x_dot: float.MinValue,
-        theta: theta_threshold_radians * -2.0,
-        theta_dot: float.MinValue
+        x: -4.8,
+        x_dot: 0,
+        theta: -0.42,
+        theta_dot: 0
     );
 
     private CartPoleState? state = null;
